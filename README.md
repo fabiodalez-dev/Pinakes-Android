@@ -11,9 +11,9 @@ read ebooks and listen to audiobooks, and manage your loans, all from your phone
 ![Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-green)
 
-### ⬇ Download
+## ⬇ Download
 
-**[Get the debug APK](https://github.com/fabiodalez-dev/pinakes-android/releases/download/v1.0.0-debug/pinakes-debug.apk)** from the latest release, then `adb install -r pinakes-debug.apk` (or open it on your phone). Point it at your Pinakes instance URL on first launch.
+**[Get the debug APK](https://github.com/fabiodalez-dev/pinakes-android/releases/download/v1.0.0-debug/pinakes-debug.apk)** from release `v1.0.0-debug`, then `adb install -r pinakes-debug.apk` (or open it on your phone). Point it at your Pinakes instance URL on first launch.
 
 ## What it is
 
@@ -31,15 +31,15 @@ catalogue-only mode, push availability).
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/login.png" width="200"><br><sub>Login</sub></td>
-    <td align="center"><img src="docs/screenshots/home.png" width="200"><br><sub>Home</sub></td>
-    <td align="center"><img src="docs/screenshots/catalog.png" width="200"><br><sub>Catalog + filters</sub></td>
-    <td align="center"><img src="docs/screenshots/detail.png" width="200"><br><sub>Book detail</sub></td>
+    <td align="center"><img src="docs/screenshots/login.png" width="200" alt="Login screen"><br><sub>Login</sub></td>
+    <td align="center"><img src="docs/screenshots/home.png" width="200" alt="Home screen"><br><sub>Home</sub></td>
+    <td align="center"><img src="docs/screenshots/catalog.png" width="200" alt="Catalog with filters"><br><sub>Catalog + filters</sub></td>
+    <td align="center"><img src="docs/screenshots/detail.png" width="200" alt="Book detail screen"><br><sub>Book detail</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/calendar.png" width="200"><br><sub>Availability calendar</sub></td>
-    <td align="center"><img src="docs/screenshots/library.png" width="200"><br><sub>My Library</sub></td>
-    <td align="center"><img src="docs/screenshots/profile.png" width="200"><br><sub>Profile</sub></td>
+    <td align="center"><img src="docs/screenshots/calendar.png" width="200" alt="Availability calendar"><br><sub>Availability calendar</sub></td>
+    <td align="center"><img src="docs/screenshots/library.png" width="200" alt="My Library screen"><br><sub>My Library</sub></td>
+    <td align="center"><img src="docs/screenshots/profile.png" width="200" alt="Profile screen"><br><sub>Profile</sub></td>
     <td></td>
   </tr>
 </table>
