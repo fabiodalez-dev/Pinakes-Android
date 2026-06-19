@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Window-level theme. AppCompat base is required because MainActivity is an
+      AppCompatActivity (needed for per-app locales). The full M3 design system is
+      still applied via PinakesTheme (Kotlin/Compose) on top of this window theme.
+    -->
+    <style name="Theme.Pinakes" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

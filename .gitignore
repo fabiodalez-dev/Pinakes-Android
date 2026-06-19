@@ -1,0 +1,19 @@
+# Android / Gradle build outputs
+*.iml
+.gradle/
+/local.properties
+.idea/
+.DS_Store
+build/
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+*.ap_
+*.dex
+# Keystores / secrets
+*.jks
+*.keystore
+# Generated i18n resources (regenerated from i18n/*.json at build)
+app/src/main/res/values*/strings.xml

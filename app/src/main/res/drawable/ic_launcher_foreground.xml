@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Pinakes adaptive icon foreground.
+  Safe zone: centre 72×72dp within the 108×108dp canvas (18dp inset all sides).
+  The mark: an open book with a rising spine — represents the Pinakes library.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Left page of the open book -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="
+            M54,36
+            C48,32 39,31 30,33.5
+            L30,74
+            C39,71.5 48,72.5 54,76.5
+            Z" />
+
+    <!-- Left page inner tint (pink tonal) -->
+    <path
+        android:fillColor="#FFD9E2"
+        android:pathData="
+            M53,39
+            C48,36 41,35 34,37
+            L34,71
+            C41,69 48,70 53,73.5
+            Z" />
+
+    <!-- Left page text lines -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:alpha="0.55"
+        android:pathData="M37,44 L51,42.5 L51,44.5 L37,46 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:alpha="0.55"
+        android:pathData="M37,49 L51,47.5 L51,49.5 L37,51 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:alpha="0.55"
+        android:pathData="M37,54 L51,52.5 L51,54.5 L37,56 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:alpha="0.55"
+        android:pathData="M37,59 L48,57.5 L48,59.5 L37,61 Z" />
+
+    <!-- Right page of the open book -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="
+            M54,36
+            C60,32 69,31 78,33.5
+            L78,74
+            C69,71.5 60,72.5 54,76.5
+            Z" />
+
+    <!-- Right page inner tint -->
+    <path
+        android:fillColor="#FFD9E2"
+        android:pathData="
+            M55,39
+            C60,36 67,35 74,37
+            L74,71
+            C67,69 60,70 55,73.5
+            Z" />
+
+    <!-- Right page text lines -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:alpha="0.55"
+        android:pathData="M57,44 L71,42.5 L71,44.5 L57,46 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:alpha="0.55"
+        android:pathData="M57,49 L71,47.5 L71,49.5 L57,51 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:alpha="0.55"
+        android:pathData="M57,54 L71,52.5 L71,54.5 L57,56 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:alpha="0.55"
+        android:pathData="M57,59 L68,57.5 L68,59.5 L57,61 Z" />
+
+    <!-- Spine / centre crease -->
+    <path
+        android:strokeColor="#FFD9E2"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M54,36 L54,76.5" />
+
+</vector>
