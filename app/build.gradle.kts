@@ -1,4 +1,5 @@
 import groovy.json.JsonSlurper
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -115,6 +116,42 @@ val generateI18nRes = tasks.register<GenerateI18nResTask>("generateI18nRes") {
     defaultLocaleCode.set("en")
 }
 
+// ---------------------------------------------------------------------------
+// Release signing — secrets are NEVER committed. Provide them at build time via
+// a git-ignored `keystore.properties` at the repo root:
+//
+//     storeFile=/abs/path/pinakes-release.jks
+//     storePassword=...
+//     keyAlias=...
+//     keyPassword=...
+//
+// or via env vars (PINAKES_KEYSTORE / PINAKES_KEYSTORE_PASSWORD /
+// PINAKES_KEY_ALIAS / PINAKES_KEY_PASSWORD), e.g. in CI. Unless the FULL set of
+// credentials is present the release signing config stays unconfigured (debug
+// builds and `assembleDebug` are unaffected); `assembleRelease`/`bundleRelease`
+// then produce an unsigned artifact you must sign separately.
+// ---------------------------------------------------------------------------
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = Properties().apply {
+    if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
+}
+val releaseStorePath: String? =
+    keystoreProps.getProperty("storeFile") ?: System.getenv("PINAKES_KEYSTORE")
+val releaseStorePassword: String? =
+    keystoreProps.getProperty("storePassword") ?: System.getenv("PINAKES_KEYSTORE_PASSWORD")
+val releaseKeyAlias: String? =
+    keystoreProps.getProperty("keyAlias") ?: System.getenv("PINAKES_KEY_ALIAS")
+val releaseKeyPassword: String? =
+    keystoreProps.getProperty("keyPassword") ?: System.getenv("PINAKES_KEY_PASSWORD")
+// Only sign when ALL credentials are present; partial credentials must fall
+// back to an unsigned artifact (per the contract above) rather than fail the
+// build with a half-configured signing config.
+val hasCompleteReleaseSigning =
+    !releaseStorePath.isNullOrBlank() &&
+        !releaseStorePassword.isNullOrBlank() &&
+        !releaseKeyAlias.isNullOrBlank() &&
+        !releaseKeyPassword.isNullOrBlank()
+
 android {
     namespace = "com.pinakes.app"
     compileSdk = 35
@@ -131,13 +168,34 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            if (hasCompleteReleaseSigning) {
+                storeFile = file(releaseStorePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // R8 shrinking is OFF by default so the verified runtime behaviour is
+            // preserved. Complete keep rules for Retrofit/OkHttp/kotlinx.serialization/
+            // Coil already live in proguard-rules.pro, so this can be flipped to `true`
+            // (add isShrinkResources = true) once a minified release has been smoke-
+            // tested on a device/emulator. Not enabled here because this checkout has
+            // no Android SDK to verify against.
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Only attach the signing config when a keystore was actually
+            // provided; otherwise leave the release build unsigned so the build
+            // file never fails for contributors without the secrets.
+            signingConfig = if (hasCompleteReleaseSigning) signingConfigs.getByName("release") else null
         }
     }
 

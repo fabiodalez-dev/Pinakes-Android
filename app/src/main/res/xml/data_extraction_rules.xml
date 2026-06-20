@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Backup / device-transfer rules (Android 12 / API 31+).
+
+  The bearer token + instance URL live in an EncryptedSharedPreferences file
+  ("pinakes_session_secure"); the cached server feature flags live in a second
+  EncryptedSharedPreferences file ("pinakes_features_secure"). Both have an AES
+  master key held in the Android Keystore. The Keystore key is device-bound and
+  is NOT part of cloud backup or device-to-device transfer, so a restored
+  encrypted-prefs file would be undecryptable on the new device (read failures /
+  crash). We therefore exclude both files from both backup paths; the user
+  simply re-onboards + logs in after a restore, which re-creates a valid local
+  session and re-fetches the feature flags.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="pinakes_session_secure.xml" />
+        <exclude domain="sharedpref" path="pinakes_features_secure.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="pinakes_session_secure.xml" />
+        <exclude domain="sharedpref" path="pinakes_features_secure.xml" />
+    </device-transfer>
+</data-extraction-rules>
