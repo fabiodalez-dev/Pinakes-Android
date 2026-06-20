@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Legacy Auto Backup rules (Android 11 / API 30 and below).
+
+  Same rationale as data_extraction_rules.xml: the encrypted session and
+  feature prefs cannot be decrypted after a restore because the Keystore master
+  key does not travel with the backup, so exclude both files.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="pinakes_session_secure.xml" />
+    <exclude domain="sharedpref" path="pinakes_features_secure.xml" />
+</full-backup-content>
