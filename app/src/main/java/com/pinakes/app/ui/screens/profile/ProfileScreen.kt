@@ -146,6 +146,9 @@ private fun ProfileContent(
     onOpenNotifications: () -> Unit,
     onOpenContact: () -> Unit,
 ) {
+    // Instance feature flags — gate the messaging/notifications actions so the
+    // app reflects what the library actually exposes via the Mobile API.
+    val features by LocalServices.current.features.features.collectAsStateWithLifecycle()
     Column(
         Modifier
             .fillMaxSize()
@@ -192,8 +195,12 @@ private fun ProfileContent(
         // Actions
         ActionRow(Icons.Outlined.Edit, stringResource(R.string.profile_action_edit), onClick = onEdit)
         ActionRow(Icons.Outlined.Lock, stringResource(R.string.profile_action_change_password), onClick = onChangePassword)
-        ActionRow(Icons.Outlined.Notifications, stringResource(R.string.profile_action_notifications), onClick = onOpenNotifications)
-        ActionRow(Icons.Outlined.ChatBubbleOutline, stringResource(R.string.profile_action_message_library), onClick = onOpenContact)
+        if (features.notifications) {
+            ActionRow(Icons.Outlined.Notifications, stringResource(R.string.profile_action_notifications), onClick = onOpenNotifications)
+        }
+        if (features.messages) {
+            ActionRow(Icons.Outlined.ChatBubbleOutline, stringResource(R.string.profile_action_message_library), onClick = onOpenContact)
+        }
 
         Spacer(Modifier.height(Spacing.xl))
 

@@ -74,7 +74,14 @@ data class RegisterRequest(
     val nome: String,
     val cognome: String,
     val email: String,
-    val password: String, // min 8
+    // Backend (AuthController) requires these too and 422s without them:
+    // privacy must be accepted, phone + address are mandatory, and the password
+    // must be confirmed (8-72 chars, upper+lower+digit).
+    val telefono: String,
+    val indirizzo: String,
+    val password: String,
+    @SerialName("password_confirm") val passwordConfirm: String,
+    @SerialName("privacy_acceptance") val privacyAcceptance: Boolean,
 )
 
 @Serializable
