@@ -1555,6 +1555,108 @@
                 }
             }
         },
+        "/catalog/books/{id}/availability": {
+            "get": {
+                "tags": [
+                    "catalog"
+                ],
+                "summary": "Book loan availability (calendar)",
+                "description": "Per-day loan availability for the date-picker calendar: total_copies, earliest_available, unavailable_dates (fully-booked days), and days[] with per-day free/total counts. Same computation as the website; excludes the requesting user's own active reservations. Soft-deleted books return 404.",
+                "operationId": "getCatalogBookAvailability",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Book ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Availability calendar data.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        }
+                                    ],
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total_copies": {
+                                                    "type": "integer"
+                                                },
+                                                "earliest_available": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "nullable": true
+                                                },
+                                                "unavailable_dates": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "format": "date"
+                                                    }
+                                                },
+                                                "days": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "date": {
+                                                                "type": "string",
+                                                                "format": "date"
+                                                            },
+                                                            "available": {
+                                                                "type": "integer"
+                                                            },
+                                                            "loaned": {
+                                                                "type": "integer"
+                                                            },
+                                                            "reserved": {
+                                                                "type": "integer"
+                                                            },
+                                                            "state": {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                    "free",
+                                                                    "borrowed",
+                                                                    "reserved"
+                                                                ]
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                }
+            }
+        },
         "/catalog/genres": {
             "get": {
                 "tags": [
