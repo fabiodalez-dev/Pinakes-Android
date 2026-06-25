@@ -38,6 +38,10 @@ class LoginViewModel(
     )
     val state: StateFlow<LoginUiState> = _state.asStateFlow()
 
+    init {
+        viewModelScope.launch { auth.refreshHealth() }
+    }
+
     fun onEmailChange(v: String) = _state.update { it.copy(email = v, error = null, errorRes = null, errorArg = null) }
     fun onPasswordChange(v: String) = _state.update { it.copy(password = v, error = null, errorRes = null, errorArg = null) }
 

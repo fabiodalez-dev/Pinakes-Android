@@ -66,7 +66,7 @@ fun MainScaffold(
             if (tab != PinakesTab.Home) {
                 PinakesListTopBar(
                     title = title,
-                    onNotifications = onOpenNotifications,
+                    onNotifications = if (features.notifications) onOpenNotifications else null,
                 )
             }
         },

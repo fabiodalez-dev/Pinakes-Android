@@ -74,7 +74,11 @@ data class RegisterRequest(
     val nome: String,
     val cognome: String,
     val email: String,
-    val password: String, // min 8
+    val telefono: String,
+    val indirizzo: String,
+    val password: String, // min 8, max 72
+    @SerialName("password_confirm") val passwordConfirm: String,
+    @SerialName("privacy_acceptance") val privacyAcceptance: Boolean,
 )
 
 @Serializable
@@ -104,7 +108,8 @@ data class UpdateProfileRequest(
 @Serializable
 data class ChangePasswordRequest(
     @SerialName("current_password") val currentPassword: String,
-    @SerialName("new_password") val newPassword: String, // min 8
+    val password: String, // min 8
+    @SerialName("password_confirm") val passwordConfirm: String,
 )
 
 // ---------- Devices ----------

@@ -35,6 +35,21 @@ import com.pinakes.app.ui.theme.Spacing
 @Composable
 fun ContactScreen(onNavigateUp: () -> Unit) {
     val services = LocalServices.current
+    val features by services.features.features.collectAsStateWithLifecycle()
+    if (!features.messages) {
+        Scaffold(
+            topBar = { PinakesTopBar(title = stringResource(R.string.title_message_library), onNavigateUp = onNavigateUp) },
+        ) { padding ->
+            EmptyState(
+                title = stringResource(R.string.contact_disabled_title),
+                subtitle = stringResource(R.string.contact_disabled_subtitle),
+                icon = Icons.Outlined.MarkEmailRead,
+                modifier = Modifier.padding(padding),
+            )
+        }
+        return
+    }
+
     val vm: ContactViewModel = viewModel(factory = ContactViewModel.Factory(services.messagesRepository))
     val state by vm.state.collectAsStateWithLifecycle()
 

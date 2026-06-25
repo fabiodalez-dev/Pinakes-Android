@@ -88,9 +88,31 @@ class AuthRepository(
         }
     }
 
-    suspend fun register(nome: String, cognome: String, email: String, password: String): ApiResult<Unit> {
+    suspend fun register(
+        nome: String,
+        cognome: String,
+        email: String,
+        telefono: String,
+        indirizzo: String,
+        password: String,
+        passwordConfirm: String,
+        privacyAccepted: Boolean,
+    ): ApiResult<Unit> {
         val api = network.api()
-        return apiCall { api.register(RegisterRequest(nome.trim(), cognome.trim(), email.trim(), password)) }
+        return apiCall {
+            api.register(
+                RegisterRequest(
+                    nome = nome.trim(),
+                    cognome = cognome.trim(),
+                    email = email.trim(),
+                    telefono = telefono.trim(),
+                    indirizzo = indirizzo.trim(),
+                    password = password,
+                    passwordConfirm = passwordConfirm,
+                    privacyAcceptance = privacyAccepted,
+                )
+            )
+        }
     }
 
     suspend fun forgotPassword(email: String): ApiResult<Unit> {

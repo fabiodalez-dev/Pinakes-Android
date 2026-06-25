@@ -17,8 +17,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * screens recompose when the server-side mode changes.
  *
  * Robustness: when the flags have never been fetched (first run, `/health` unreachable) the
- * defaults are **all-enabled** — the app must never lock the user out because discovery failed.
- * A successful fetch is remembered; a later failed re-fetch keeps the last-known flags.
+ * defaults keep the operational app features enabled — the app must never lock the user out
+ * because discovery failed. Public registration is different: it stays hidden until `/health`
+ * explicitly advertises `registration_enabled=true`.
  */
 data class InstanceFeatures(
     val catalogueMode: Boolean = false,
@@ -29,6 +30,7 @@ data class InstanceFeatures(
     val messages: Boolean = true,
     val notifications: Boolean = true,
     val push: Boolean = true,
+    val registrationEnabled: Boolean = false,
 ) {
     /** Library tab (loans + reservations) is shown only when at least one of them is enabled. */
     val showLibrary: Boolean get() = loans || reservations
@@ -39,7 +41,7 @@ data class InstanceFeatures(
     val showWishlist: Boolean get() = wishlist
 
     companion object {
-        /** Safe default before/without a successful `/health`: everything enabled. */
+        /** Safe default before/without `/health`: app features enabled, registration hidden. */
         val AllEnabled = InstanceFeatures()
     }
 }
@@ -74,6 +76,7 @@ class FeatureStore(context: Context) {
             messages = f.messages,
             notifications = f.notifications,
             push = f.push,
+            registrationEnabled = health.registrationEnabled,
         )
         prefs.edit()
             .putBoolean(KEY_KNOWN, true)
@@ -85,6 +88,7 @@ class FeatureStore(context: Context) {
             .putBoolean(KEY_MESSAGES, value.messages)
             .putBoolean(KEY_NOTIFICATIONS, value.notifications)
             .putBoolean(KEY_PUSH, value.push)
+            .putBoolean(KEY_REGISTRATION_ENABLED, value.registrationEnabled)
             .apply()
         _features.value = value
     }
@@ -109,6 +113,7 @@ class FeatureStore(context: Context) {
             messages = prefs.getBoolean(KEY_MESSAGES, true),
             notifications = prefs.getBoolean(KEY_NOTIFICATIONS, true),
             push = prefs.getBoolean(KEY_PUSH, true),
+            registrationEnabled = prefs.getBoolean(KEY_REGISTRATION_ENABLED, false),
         )
     }
 
@@ -123,5 +128,6 @@ class FeatureStore(context: Context) {
         private const val KEY_MESSAGES = "f_messages"
         private const val KEY_NOTIFICATIONS = "f_notifications"
         private const val KEY_PUSH = "f_push"
+        private const val KEY_REGISTRATION_ENABLED = "registration_enabled"
     }
 }

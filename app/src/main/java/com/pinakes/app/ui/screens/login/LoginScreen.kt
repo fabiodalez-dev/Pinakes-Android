@@ -46,12 +46,15 @@ import com.pinakes.app.ui.theme.Spacing
 fun LoginScreen(
     onLoggedIn: () -> Unit,
     onChangeLibrary: () -> Unit,
+    onRegister: () -> Unit,
+    onForgotPassword: () -> Unit,
 ) {
     val services = LocalServices.current
     val vm: LoginViewModel = viewModel(
         factory = LoginViewModel.Factory(services.authRepository, services.session)
     )
     val state by vm.state.collectAsStateWithLifecycle()
+    val features by services.features.features.collectAsStateWithLifecycle()
 
     val errorMessage = state.error ?: state.errorRes?.let { res ->
         if (state.errorArg != null) stringResource(res, state.errorArg!!) else stringResource(res)
@@ -140,6 +143,21 @@ fun LoginScreen(
                 modifier = form,
                 loading = state.loading,
             )
+            Spacer(Modifier.height(Spacing.sm))
+            Box(modifier = form, contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    PinakesTextButton(
+                        label = stringResource(R.string.login_forgot_password),
+                        onClick = onForgotPassword,
+                    )
+                    if (features.registrationEnabled) {
+                        PinakesTextButton(
+                            label = stringResource(R.string.login_create_account),
+                            onClick = onRegister,
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(Spacing.sm))
             Box(modifier = form, contentAlignment = Alignment.Center) {
                 PinakesTextButton(

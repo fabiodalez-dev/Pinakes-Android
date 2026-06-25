@@ -31,9 +31,9 @@ class ProfileRepository(private val network: NetworkModule) {
         }
     }
 
-    suspend fun changePassword(current: String, new: String): ApiResult<Unit> {
+    suspend fun changePassword(current: String, new: String, newConfirm: String): ApiResult<Unit> {
         val api = network.api()
-        return apiCall { api.changePassword(ChangePasswordRequest(current, new)) }
+        return apiCall { api.changePassword(ChangePasswordRequest(current, new, newConfirm)) }
     }
 
     suspend fun devices(): ApiResult<List<DeviceItem>> {

@@ -128,7 +128,7 @@ const ENDPOINTS = [
     { name: 'POST /auth/forgot-password',        method: 'POST',   path: '/auth/forgot-password',         auth: false, kind: 'write2xx',
         body: () => ({ email: USER_EMAIL }) },
     { name: 'POST /auth/register',               method: 'POST',   path: '/auth/register',                auth: false, kind: 'conflict2',
-        body: () => ({ email: USER_EMAIL, password: USER_PASS, password_confirm: USER_PASS, nome: 'Idem', cognome: 'Test', telefono: '0', indirizzo: 'x', privacy_acceptance: '1' }),
+        body: () => ({ email: USER_EMAIL, password: USER_PASS, password_confirm: USER_PASS, nome: 'Idem', cognome: 'Test', telefono: '0', indirizzo: 'x', privacy_acceptance: true }),
         firstAny: true /* registration may be disabled → 1st is 4xx; still asserts 2nd >= 400 */ },
     { name: 'POST /auth/logout',                 method: 'POST',   path: '/auth/logout',                  auth: 'throwaway', kind: 'revoked2' },
     { name: 'GET /me',                           method: 'GET',    path: '/me',                           auth: true,  kind: 'safeGet' },
@@ -140,6 +140,7 @@ const ENDPOINTS = [
     { name: 'DELETE /me/devices/{deviceId}',     method: 'DELETE', path: '/me/devices/{deviceId}',        auth: true,  kind: 'gone2' },
     { name: 'GET /catalog/search',               method: 'GET',    path: '/catalog/search',               auth: true,  kind: 'etag' },
     { name: 'GET /catalog/books/{bookId}',       method: 'GET',    path: '/catalog/books/{bookId}',       auth: true,  kind: 'etag' },
+    { name: 'GET /catalog/books/{bookId}/availability', method: 'GET', path: '/catalog/books/{bookId}/availability', auth: true, kind: 'safeGet' },
     { name: 'GET /catalog/genres',               method: 'GET',    path: '/catalog/genres',               auth: true,  kind: 'etag' },
     { name: 'GET /me/loans',                     method: 'GET',    path: '/me/loans',                     auth: true,  kind: 'safeGet' },
     { name: 'GET /me/reservations',              method: 'GET',    path: '/me/reservations',              auth: true,  kind: 'safeGet' },
@@ -151,7 +152,7 @@ const ENDPOINTS = [
         body: (ctx) => ({ book_id: ctx.bookId }) /* adding twice must not duplicate; both 2xx */ },
     { name: 'DELETE /me/wishlist/{bookId}',      method: 'DELETE', path: '/me/wishlist/{bookId}',         auth: true,  kind: 'gone2' },
     { name: 'POST /messages',                    method: 'POST',   path: '/messages',                     auth: true,  kind: 'write2xx',
-        body: () => ({ messaggio: 'idem test message', oggetto: 'idem' }) },
+        body: () => ({ subject: 'idem', body: 'idem test message' }) },
     { name: 'GET /me/notifications',             method: 'GET',    path: '/me/notifications',             auth: true,  kind: 'safeGet' },
     { name: 'GET /me/push/prefs',                method: 'GET',    path: '/me/push/prefs',                auth: true,  kind: 'safeGet' },
     { name: 'PUT /me/push/prefs',                method: 'PUT',    path: '/me/push/prefs',                auth: true,  kind: 'write2xx',
@@ -297,7 +298,7 @@ test.describe('Mobile API — two calls per endpoint (idempotency + ETag/304)', 
         } catch { ctx.reservationId = 0; }
 
         // Pre-add the wishlist book so DELETE /me/wishlist/{bookId} has something to remove on call #1.
-        try { dbExec(`INSERT IGNORE INTO wishlist (utente_id, libro_id, created_at) VALUES (${ctx.userId}, ${ctx.bookId}, NOW())`); } catch {}
+        try { dbExec(`INSERT IGNORE INTO wishlist (utente_id, libro_id) VALUES (${ctx.userId}, ${ctx.bookId})`); } catch {}
     });
 
     test.afterAll(async () => {
