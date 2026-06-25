@@ -79,6 +79,9 @@ class RegisterViewModel(private val auth: AuthRepository) : ViewModel() {
     }
 
     fun submit() {
+        // Guard against duplicate submits while a request is in flight or already
+        // done — account creation is not idempotent.
+        if (_state.value.loading || _state.value.sent) return
         val s = _state.value
         val validation = when {
             s.nome.isBlank() || s.cognome.isBlank() || s.email.isBlank() ||

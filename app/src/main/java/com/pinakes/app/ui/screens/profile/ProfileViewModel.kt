@@ -113,7 +113,7 @@ class ProfileViewModel(
         }
         _state.update { it.copy(savingPassword = true, pwError = null, pwErrorRes = null) }
         viewModelScope.launch {
-            when (val res = profile.changePassword(s.pwCurrent, s.pwNew)) {
+            when (val res = profile.changePassword(s.pwCurrent, s.pwNew, s.pwConfirm)) {
                 is ApiResult.Success -> _state.update {
                     it.copy(savingPassword = false, changingPassword = false, snackbar = null, snackbarRes = R.string.profile_password_changed)
                 }

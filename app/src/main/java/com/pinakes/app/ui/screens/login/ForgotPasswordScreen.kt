@@ -70,11 +70,11 @@ class ForgotPasswordViewModel(private val auth: AuthRepository) : ViewModel() {
             when (val res = auth.forgotPassword(email)) {
                 is ApiResult.Success -> _state.update { it.copy(loading = false, sent = true) }
                 is ApiResult.Failure -> _state.update {
-                    it.copy(
-                        loading = false,
-                        error = res.message.ifBlank { null },
-                        errorRes = if (res.message.isBlank()) R.string.forgot_password_error else null,
-                    )
+                    // Never surface the backend's raw message here: a specific
+                    // "user not found" would enable account enumeration and break
+                    // the neutral "if that email is registered…" semantics. Always
+                    // show a generic error.
+                    it.copy(loading = false, error = null, errorRes = R.string.forgot_password_error)
                 }
             }
         }
