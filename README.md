@@ -1,8 +1,9 @@
 # Pinakes Android
 
-Native Android client for a [Pinakes](https://github.com/fabiodalez-dev) library
-instance. Browse the catalog, check real availability, borrow and reserve books,
-read ebooks and listen to audiobooks, and manage your loans, all from your phone.
+Native Android client for a [Pinakes](https://github.com/fabiodalez-dev/Pinakes)
+library instance. Browse the catalog, check real availability, borrow and reserve
+books, read ebooks and listen to audiobooks, and manage your loans, all from your
+phone.
 
 ![Platform](https://img.shields.io/badge/platform-Android-3DDC84)
 ![minSdk](https://img.shields.io/badge/minSdk-26-blue)
@@ -13,7 +14,9 @@ read ebooks and listen to audiobooks, and manage your loans, all from your phone
 
 ## ⬇ Download
 
-**[Get the debug APK](https://github.com/fabiodalez-dev/pinakes-android/releases/download/v1.0.0-debug/pinakes-debug.apk)** from release `v1.0.0-debug`, then `adb install -r pinakes-debug.apk` (or open it on your phone). Point it at your Pinakes instance URL on first launch.
+**[Get the latest debug APK](https://github.com/fabiodalez-dev/Pinakes-Android/releases/latest)** from the Releases page (`pinakes-android-v<version>-debug.apk`), then install it on your phone (enable *install from unknown sources*) or `adb install -r <file>.apk`. Point it at your Pinakes instance URL on first launch.
+
+> These are **debug-signed** builds for direct sideloading, not Play Store releases. Each release bumps `versionCode`, so a newer APK installs over the previous one in place.
 
 ## What it is
 
@@ -49,7 +52,7 @@ catalogue-only mode, push availability).
 | Area | What you get |
 |------|--------------|
 | **Onboarding** | Enter the instance URL, `/health` discovery card (library name, logo, HTTPS check, mobile-access check) |
-| **Login** | Email/password, mapped error messages, secure token storage |
+| **Sign in & sign up** | Email/password login, **in-app registration** and **password recovery**, mapped error messages, secure token storage |
 | **Home** | An "Available now" landing showing what you can borrow today |
 | **Catalog** | The full catalog with infinite scroll, search, and a filter sheet (availability, genre, author, publisher, language) |
 | **Book detail** | HTML-rendered description, tap-to-zoom cover, full metadata block (ISBN, year, pages …), genre chip |
@@ -108,6 +111,19 @@ On first launch the app asks for the instance URL.
 
 Cleartext HTTP is only permitted for loopback and the emulator alias (`localhost`,
 `127.0.0.1`, `10.0.2.2`); every other host must be HTTPS.
+
+### Enable the Mobile API on the server
+
+The app talks to Pinakes' bundled **Mobile API** plugin (`/api/v1`). A library
+admin enables it once:
+
+1. **Admin → Plugins → Mobile API** — activate the plugin. It is active by
+   default on a fresh install; after an upgrade it ships disabled.
+2. **Mobile API → Settings** — turn on **mobile app access** (otherwise login is
+   refused with *"mobile app access is disabled on this library"*).
+
+`/api/v1/health` and the interactive docs at `/api/v1/docs` are always reachable.
+See the [Mobile API documentation](https://fabiodalez-dev.github.io/Pinakes/#/admin/mobile-api).
 
 ## Internationalization
 
