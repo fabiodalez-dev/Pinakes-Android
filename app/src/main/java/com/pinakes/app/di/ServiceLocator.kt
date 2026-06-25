@@ -1,6 +1,7 @@
 package com.pinakes.app.di
 
 import android.content.Context
+import com.pinakes.app.data.local.AppDatabase
 import com.pinakes.app.data.network.NetworkModule
 import com.pinakes.app.data.repository.AuthRepository
 import com.pinakes.app.data.repository.CatalogRepository
@@ -30,8 +31,11 @@ class ServiceLocator(context: Context) {
 
     val network: NetworkModule = NetworkModule(session)
 
+    /** Local cache DB (offline catalog snapshot). */
+    val database: AppDatabase = AppDatabase.get(context.applicationContext)
+
     val authRepository: AuthRepository by lazy { AuthRepository(network, session, features) }
-    val catalogRepository: CatalogRepository by lazy { CatalogRepository(network) }
+    val catalogRepository: CatalogRepository by lazy { CatalogRepository(network, database.catalogDao()) }
     val libraryRepository: LibraryRepository by lazy { LibraryRepository(network) }
     val wishlistRepository: WishlistRepository by lazy { WishlistRepository(network) }
     val profileRepository: ProfileRepository by lazy { ProfileRepository(network) }

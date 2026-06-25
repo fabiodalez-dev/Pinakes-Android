@@ -6,6 +6,9 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    // kapt is already on the classpath via the Kotlin Gradle plugin — apply it
+    // without a version (declaring one conflicts: "already on the classpath").
+    id("org.jetbrains.kotlin.kapt")
 }
 
 // ---------------------------------------------------------------------------
@@ -160,8 +163,8 @@ android {
         applicationId = "com.pinakes.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.1.1"
+        versionCode = 4
+        versionName = "1.2.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -218,6 +221,13 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    testOptions {
+        unitTests {
+            // Robolectric needs the merged Android resources for in-JVM Room/DAO tests.
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 // Wire the generated res directory into every variant. addGeneratedSourceDirectory
@@ -267,4 +277,17 @@ dependencies {
     // Per-app language preferences (AppCompatDelegate.setApplicationLocales) +
     // autoStoreLocales backport for API < 33.
     implementation(libs.androidx.appcompat)
+
+    // Local cache: Room (offline catalog) + app-open refresh via the process lifecycle.
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    kapt(libs.androidx.room.compiler)
+    implementation(libs.androidx.lifecycle.process)
+
+    // Unit tests (JVM + Robolectric for Room DAO).
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.androidx.test.core)
 }
