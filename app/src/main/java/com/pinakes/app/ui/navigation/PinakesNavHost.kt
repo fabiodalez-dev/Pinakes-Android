@@ -19,7 +19,9 @@ import com.pinakes.app.data.store.AuthState
 import com.pinakes.app.ui.common.LocalServices
 import com.pinakes.app.ui.screens.contact.ContactScreen
 import com.pinakes.app.ui.screens.detail.BookDetailScreen
+import com.pinakes.app.ui.screens.login.ForgotPasswordScreen
 import com.pinakes.app.ui.screens.login.LoginScreen
+import com.pinakes.app.ui.screens.login.RegisterScreen
 import com.pinakes.app.ui.screens.notifications.NotificationsScreen
 import com.pinakes.app.ui.screens.onboarding.OnboardingScreen
 
@@ -67,7 +69,17 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
+                onRegister = { navController.navigate(Routes.REGISTER) },
+                onForgotPassword = { navController.navigate(Routes.FORGOT_PASSWORD) },
             )
+        }
+
+        composable(Routes.REGISTER) {
+            RegisterScreen(onBackToLogin = { navController.popBackStack(Routes.LOGIN, inclusive = false) })
+        }
+
+        composable(Routes.FORGOT_PASSWORD) {
+            ForgotPasswordScreen(onBackToLogin = { navController.popBackStack(Routes.LOGIN, inclusive = false) })
         }
 
         composable(Routes.MAIN_GRAPH) {

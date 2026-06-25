@@ -79,6 +79,7 @@ fun ProfileScreen(
         factory = ProfileViewModel.Factory(services.profileRepository, services.authRepository)
     )
     val state by vm.state.collectAsStateWithLifecycle()
+    val features by services.features.features.collectAsStateWithLifecycle()
     val snackbarHost = remember { SnackbarHostState() }
 
     val snackbarMessage = state.snackbar ?: state.snackbarRes?.let { stringResource(it) }
@@ -101,6 +102,8 @@ fun ProfileScreen(
                     onLogout = { vm.logout(onLoggedOut) },
                     onOpenNotifications = onOpenNotifications,
                     onOpenContact = onOpenContact,
+                    showNotifications = features.notifications,
+                    showContact = features.messages,
                 )
             }
         }
@@ -145,6 +148,8 @@ private fun ProfileContent(
     onLogout: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenContact: () -> Unit,
+    showNotifications: Boolean,
+    showContact: Boolean,
 ) {
     Column(
         Modifier
@@ -192,8 +197,12 @@ private fun ProfileContent(
         // Actions
         ActionRow(Icons.Outlined.Edit, stringResource(R.string.profile_action_edit), onClick = onEdit)
         ActionRow(Icons.Outlined.Lock, stringResource(R.string.profile_action_change_password), onClick = onChangePassword)
-        ActionRow(Icons.Outlined.Notifications, stringResource(R.string.profile_action_notifications), onClick = onOpenNotifications)
-        ActionRow(Icons.Outlined.ChatBubbleOutline, stringResource(R.string.profile_action_message_library), onClick = onOpenContact)
+        if (showNotifications) {
+            ActionRow(Icons.Outlined.Notifications, stringResource(R.string.profile_action_notifications), onClick = onOpenNotifications)
+        }
+        if (showContact) {
+            ActionRow(Icons.Outlined.ChatBubbleOutline, stringResource(R.string.profile_action_message_library), onClick = onOpenContact)
+        }
 
         Spacer(Modifier.height(Spacing.xl))
 

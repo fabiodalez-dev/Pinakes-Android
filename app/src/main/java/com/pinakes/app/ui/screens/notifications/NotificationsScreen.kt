@@ -55,6 +55,21 @@ import com.pinakes.app.ui.theme.Spacing
 @Composable
 fun NotificationsScreen(onNavigateUp: () -> Unit) {
     val services = LocalServices.current
+    val features by services.features.features.collectAsStateWithLifecycle()
+    if (!features.notifications) {
+        Scaffold(
+            topBar = { PinakesTopBar(title = stringResource(R.string.title_notifications), onNavigateUp = onNavigateUp) },
+        ) { padding ->
+            EmptyState(
+                title = stringResource(R.string.notifications_disabled_title),
+                subtitle = stringResource(R.string.notifications_disabled_subtitle),
+                icon = Icons.Outlined.NotificationsNone,
+                modifier = Modifier.padding(padding),
+            )
+        }
+        return
+    }
+
     val vm: NotificationsViewModel = viewModel(factory = NotificationsViewModel.Factory(services.notificationsRepository))
     val state by vm.state.collectAsStateWithLifecycle()
 

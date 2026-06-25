@@ -54,6 +54,7 @@ class OnboardingViewModel(private val auth: AuthRepository) : ViewModel() {
     /** Persist the instance so the app advances to login. Returns false if not connectable. */
     fun confirm(): Boolean {
         val d = _state.value.discovery ?: return false
+        if (!d.health.appAccessEnabled || !d.transportAllowed) return false
         auth.commitInstance(d)
         return true
     }

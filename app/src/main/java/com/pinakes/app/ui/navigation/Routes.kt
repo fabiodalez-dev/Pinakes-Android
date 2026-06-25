@@ -5,6 +5,8 @@ object Routes {
     // Top-level auth graph
     const val ONBOARDING = "onboarding"
     const val LOGIN = "login"
+    const val REGISTER = "register"
+    const val FORGOT_PASSWORD = "forgot-password"
 
     // Bottom-nav destinations
     const val SEARCH = "search"

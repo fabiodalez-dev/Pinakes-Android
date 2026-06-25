@@ -70,6 +70,7 @@ All FKs respect existing `utenti`/`libri` schema. Follow the soft-delete rule on
 - `GET /me/devices` — list devices. `DELETE /me/devices/{id}` — revoke a device.
 - `GET /catalog/search` — filters: `q`, `author`, `publisher`, `genre` (cascade id), `language`, `available` (bool); cursor pagination.
 - `GET /catalog/books/{id}` — full detail + personal history.
+- `GET /catalog/books/{id}/availability` — per-day availability calendar for the loan/reservation date picker.
 - `GET /catalog/genres` — genre cascade tree (for filter UI).
 - `GET /me/loans` — own loans (active + history). `GET /me/reservations`.
 - `POST /reservations` — request a loan/reservation (honor existing overlap/availability rules). `DELETE /reservations/{id}` — cancel own pending reservation.
