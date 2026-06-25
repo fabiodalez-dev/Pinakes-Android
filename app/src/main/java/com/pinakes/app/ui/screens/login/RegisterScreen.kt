@@ -83,7 +83,12 @@ class RegisterViewModel(private val auth: AuthRepository) : ViewModel() {
         val validation = when {
             s.nome.isBlank() || s.cognome.isBlank() || s.email.isBlank() ||
                 s.telefono.isBlank() || s.indirizzo.isBlank() -> R.string.register_error_required
-            s.password.length < 8 -> R.string.profile_password_too_short
+            // Mirror the backend (AuthController) rules so the user gets a clear
+            // client-side error instead of a server 422: 8-72 chars, plus at least
+            // one uppercase, one lowercase and one digit.
+            s.password.length < 8 || s.password.length > 72 -> R.string.register_error_password_length
+            !(s.password.any { it.isUpperCase() } && s.password.any { it.isLowerCase() } && s.password.any { it.isDigit() }) ->
+                R.string.register_error_password_weak
             s.password != s.passwordConfirm -> R.string.profile_passwords_mismatch
             !s.privacyAccepted -> R.string.register_error_privacy
             else -> null
@@ -237,7 +242,7 @@ fun RegisterScreen(onBackToLogin: () -> Unit) {
             PasswordField(
                 value = state.passwordConfirm,
                 onValueChange = vm::onPasswordConfirmChange,
-                label = stringResource(R.string.profile_confirm_new_password),
+                label = stringResource(R.string.register_confirm_password),
                 modifier = form,
                 imeAction = ImeAction.Done,
                 keyboardActions = KeyboardActions(onDone = { vm.submit() }),
