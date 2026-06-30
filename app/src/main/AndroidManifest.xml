@@ -15,6 +15,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Pinakes">
+
+        <!-- Sentry is initialized manually in PinakesApplication.onCreate() (so we
+             control DSN/environment/PII), so disable the SDK's auto-init ContentProvider. -->
+        <meta-data android:name="io.sentry.auto-init" android:value="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
