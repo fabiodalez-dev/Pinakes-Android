@@ -1,13 +1,14 @@
 package com.pinakes.app.ui.screens.login
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.repository.AuthRepository
 import com.pinakes.app.data.store.SessionStore
 import com.pinakes.app.R
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +26,8 @@ data class LoginUiState(
     val instanceOrigin: String = "",
 )
 
-class LoginViewModel(
+@HiltViewModel
+class LoginViewModel @Inject constructor(
     private val auth: AuthRepository,
     session: SessionStore,
 ) : ViewModel() {
@@ -85,14 +87,5 @@ class LoginViewModel(
         else ->
             if (failure.message.isNotBlank()) state.copy(error = failure.message, errorRes = null, errorArg = null)
             else state.copy(error = null, errorRes = R.string.login_error_generic, errorArg = null)
-    }
-
-    class Factory(
-        private val auth: AuthRepository,
-        private val session: SessionStore,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            LoginViewModel(auth, session) as T
     }
 }

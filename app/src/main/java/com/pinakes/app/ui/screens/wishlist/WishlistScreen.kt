@@ -23,10 +23,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pinakes.app.R
-import com.pinakes.app.ui.common.LocalServices
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.AvailabilityStatus
@@ -39,8 +38,7 @@ import com.pinakes.app.ui.theme.Spacing
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WishlistScreen(onBookClick: (Int) -> Unit) {
-    val services = LocalServices.current
-    val vm: WishlistViewModel = viewModel(factory = WishlistViewModel.Factory(services.wishlistRepository))
+    val vm: WishlistViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbarHost = remember { SnackbarHostState() }
 

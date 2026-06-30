@@ -1,7 +1,6 @@
 package com.pinakes.app.ui.screens.library
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.LoansData
 import com.pinakes.app.data.model.ReservationItem
@@ -10,6 +9,8 @@ import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.repository.LibraryRepository
 import com.pinakes.app.R
 import com.pinakes.app.ui.common.UiState
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +32,8 @@ data class LibraryUiState(
     val snackbarRes: Int? = null,
 )
 
-class LibraryViewModel(private val library: LibraryRepository) : ViewModel() {
+@HiltViewModel
+class LibraryViewModel @Inject constructor(private val library: LibraryRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(LibraryUiState())
     val state: StateFlow<LibraryUiState> = _state.asStateFlow()
@@ -99,9 +101,4 @@ class LibraryViewModel(private val library: LibraryRepository) : ViewModel() {
     }
 
     fun consumeSnackbar() = _state.update { it.copy(snackbar = null, snackbarRes = null) }
-
-    class Factory(private val library: LibraryRepository) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = LibraryViewModel(library) as T
-    }
 }

@@ -1,12 +1,13 @@
 package com.pinakes.app.ui.screens.onboarding
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.AuthRepository
 import com.pinakes.app.data.repository.HealthDiscovery
 import com.pinakes.app.R
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +26,8 @@ data class OnboardingUiState(
  * Onboarding: the user types an instance URL, we call `/health` and surface the library
  * identity + transport/app-access warnings before they continue.
  */
-class OnboardingViewModel(private val auth: AuthRepository) : ViewModel() {
+@HiltViewModel
+class OnboardingViewModel @Inject constructor(private val auth: AuthRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(OnboardingUiState())
     val state: StateFlow<OnboardingUiState> = _state.asStateFlow()
@@ -65,11 +67,5 @@ class OnboardingViewModel(private val auth: AuthRepository) : ViewModel() {
         else ->
             if (failure.message.isNotBlank()) state.copy(error = failure.message, errorRes = null)
             else state.copy(error = null, errorRes = R.string.onboarding_error_generic)
-    }
-
-    class Factory(private val auth: AuthRepository) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            OnboardingViewModel(auth) as T
     }
 }

@@ -30,7 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pinakes.app.R
-import com.pinakes.app.ui.common.LocalServices
+import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.components.BookCard
 import com.pinakes.app.ui.components.BookCardSkeleton
 import com.pinakes.app.ui.components.EmptyState
@@ -48,10 +48,10 @@ fun HomeScreen(
     onBookClick: (Int) -> Unit,
     onBrowseCatalog: () -> Unit,
 ) {
-    // Feature flags still come from the ServiceLocator (coexistence); the ViewModel is now
+    // Feature flags come from the Hilt-provided AppViewModel; the screen ViewModel is also
     // created by Hilt via hiltViewModel() instead of a hand-written ViewModelProvider.Factory.
-    val services = LocalServices.current
-    val features by services.features.features.collectAsStateWithLifecycle()
+    val app: AppViewModel = hiltViewModel()
+    val features by app.features.collectAsStateWithLifecycle()
     val vm: HomeViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val catalogueMode = features.catalogueMode
