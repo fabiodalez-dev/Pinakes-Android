@@ -27,10 +27,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pinakes.app.R
-import com.pinakes.app.ui.common.LocalServices
+import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.components.PasswordField
 import com.pinakes.app.ui.components.PinakesTextButton
 import com.pinakes.app.ui.components.PinakesTextField
@@ -49,12 +49,10 @@ fun LoginScreen(
     onRegister: () -> Unit,
     onForgotPassword: () -> Unit,
 ) {
-    val services = LocalServices.current
-    val vm: LoginViewModel = viewModel(
-        factory = LoginViewModel.Factory(services.authRepository, services.session)
-    )
+    val app: AppViewModel = hiltViewModel()
+    val vm: LoginViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
-    val features by services.features.features.collectAsStateWithLifecycle()
+    val features by app.features.collectAsStateWithLifecycle()
 
     val errorMessage = state.error ?: state.errorRes?.let { res ->
         if (state.errorArg != null) stringResource(res, state.errorArg!!) else stringResource(res)

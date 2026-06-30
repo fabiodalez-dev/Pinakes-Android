@@ -1,7 +1,6 @@
 package com.pinakes.app.ui.screens.profile
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.DeviceItem
 import com.pinakes.app.data.model.UserProfile
@@ -11,6 +10,8 @@ import com.pinakes.app.data.repository.AuthRepository
 import com.pinakes.app.data.repository.ProfileRepository
 import com.pinakes.app.R
 import com.pinakes.app.ui.common.UiState
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,7 +40,8 @@ data class ProfileUiState(
     val snackbarRes: Int? = null,
 )
 
-class ProfileViewModel(
+@HiltViewModel
+class ProfileViewModel @Inject constructor(
     private val profile: ProfileRepository,
     private val auth: AuthRepository,
 ) : ViewModel() {
@@ -150,12 +152,4 @@ class ProfileViewModel(
     }
 
     fun consumeSnackbar() = _state.update { it.copy(snackbar = null, snackbarRes = null) }
-
-    class Factory(
-        private val profile: ProfileRepository,
-        private val auth: AuthRepository,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = ProfileViewModel(profile, auth) as T
-    }
 }

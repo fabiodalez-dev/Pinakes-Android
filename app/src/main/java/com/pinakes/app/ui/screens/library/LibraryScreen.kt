@@ -28,13 +28,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pinakes.app.R
 import com.pinakes.app.data.model.LoanItem
 import com.pinakes.app.data.model.ReservationItem
 import com.pinakes.app.ui.common.DateFormat
-import com.pinakes.app.ui.common.LocalServices
 import com.pinakes.app.ui.common.StatusMapping
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
@@ -48,8 +47,7 @@ import com.pinakes.app.ui.theme.Spacing
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(onBookClick: (Int) -> Unit) {
-    val services = LocalServices.current
-    val vm: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory(services.libraryRepository))
+    val vm: LibraryViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var confirmCancelId by remember { mutableStateOf<Int?>(null) }

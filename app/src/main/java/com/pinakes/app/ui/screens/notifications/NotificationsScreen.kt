@@ -37,12 +37,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pinakes.app.R
 import com.pinakes.app.data.model.NotificationItem
+import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.common.DateFormat
-import com.pinakes.app.ui.common.LocalServices
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.EmptyState
@@ -54,8 +54,8 @@ import com.pinakes.app.ui.theme.Spacing
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(onNavigateUp: () -> Unit) {
-    val services = LocalServices.current
-    val features by services.features.features.collectAsStateWithLifecycle()
+    val app: AppViewModel = hiltViewModel()
+    val features by app.features.collectAsStateWithLifecycle()
     if (!features.notifications) {
         Scaffold(
             topBar = { PinakesTopBar(title = stringResource(R.string.title_notifications), onNavigateUp = onNavigateUp) },
@@ -70,7 +70,7 @@ fun NotificationsScreen(onNavigateUp: () -> Unit) {
         return
     }
 
-    val vm: NotificationsViewModel = viewModel(factory = NotificationsViewModel.Factory(services.notificationsRepository))
+    val vm: NotificationsViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
 
     Scaffold(

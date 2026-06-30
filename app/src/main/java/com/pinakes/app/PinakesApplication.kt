@@ -8,18 +8,21 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import com.pinakes.app.data.sync.CatalogSyncWorker
-import com.pinakes.app.di.ServiceLocator
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.android.HiltAndroidApp
 import io.sentry.android.core.SentryAndroid
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-/** Application entry point; owns the single [ServiceLocator] and the Coil image loader. */
+/**
+ * Application entry point (`@HiltAndroidApp`) plus the Coil image loader. All dependencies
+ * live in Hilt ([com.pinakes.app.di.AppModule]); code that can't be constructor-injected
+ * (this Application and the WorkManager worker) reaches them through a Hilt EntryPoint.
+ */
+@HiltAndroidApp
 class PinakesApplication : Application(), ImageLoaderFactory {
-
-    lateinit var services: ServiceLocator
-        private set
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -39,14 +42,16 @@ class PinakesApplication : Application(), ImageLoaderFactory {
             options.tracesSampleRate = 0.0     // crash reporting only — no performance tracing
         }
 
-        services = ServiceLocator(this)
-
         // Refresh the cached catalog every time the app comes to the foreground, so the
         // offline catalog stays current without a network round-trip on every screen.
+        // Reaches the Hilt singletons via the worker's EntryPoint (same session + repository).
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) {
-                if (!services.session.isLoggedIn()) return
-                appScope.launch { services.catalogRepository.refreshCatalog() }
+                val deps = EntryPointAccessors.fromApplication(
+                    this@PinakesApplication, CatalogSyncWorker.Deps::class.java,
+                )
+                if (!deps.session().isLoggedIn()) return
+                appScope.launch { deps.catalogRepository().refreshCatalog() }
             }
         })
 

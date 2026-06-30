@@ -1,13 +1,14 @@
 package com.pinakes.app.ui.screens.notifications
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.NotificationItem
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.NotificationsRepository
 import com.pinakes.app.R
 import com.pinakes.app.ui.common.UiState
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +20,8 @@ data class NotificationsUiState(
     val refreshing: Boolean = false,
 )
 
-class NotificationsViewModel(private val repo: NotificationsRepository) : ViewModel() {
+@HiltViewModel
+class NotificationsViewModel @Inject constructor(private val repo: NotificationsRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(NotificationsUiState())
     val state: StateFlow<NotificationsUiState> = _state.asStateFlow()
@@ -45,10 +47,5 @@ class NotificationsViewModel(private val repo: NotificationsRepository) : ViewMo
                 }
             }
         }
-    }
-
-    class Factory(private val repo: NotificationsRepository) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = NotificationsViewModel(repo) as T
     }
 }

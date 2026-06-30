@@ -50,13 +50,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pinakes.app.R
 import com.pinakes.app.data.model.DeviceItem
 import com.pinakes.app.data.model.UserProfile
+import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.common.DateFormat
-import com.pinakes.app.ui.common.LocalServices
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.ErrorState
@@ -74,12 +74,10 @@ fun ProfileScreen(
     onOpenNotifications: () -> Unit,
     onOpenContact: () -> Unit,
 ) {
-    val services = LocalServices.current
-    val vm: ProfileViewModel = viewModel(
-        factory = ProfileViewModel.Factory(services.profileRepository, services.authRepository)
-    )
+    val app: AppViewModel = hiltViewModel()
+    val vm: ProfileViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
-    val features by services.features.features.collectAsStateWithLifecycle()
+    val features by app.features.collectAsStateWithLifecycle()
     val snackbarHost = remember { SnackbarHostState() }
 
     val snackbarMessage = state.snackbar ?: state.snackbarRes?.let { stringResource(it) }
@@ -324,8 +322,8 @@ private fun LanguageSection() {
  */
 @Composable
 private fun ThemeSection() {
-    val services = LocalServices.current
-    val mode by services.theme.mode.collectAsStateWithLifecycle()
+    val app: AppViewModel = hiltViewModel()
+    val mode by app.themeMode.collectAsStateWithLifecycle()
     var dialogOpen by remember { mutableStateOf(false) }
 
     val options = listOf(
@@ -366,7 +364,7 @@ private fun ThemeSection() {
                             Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    services.theme.setMode(value)
+                                    app.setThemeMode(value)
                                     dialogOpen = false
                                 }
                                 .padding(vertical = Spacing.sm),

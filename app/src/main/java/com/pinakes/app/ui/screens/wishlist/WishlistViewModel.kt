@@ -1,13 +1,14 @@
 package com.pinakes.app.ui.screens.wishlist
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.WishlistItem
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.WishlistRepository
 import com.pinakes.app.R
 import com.pinakes.app.ui.common.UiState
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +23,8 @@ data class WishlistUiState(
     val snackbarRes: Int? = null,
 )
 
-class WishlistViewModel(private val wishlist: WishlistRepository) : ViewModel() {
+@HiltViewModel
+class WishlistViewModel @Inject constructor(private val wishlist: WishlistRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(WishlistUiState())
     val state: StateFlow<WishlistUiState> = _state.asStateFlow()
@@ -75,9 +77,4 @@ class WishlistViewModel(private val wishlist: WishlistRepository) : ViewModel() 
     }
 
     fun consumeSnackbar() = _state.update { it.copy(snackbar = null, snackbarRes = null) }
-
-    class Factory(private val wishlist: WishlistRepository) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = WishlistViewModel(wishlist) as T
-    }
 }

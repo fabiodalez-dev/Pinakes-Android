@@ -34,11 +34,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pinakes.app.R
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.SubcomposeAsyncImage
 import com.pinakes.app.data.repository.HealthDiscovery
-import com.pinakes.app.ui.common.LocalServices
 import com.pinakes.app.ui.components.PrimaryButton
 import com.pinakes.app.ui.components.UrlField
 import com.pinakes.app.ui.theme.AvailableOnContainerDark
@@ -51,8 +50,7 @@ import com.pinakes.app.ui.theme.Spacing
  */
 @Composable
 fun OnboardingScreen(onContinue: () -> Unit) {
-    val services = LocalServices.current
-    val vm: OnboardingViewModel = viewModel(factory = OnboardingViewModel.Factory(services.authRepository))
+    val vm: OnboardingViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
 
     Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
