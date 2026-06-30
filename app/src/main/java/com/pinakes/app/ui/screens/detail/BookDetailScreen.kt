@@ -86,7 +86,6 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookDetailScreen(
-    bookId: Int,
     onNavigateUp: () -> Unit,
 ) {
     val app: AppViewModel = hiltViewModel()

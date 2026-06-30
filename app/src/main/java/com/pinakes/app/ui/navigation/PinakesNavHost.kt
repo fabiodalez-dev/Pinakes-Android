@@ -108,9 +108,8 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
             arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.IntType }),
             enterTransition = slideIn,
             popExitTransition = slideOut,
-        ) { backStack ->
-            val bookId = backStack.arguments?.getInt(Routes.ARG_BOOK_ID) ?: 0
-            BookDetailScreen(bookId = bookId, onNavigateUp = { navController.popBackStack() })
+        ) {
+            BookDetailScreen(onNavigateUp = { navController.popBackStack() })
         }
 
         composable(
