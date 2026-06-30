@@ -184,13 +184,14 @@ android {
 
     buildTypes {
         release {
-            // R8 shrinking is OFF by default so the verified runtime behaviour is
-            // preserved. Complete keep rules for Retrofit/OkHttp/kotlinx.serialization/
-            // Coil already live in proguard-rules.pro, so this can be flipped to `true`
-            // (add isShrinkResources = true) once a minified release has been smoke-
-            // tested on a device/emulator. Not enabled here because this checkout has
-            // no Android SDK to verify against.
-            isMinifyEnabled = false
+            // R8 code shrinking + resource shrinking ON. Complete keep rules for
+            // Retrofit/OkHttp/kotlinx.serialization/Coil/Room live in proguard-rules.pro,
+            // and `assembleRelease` is verified to run R8 cleanly in CI. NOTE: a minified
+            // release should still get one device/emulator smoke-test (login → catalog →
+            // loan request) before shipping, since reflection-based runtime breakage can
+            // only surface at runtime, not at build time.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
