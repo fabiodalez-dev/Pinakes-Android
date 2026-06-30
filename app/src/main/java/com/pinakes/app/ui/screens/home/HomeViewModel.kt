@@ -1,12 +1,13 @@
 package com.pinakes.app.ui.screens.home
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.BookSummary
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.CatalogRepository
 import com.pinakes.app.data.store.SessionStore
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +25,8 @@ data class HomeUiState(
     val isEmpty: Boolean get() = !loading && error == null && available.isEmpty()
 }
 
-class HomeViewModel(
+@HiltViewModel
+class HomeViewModel @Inject constructor(
     private val catalog: CatalogRepository,
     private val session: SessionStore,
 ) : ViewModel() {
@@ -76,13 +78,4 @@ class HomeViewModel(
     }
 
     fun retry() = refresh()
-
-    class Factory(
-        private val catalog: CatalogRepository,
-        private val session: SessionStore,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            HomeViewModel(catalog, session) as T
-    }
 }

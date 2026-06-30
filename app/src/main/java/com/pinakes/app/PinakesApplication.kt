@@ -9,13 +9,21 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import com.pinakes.app.data.sync.CatalogSyncWorker
 import com.pinakes.app.di.ServiceLocator
+import dagger.hilt.android.HiltAndroidApp
 import io.sentry.android.core.SentryAndroid
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-/** Application entry point; owns the single [ServiceLocator] and the Coil image loader. */
+/**
+ * Application entry point; owns the single [ServiceLocator] and the Coil image loader.
+ *
+ * `@HiltAndroidApp` enables Hilt. During the incremental migration the ServiceLocator is
+ * kept and [com.pinakes.app.di.AppModule] bridges Hilt to its singletons, so migrated and
+ * not-yet-migrated screens share the same instances.
+ */
+@HiltAndroidApp
 class PinakesApplication : Application(), ImageLoaderFactory {
 
     lateinit var services: ServiceLocator

@@ -10,6 +10,7 @@ plugins {
     // without a version (declaring one conflicts: "already on the classpath").
     id("org.jetbrains.kotlin.kapt")
     alias(libs.plugins.sentry)
+    alias(libs.plugins.hilt)
 }
 
 // ---------------------------------------------------------------------------
@@ -308,6 +309,11 @@ dependencies {
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.work.runtime.ktx)
+
+    // Hilt — dependency injection (trial: Home slice migrated, ServiceLocator bridges the rest).
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
 
     // Unit tests (JVM + Robolectric for Room DAO).
     testImplementation(libs.junit)

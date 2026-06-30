@@ -12,9 +12,12 @@ import com.pinakes.app.ui.common.LocalServices
 import kotlinx.coroutines.launch
 import com.pinakes.app.ui.navigation.PinakesNavHost
 import com.pinakes.app.ui.theme.PinakesTheme
+import dagger.hilt.android.AndroidEntryPoint
 
 // AppCompatActivity is required for per-app locales (AppCompatDelegate
 // .setApplicationLocales) to be applied to this Activity's configuration.
+// @AndroidEntryPoint lets Composables hosted here obtain Hilt ViewModels via hiltViewModel().
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
