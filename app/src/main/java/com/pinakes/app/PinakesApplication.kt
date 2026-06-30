@@ -7,6 +7,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
+import com.pinakes.app.data.sync.CatalogSyncWorker
 import com.pinakes.app.di.ServiceLocator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +34,10 @@ class PinakesApplication : Application(), ImageLoaderFactory {
                 appScope.launch { services.catalogRepository.refreshCatalog() }
             }
         })
+
+        // Keep the offline snapshot fresh even when the app isn't opened (every 6h, on a
+        // connected network). Idempotent (KEEP) — safe to call on every process start.
+        CatalogSyncWorker.schedule(this)
     }
 
     /**

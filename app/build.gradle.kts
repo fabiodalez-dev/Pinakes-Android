@@ -284,6 +284,7 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.lifecycle.process)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Unit tests (JVM + Robolectric for Room DAO).
     testImplementation(libs.junit)
