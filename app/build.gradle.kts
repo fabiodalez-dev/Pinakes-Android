@@ -9,6 +9,7 @@ plugins {
     // kapt is already on the classpath via the Kotlin Gradle plugin — apply it
     // without a version (declaring one conflicts: "already on the classpath").
     id("org.jetbrains.kotlin.kapt")
+    alias(libs.plugins.sentry)
 }
 
 // ---------------------------------------------------------------------------
@@ -241,6 +242,28 @@ androidComponents {
             GenerateI18nResTask::outputDir,
         )
     }
+}
+
+// ---------------------------------------------------------------------------
+// Sentry — crash reporting + ProGuard/R8 mapping upload (so release stack traces
+// deobfuscate). The DSN is a public ingest endpoint and lives in source; the AUTH
+// TOKEN (used only to UPLOAD mappings) is a secret and is read from the env or a
+// git-ignored sentry.properties — never committed. Mapping upload is skipped (with
+// a warning, not a failure) when no auth token is present, so CI/contributor builds
+// without the secret still succeed.
+// ---------------------------------------------------------------------------
+sentry {
+    org.set("fabiodalez")
+    projectName.set("android")
+    authToken.set(System.getenv("SENTRY_AUTH_TOKEN"))
+    // Upload R8 mapping files so crash stack traces are readable in Sentry.
+    includeProguardMapping.set(true)
+    autoUploadProguardMapping.set(!System.getenv("SENTRY_AUTH_TOKEN").isNullOrBlank())
+    // We call SentryAndroid.init() ourselves in PinakesApplication, so let the SDK's
+    // auto-install add the dependency but keep our explicit init in control.
+    autoInstallation { enabled.set(true) }
+    // Don't phone home build telemetry from this repo's builds.
+    telemetry.set(false)
 }
 
 dependencies {

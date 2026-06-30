@@ -9,6 +9,7 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import com.pinakes.app.data.sync.CatalogSyncWorker
 import com.pinakes.app.di.ServiceLocator
+import io.sentry.android.core.SentryAndroid
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,6 +25,20 @@ class PinakesApplication : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Crash reporting (Sentry — vendor-neutral, not a Google service). Init as
+        // early as possible so failures during the rest of onCreate() are captured.
+        // The DSN is a public ingest endpoint; no PII or perf tracing is sent.
+        SentryAndroid.init(this) { options ->
+            options.dsn =
+                "https://a51e7537271cdf25767251d18d2e4ffa@o4511654498926592.ingest.de.sentry.io/4511654504300624"
+            options.environment = if (BuildConfig.DEBUG) "debug" else "production"
+            options.release = "${BuildConfig.APPLICATION_ID}@${BuildConfig.VERSION_NAME}+${BuildConfig.VERSION_CODE}"
+            options.isDebug = false
+            options.isSendDefaultPii = false   // no IP / user data attached by default
+            options.tracesSampleRate = 0.0     // crash reporting only — no performance tracing
+        }
+
         services = ServiceLocator(this)
 
         // Refresh the cached catalog every time the app comes to the foreground, so the
