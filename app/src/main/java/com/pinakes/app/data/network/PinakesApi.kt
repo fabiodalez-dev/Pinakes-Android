@@ -2,6 +2,7 @@ package com.pinakes.app.data.network
 
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
+import com.pinakes.app.data.model.BookReviews
 import com.pinakes.app.data.model.BookSummary
 import com.pinakes.app.data.model.ChangePasswordRequest
 import com.pinakes.app.data.model.DeviceItem
@@ -14,7 +15,10 @@ import com.pinakes.app.data.model.LoansData
 import com.pinakes.app.data.model.LoginRequest
 import com.pinakes.app.data.model.LoginResponse
 import com.pinakes.app.data.model.MessageRequest
+import com.pinakes.app.data.model.MyReview
 import com.pinakes.app.data.model.NotificationItem
+import com.pinakes.app.data.model.Review
+import com.pinakes.app.data.model.ReviewRequest
 import com.pinakes.app.data.model.PushPrefs
 import com.pinakes.app.data.model.PushSubscribeRequest
 import com.pinakes.app.data.model.RegisterRequest
@@ -106,6 +110,33 @@ interface PinakesApi {
 
     @GET("catalog/genres")
     suspend fun genres(): Envelope<List<GenreNode>>
+
+    // ---- Reviews ----
+    /** Aggregate rating + the user's own review + a page of other users' reviews for a book. */
+    @GET("catalog/books/{id}/reviews")
+    suspend fun bookReviews(
+        @Path("id") id: Int,
+        @Query("cursor") cursor: String? = null,
+        @Query("limit") limit: Int? = null, // 1..50, default 20
+    ): Envelope<BookReviews>
+
+    /** Upsert the current user's review for a book (create or edit). Requires a past loan. */
+    @PUT("catalog/books/{id}/reviews")
+    suspend fun submitReview(
+        @Path("id") id: Int,
+        @Body body: ReviewRequest,
+    ): Envelope<Review>
+
+    /** Delete the current user's review for a book (idempotent). */
+    @DELETE("catalog/books/{id}/reviews")
+    suspend fun deleteReview(@Path("id") id: Int): Envelope<Unit>
+
+    /** The current user's own reviews across all books (for the "My reviews" page). */
+    @GET("me/reviews")
+    suspend fun myReviews(
+        @Query("cursor") cursor: String? = null,
+        @Query("limit") limit: Int? = null, // 1..50, default 20
+    ): Envelope<List<MyReview>>
 
     // ---- Loans / reservations ----
     @GET("me/loans")

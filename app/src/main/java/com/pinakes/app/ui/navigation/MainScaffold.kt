@@ -38,6 +38,7 @@ fun MainScaffold(
     onOpenBook: (Int) -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenContact: () -> Unit,
+    onOpenMyReviews: () -> Unit,
 ) {
     val app: AppViewModel = hiltViewModel()
     val features by app.features.collectAsStateWithLifecycle()
@@ -93,6 +94,7 @@ fun MainScaffold(
                     onLoggedOut = onLoggedOut,
                     onOpenNotifications = onOpenNotifications,
                     onOpenContact = onOpenContact,
+                    onOpenMyReviews = onOpenMyReviews,
                 )
             }
         }

@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pinakes.app.R
 import com.pinakes.app.ui.theme.Spacing
@@ -68,19 +69,22 @@ fun MetadataRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = Spacing.sm),
+            .padding(vertical = Spacing.md),
         horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
         verticalAlignment = Alignment.Top,
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(116.dp),
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            // High-contrast value: the primary onSurface colour + a slightly
+            // larger, medium-weight body so metadata reads clearly at a glance.
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )

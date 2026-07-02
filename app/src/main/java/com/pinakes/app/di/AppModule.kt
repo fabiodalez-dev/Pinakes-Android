@@ -10,6 +10,7 @@ import com.pinakes.app.data.repository.LibraryRepository
 import com.pinakes.app.data.repository.MessagesRepository
 import com.pinakes.app.data.repository.NotificationsRepository
 import com.pinakes.app.data.repository.ProfileRepository
+import com.pinakes.app.data.repository.ReviewsRepository
 import com.pinakes.app.data.repository.WishlistRepository
 import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.store.SessionStore
@@ -60,6 +61,9 @@ object AppModule {
 
     @Provides @Singleton
     fun wishlistRepository(network: NetworkModule): WishlistRepository = WishlistRepository(network)
+
+    @Provides @Singleton
+    fun reviewsRepository(network: NetworkModule): ReviewsRepository = ReviewsRepository(network)
 
     @Provides @Singleton
     fun profileRepository(network: NetworkModule): ProfileRepository = ProfileRepository(network)

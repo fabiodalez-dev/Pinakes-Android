@@ -51,6 +51,7 @@ stock). The app stores the instance URL + a long-lived per-device token.
 - `mobile_push_subscriptions` — `id`, `user_id`, `token_id` (FK → mobile_app_tokens, cascade), `provider` (`unifiedpush`|`fcm`), `endpoint`/`registration_id`, `public_key`/`auth` (for UnifiedPush WebPush), `created_at`, `last_ok_at`, `failure_count`.
 - `mobile_push_prefs` — `user_id` (PK), `loan_due` bool, `loan_overdue` bool, `reservation_ready` bool, `new_message` bool, `book_available` bool, `quiet_start` time NULL, `quiet_end` time NULL.
 - `mobile_availability_watchers` — `id`, `user_id`, `libro_id`, `created_at` — who to notify when a title is loanable again (from wishlist/reservation intent).
+- `recensioni` (existing web reviews table, reused) — `id`, `libro_id` (FK), `utente_id` (FK), `stelle` (1..5, CHECK), `titolo` NULL, `descrizione` (text) NULL, `stato` enum(`pendente`|`approvata`|`rifiutata`), `approved_by` NULL, `approved_at` NULL, `created_at`, `updated_at`. One review per (user, book) — unique `unique_user_book_review (libro_id, utente_id)`. The API only lets a user create/edit/delete **their own** review and only for a title they have borrowed (a past/present loan row → else `403 not_eligible`). **Moderation is always on**: a new or edited review is set to `stato='pendente'` (returned to the author with `meta.pending=true`); aggregates (average/count/distribution) and the `items` list of other users' reviews count **approved only**, while the caller's own review (`mine`) is always returned regardless of `stato`. Follow the soft-delete rule on the joined `libri`.
 
 All FKs respect existing `utenti`/`libri` schema. Follow the soft-delete rule on every `libri` query.
 
@@ -71,6 +72,10 @@ All FKs respect existing `utenti`/`libri` schema. Follow the soft-delete rule on
 - `GET /catalog/search` — filters: `q`, `author`, `publisher`, `genre` (cascade id), `language`, `available` (bool); cursor pagination.
 - `GET /catalog/books/{id}` — full detail + personal history.
 - `GET /catalog/books/{id}/availability` — per-day availability calendar for the loan/reservation date picker.
+- `GET /catalog/books/{id}/reviews` — aggregate rating (`average`, `count`, `distribution`) + the user's own review (`mine`) + `can_review` (has the user borrowed the title) + cursor-paginated `items` (other users' reviews). Same feature as the web review view.
+- `PUT /catalog/books/{id}/reviews` — upsert the current user's review `{ rating: 1..5, text? }`. Allowed only if the user has borrowed the title (else `403 forbidden`). Idempotent (creates or edits).
+- `DELETE /catalog/books/{id}/reviews` — delete the current user's review (idempotent).
+- `GET /me/reviews` — the user's own reviews across all titles (`book_id`, `book_title`, `book_author`, `cover_url`, `rating`, `text`, timestamps); cursor pagination.
 - `GET /catalog/genres` — genre cascade tree (for filter UI).
 - `GET /me/loans` — own loans (active + history). `GET /me/reservations`.
 - `POST /reservations` — request a loan/reservation (honor existing overlap/availability rules). `DELETE /reservations/{id}` — cancel own pending reservation.
