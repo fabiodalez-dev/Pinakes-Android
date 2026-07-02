@@ -67,6 +67,142 @@
             }
         },
         "schemas": {
+            "Review": {
+                "type": "object",
+                "description": "A single book review (star rating + optional text).",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "rating": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5
+                    },
+                    "text": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "user_name": {
+                        "type": "string",
+                        "description": "Display name of the reviewer."
+                    },
+                    "is_mine": {
+                        "type": "boolean",
+                        "description": "True when this review belongs to the requesting user."
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                }
+            },
+            "ReviewRequest": {
+                "type": "object",
+                "description": "Body to create or update the current user's review.",
+                "required": [
+                    "rating"
+                ],
+                "properties": {
+                    "rating": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5
+                    },
+                    "text": {
+                        "type": "string",
+                        "maxLength": 2000,
+                        "nullable": true
+                    }
+                }
+            },
+            "BookReviews": {
+                "type": "object",
+                "description": "Aggregate rating + the user's own review + a page of other users' reviews.",
+                "properties": {
+                    "average": {
+                        "type": "number",
+                        "format": "float",
+                        "description": "Mean rating across all reviews (0 when none)."
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "distribution": {
+                        "type": "object",
+                        "description": "Star -> number of reviews, keys \"1\"..\"5\".",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "can_review": {
+                        "type": "boolean",
+                        "description": "True when the user is eligible to review (has borrowed the title)."
+                    },
+                    "mine": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Review"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "The user's own review, when present."
+                    },
+                    "items": {
+                        "type": "array",
+                        "description": "Other users' reviews (excludes the user's own).",
+                        "items": {
+                            "$ref": "#/components/schemas/Review"
+                        }
+                    }
+                }
+            },
+            "MyReview": {
+                "type": "object",
+                "description": "One of the current user's reviews, with book info for rendering + navigation.",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "book_id": {
+                        "type": "integer"
+                    },
+                    "book_title": {
+                        "type": "string"
+                    },
+                    "book_author": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "cover_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "rating": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5
+                    },
+                    "text": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                }
+            },
             "Envelope": {
                 "type": "object",
                 "description": "Standard API envelope. Every response is one of these two shapes.",
@@ -970,6 +1106,10 @@
                             },
                             "push": {
                                 "type": "boolean"
+                            },
+                            "reviews": {
+                                "type": "boolean",
+                                "description": "Star + text book reviews enabled for this instance."
                             }
                         }
                     },
@@ -1833,6 +1973,256 @@
                     },
                     "429": {
                         "$ref": "#/components/responses/TooManyRequests"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                }
+            }
+        },
+        "/catalog/books/{id}/reviews": {
+            "get": {
+                "tags": [
+                    "catalog"
+                ],
+                "summary": "Book reviews",
+                "description": "Aggregate rating (average, count, star distribution) + the requesting user's own review (`mine`, if any) + `can_review` (true when the user has borrowed the title) + cursor-paginated `items` (other users' reviews, excluding the user's own). Soft-deleted books return 404.",
+                "operationId": "getCatalogBookReviews",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Book ID"
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Opaque pagination cursor for the other-users list."
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50,
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reviews for the book.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        }
+                                    ],
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/BookReviews"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "catalog"
+                ],
+                "summary": "Create or update the user's review",
+                "description": "Upsert the current user's review for the book. Allowed only when the user has borrowed the title (a loan row exists); otherwise 403. Idempotent — a repeat with the same body returns the same stored review.",
+                "operationId": "putCatalogBookReview",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Book ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReviewRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The stored review.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        }
+                                    ],
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Review"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/UnprocessableEntity"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "catalog"
+                ],
+                "summary": "Delete the user's review",
+                "description": "Delete the current user's review for the book. Idempotent — deleting a review that no longer exists still returns success.",
+                "operationId": "deleteCatalogBookReview",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Book ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Review deleted (or already absent)."
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                }
+            }
+        },
+        "/me/reviews": {
+            "get": {
+                "tags": [
+                    "profile"
+                ],
+                "summary": "The user's own reviews",
+                "description": "All reviews written by the current user, across every title, with enough book info to render a row and navigate to the book. Cursor-paginated.",
+                "operationId": "getMeReviews",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50,
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The user's reviews.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        }
+                                    ],
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/MyReview"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
                     },
                     "500": {
                         "$ref": "#/components/responses/InternalError"

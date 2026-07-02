@@ -30,6 +30,7 @@ data class InstanceFeatures(
     val messages: Boolean = true,
     val notifications: Boolean = true,
     val push: Boolean = true,
+    val reviews: Boolean = true,
     val registrationEnabled: Boolean = false,
 ) {
     /** Library tab (loans + reservations) is shown only when at least one of them is enabled. */
@@ -39,6 +40,9 @@ data class InstanceFeatures(
     val canBorrow: Boolean get() = loans || reservations
 
     val showWishlist: Boolean get() = wishlist
+
+    /** Book reviews (read + write) surfaced on book detail and the "My reviews" page. */
+    val showReviews: Boolean get() = reviews
 
     companion object {
         /** Safe default before/without `/health`: app features enabled, registration hidden. */
@@ -76,6 +80,7 @@ class FeatureStore(context: Context) {
             messages = f.messages,
             notifications = f.notifications,
             push = f.push,
+            reviews = f.reviews,
             registrationEnabled = health.registrationEnabled,
         )
         prefs.edit()
@@ -88,6 +93,7 @@ class FeatureStore(context: Context) {
             .putBoolean(KEY_MESSAGES, value.messages)
             .putBoolean(KEY_NOTIFICATIONS, value.notifications)
             .putBoolean(KEY_PUSH, value.push)
+            .putBoolean(KEY_REVIEWS, value.reviews)
             .putBoolean(KEY_REGISTRATION_ENABLED, value.registrationEnabled)
             .apply()
         _features.value = value
@@ -113,6 +119,7 @@ class FeatureStore(context: Context) {
             messages = prefs.getBoolean(KEY_MESSAGES, true),
             notifications = prefs.getBoolean(KEY_NOTIFICATIONS, true),
             push = prefs.getBoolean(KEY_PUSH, true),
+            reviews = prefs.getBoolean(KEY_REVIEWS, true),
             registrationEnabled = prefs.getBoolean(KEY_REGISTRATION_ENABLED, false),
         )
     }
@@ -128,6 +135,7 @@ class FeatureStore(context: Context) {
         private const val KEY_MESSAGES = "f_messages"
         private const val KEY_NOTIFICATIONS = "f_notifications"
         private const val KEY_PUSH = "f_push"
+        private const val KEY_REVIEWS = "f_reviews"
         private const val KEY_REGISTRATION_ENABLED = "registration_enabled"
     }
 }

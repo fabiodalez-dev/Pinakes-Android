@@ -51,6 +51,8 @@ data class HealthFeatures(
     val messages: Boolean = false,
     val notifications: Boolean = false,
     val push: Boolean = false,
+    // Star + text book reviews (a borrower can review a title; everyone reads them).
+    val reviews: Boolean = false,
 )
 
 // ---------- Auth ----------
@@ -366,4 +368,54 @@ data class PushPrefs(
     @SerialName("book_available") val bookAvailable: Boolean? = null,
     @SerialName("quiet_start") val quietStart: String? = null, // "HH:MM"
     @SerialName("quiet_end") val quietEnd: String? = null,     // "HH:MM"
+)
+
+// ---------- Reviews ----------
+// Mirrors GET /catalog/books/{id}/reviews: aggregate rating + the current user's own
+// review (if any) + the page of other users' reviews. Same feature as the website: a user
+// who has borrowed a title can leave a 1–5 star rating with optional text; everyone reads them.
+@Serializable
+data class BookReviews(
+    val average: Double = 0.0,
+    val count: Int = 0,
+    // Star distribution "1".."5" -> how many reviews gave that many stars.
+    val distribution: Map<String, Int> = emptyMap(),
+    // The authenticated user's own review for this book, when present (edit/delete target).
+    val mine: Review? = null,
+    // Whether the user is eligible to review (server-authoritative: has borrowed the book).
+    @SerialName("can_review") val canReview: Boolean = false,
+    // Other users' reviews (excludes [mine]); paginated via meta.next_cursor.
+    val items: List<Review> = emptyList(),
+)
+
+@Serializable
+data class Review(
+    val id: Int = 0,
+    val rating: Int = 0,          // 1..5
+    val text: String? = null,
+    @SerialName("user_name") val userName: String = "",
+    @SerialName("is_mine") val isMine: Boolean = false,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null,
+)
+
+/** Body for PUT /catalog/books/{id}/reviews — upsert the current user's review. */
+@Serializable
+data class ReviewRequest(
+    val rating: Int,             // 1..5
+    val text: String? = null,    // optional free text, max 2000
+)
+
+/** One row of GET /me/reviews — the user's own review with enough book info to render + navigate. */
+@Serializable
+data class MyReview(
+    val id: Int = 0,
+    @SerialName("book_id") val bookId: Int = 0,
+    @SerialName("book_title") val bookTitle: String = "",
+    @SerialName("book_author") val bookAuthor: String? = null,
+    @SerialName("cover_url") val coverUrl: String? = null,
+    val rating: Int = 0,
+    val text: String? = null,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null,
 )

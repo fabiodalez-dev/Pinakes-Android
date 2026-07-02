@@ -37,6 +37,7 @@ fun MainScaffold(
     onOpenBook: (Int) -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenContact: () -> Unit,
+    onOpenMyReviews: () -> Unit,
 ) {
     val services = LocalServices.current
     val features by services.features.features.collectAsStateWithLifecycle()
@@ -92,6 +93,7 @@ fun MainScaffold(
                     onLoggedOut = onLoggedOut,
                     onOpenNotifications = onOpenNotifications,
                     onOpenContact = onOpenContact,
+                    onOpenMyReviews = onOpenMyReviews,
                 )
             }
         }

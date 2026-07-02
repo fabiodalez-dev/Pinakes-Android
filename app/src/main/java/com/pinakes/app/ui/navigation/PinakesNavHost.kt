@@ -24,6 +24,7 @@ import com.pinakes.app.ui.screens.login.LoginScreen
 import com.pinakes.app.ui.screens.login.RegisterScreen
 import com.pinakes.app.ui.screens.notifications.NotificationsScreen
 import com.pinakes.app.ui.screens.onboarding.OnboardingScreen
+import com.pinakes.app.ui.screens.reviews.MyReviewsScreen
 
 /**
  * Root navigation. The high-level [AuthState] decides the start destination; within the
@@ -92,6 +93,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onOpenBook = { id -> navController.navigate(Routes.bookDetail(id)) },
                 onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                 onOpenContact = { navController.navigate(Routes.CONTACT) },
+                onOpenMyReviews = { navController.navigate(Routes.MY_REVIEWS) },
             )
         }
 
@@ -126,6 +128,17 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
             popExitTransition = slideOut,
         ) {
             ContactScreen(onNavigateUp = { navController.popBackStack() })
+        }
+
+        composable(
+            Routes.MY_REVIEWS,
+            enterTransition = slideIn,
+            popExitTransition = slideOut,
+        ) {
+            MyReviewsScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpenBook = { id -> navController.navigate(Routes.bookDetail(id)) },
+            )
         }
     }
 }

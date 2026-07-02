@@ -45,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,6 +83,7 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,6 +103,7 @@ fun BookDetailScreen(
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbarHost = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     val snackbarMessage = state.snackbar ?: state.snackbarRes?.let { stringResource(it) }
     LaunchedEffect(snackbarMessage) {
@@ -153,8 +156,10 @@ fun BookDetailScreen(
                     reserveBusy = state.reserveBusy,
                     canBorrow = features.canBorrow,
                     showWishlist = features.showWishlist,
+                    showReviews = features.showReviews,
                     onReserve = vm::openLoanSheet,
                     onToggleWishlist = vm::toggleWishlist,
+                    onShowMessage = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } },
                 )
             }
         }
@@ -299,8 +304,10 @@ private fun DetailContent(
     reserveBusy: Boolean,
     canBorrow: Boolean,
     showWishlist: Boolean,
+    showReviews: Boolean,
     onReserve: () -> Unit,
     onToggleWishlist: () -> Unit,
+    onShowMessage: (String) -> Unit,
 ) {
     val context = LocalContext.current
     var showCover by remember { mutableStateOf(false) }
@@ -494,6 +501,17 @@ private fun DetailContent(
         book.condition?.let { MetadataRow(stringResource(R.string.book_meta_condition), it) }
         book.locationLabel?.let { MetadataRow(stringResource(R.string.book_meta_shelf), it) }
         MetadataRow(stringResource(R.string.book_meta_copies), stringResource(R.string.book_copies_value, book.copiesAvailable, book.copiesTotal))
+
+        // Reviews — aggregate rating, the user's own review (borrowers can write/edit/delete),
+        // and other users' reviews. Gated by the instance `reviews` feature flag.
+        if (showReviews) {
+            Spacer(Modifier.height(Spacing.xl))
+            BookReviewsSection(
+                bookId = book.id,
+                canReviewFallback = book.personalHistory?.hasRead == true,
+                onShowMessage = onShowMessage,
+            )
+        }
 
         Spacer(Modifier.height(Spacing.xxl))
     }

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.RateReview
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -73,6 +74,7 @@ fun ProfileScreen(
     onLoggedOut: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenContact: () -> Unit,
+    onOpenMyReviews: () -> Unit,
 ) {
     val services = LocalServices.current
     val vm: ProfileViewModel = viewModel(
@@ -102,8 +104,10 @@ fun ProfileScreen(
                     onLogout = { vm.logout(onLoggedOut) },
                     onOpenNotifications = onOpenNotifications,
                     onOpenContact = onOpenContact,
+                    onOpenMyReviews = onOpenMyReviews,
                     showNotifications = features.notifications,
                     showContact = features.messages,
+                    showReviews = features.showReviews,
                 )
             }
         }
@@ -148,8 +152,10 @@ private fun ProfileContent(
     onLogout: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenContact: () -> Unit,
+    onOpenMyReviews: () -> Unit,
     showNotifications: Boolean,
     showContact: Boolean,
+    showReviews: Boolean,
 ) {
     Column(
         Modifier
@@ -197,6 +203,9 @@ private fun ProfileContent(
         // Actions
         ActionRow(Icons.Outlined.Edit, stringResource(R.string.profile_action_edit), onClick = onEdit)
         ActionRow(Icons.Outlined.Lock, stringResource(R.string.profile_action_change_password), onClick = onChangePassword)
+        if (showReviews) {
+            ActionRow(Icons.Outlined.RateReview, stringResource(R.string.profile_action_my_reviews), onClick = onOpenMyReviews)
+        }
         if (showNotifications) {
             ActionRow(Icons.Outlined.Notifications, stringResource(R.string.profile_action_notifications), onClick = onOpenNotifications)
         }

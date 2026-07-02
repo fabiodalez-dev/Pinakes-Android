@@ -17,6 +17,7 @@ object Routes {
     // Nested
     const val NOTIFICATIONS = "notifications"
     const val CONTACT = "contact"
+    const val MY_REVIEWS = "my-reviews"
 
     const val BOOK_DETAIL = "book/{bookId}"
     fun bookDetail(bookId: Int): String = "book/$bookId"
