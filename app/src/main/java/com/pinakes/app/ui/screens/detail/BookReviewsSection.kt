@@ -85,7 +85,8 @@ fun BookReviewsSection(
     Column(modifier.fillMaxWidth()) {
         Text(
             stringResource(R.string.reviews_section_title),
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Spacer(Modifier.height(Spacing.sm))

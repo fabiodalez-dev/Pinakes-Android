@@ -54,7 +54,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.SubcomposeAsyncImage
@@ -354,14 +356,24 @@ private fun DetailContent(
             }
             Spacer(Modifier.width(Spacing.lg))
             Column(Modifier.weight(1f)) {
-                Text(book.title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    book.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
                 if (!book.subtitle.isNullOrBlank()) {
                     Spacer(Modifier.height(Spacing.xs))
-                    Text(book.subtitle!!, style = MaterialTheme.typography.bodyMedium, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(book.subtitle!!, style = MaterialTheme.typography.titleSmall, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurface)
                 }
                 if (book.authorsLabel.isNotBlank()) {
                     Spacer(Modifier.height(Spacing.sm))
-                    Text(book.authorsLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        book.authorsLabel,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
                 Spacer(Modifier.height(Spacing.md))
                 // Colour-code WHY a title isn't free: green available, red on-loan,
@@ -439,7 +451,7 @@ private fun DetailContent(
         // Audiobook player (when the API reports an audiobook for this title).
         if (book.hasAudio && !book.audioUrl.isNullOrBlank()) {
             Spacer(Modifier.height(Spacing.lg))
-            Text(stringResource(R.string.book_section_audiobook), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+            SectionTitle(stringResource(R.string.book_section_audiobook))
             Spacer(Modifier.height(Spacing.sm))
             AudioPlayer(audioUrl = book.audioUrl!!)
         }
@@ -447,7 +459,7 @@ private fun DetailContent(
         // E-book "Read" action: in-app PDF reader, or ACTION_VIEW for other formats (epub, …).
         if (book.hasEbook && !book.ebookUrl.isNullOrBlank()) {
             Spacer(Modifier.height(Spacing.lg))
-            Text(stringResource(R.string.book_section_ebook), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+            SectionTitle(stringResource(R.string.book_section_ebook))
             Spacer(Modifier.height(Spacing.sm))
             val isPdf = book.ebookFormat?.equals("pdf", ignoreCase = true) == true ||
                 book.ebookUrl!!.substringBefore('?').endsWith(".pdf", ignoreCase = true)
@@ -471,28 +483,40 @@ private fun DetailContent(
         Spacer(Modifier.height(Spacing.lg))
 
         if (!book.description.isNullOrBlank()) {
-            Text(stringResource(R.string.book_section_about), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-            Spacer(Modifier.height(Spacing.xs))
+            SectionTitle(stringResource(R.string.book_section_about))
+            Spacer(Modifier.height(Spacing.sm))
             HtmlText(
                 html = book.description!!,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp),
+                color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(Modifier.height(Spacing.lg))
+            Spacer(Modifier.height(Spacing.xl))
         }
 
-        Text(stringResource(R.string.book_section_details), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-        Spacer(Modifier.height(Spacing.xs))
-        book.publisher?.let { MetadataRow(stringResource(R.string.book_meta_publisher), it) }
-        book.year?.let { MetadataRow(stringResource(R.string.book_meta_year), it.toString()) }
-        book.language?.let { MetadataRow(stringResource(R.string.book_meta_language), it) }
-        book.pages?.let { MetadataRow(stringResource(R.string.book_meta_pages), it.toString()) }
-        book.isbn13?.let { MetadataRow(stringResource(R.string.book_meta_isbn13), it) }
-        book.isbn10?.let { MetadataRow(stringResource(R.string.book_meta_isbn10), it) }
-        book.ean?.let { MetadataRow(stringResource(R.string.book_meta_ean), it) }
-        book.condition?.let { MetadataRow(stringResource(R.string.book_meta_condition), it) }
-        book.locationLabel?.let { MetadataRow(stringResource(R.string.book_meta_shelf), it) }
-        MetadataRow(stringResource(R.string.book_meta_copies), stringResource(R.string.book_copies_value, book.copiesAvailable, book.copiesTotal))
+        SectionTitle(stringResource(R.string.book_section_details))
+        Spacer(Modifier.height(Spacing.sm))
+        // Metadata grouped into one rounded card: a clean key/value list reads
+        // as a single "spec sheet" rather than rows floating on the background.
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs)) {
+                // Blank guards: the API can send an empty string (not null) for a
+                // missing field — don't render a labelled row with no value.
+                book.publisher?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_publisher), it) }
+                book.year?.let { MetadataRow(stringResource(R.string.book_meta_year), it.toString()) }
+                book.language?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_language), it) }
+                book.pages?.let { MetadataRow(stringResource(R.string.book_meta_pages), it.toString()) }
+                book.isbn13?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_isbn13), it) }
+                book.isbn10?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_isbn10), it) }
+                book.ean?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_ean), it) }
+                book.condition?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_condition), it) }
+                book.locationLabel?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_shelf), it) }
+                MetadataRow(stringResource(R.string.book_meta_copies), stringResource(R.string.book_copies_value, book.copiesAvailable, book.copiesTotal))
+            }
+        }
 
         // Reviews — aggregate rating, the user's own review (borrowers can write/edit/delete),
         // and other users' reviews. Gated by the instance `reviews` feature flag.
@@ -616,6 +640,17 @@ private fun GenreChip(label: String) {
             modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
         )
     }
+}
+
+/** Consistent, high-contrast section heading for the book-detail screen. */
+@Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface,
+    )
 }
 
 private val displayDateFormatter: DateTimeFormatter =
