@@ -33,6 +33,13 @@ jobs:
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
+      # Build the release variant too: it is the only path that exercises R8 /
+      # resource shrinking, so a bad ProGuard/keep rule (e.g. a new @Serializable
+      # model that R8 strips) is caught in CI instead of at runtime. Debug
+      # signing is implicit and fine for a build-only check.
+      - name: Assemble release APK (R8 / minify)
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4

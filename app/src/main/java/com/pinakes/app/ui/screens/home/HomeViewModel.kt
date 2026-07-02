@@ -50,7 +50,18 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             catalog.observeCachedCatalog().collectLatest { books ->
                 val available = books.filter { it.available }
-                _state.update { it.copy(available = available, loading = false, error = null) }
+                _state.update {
+                    it.copy(
+                        available = available,
+                        // Keep the loading skeleton until the first [refresh]
+                        // resolves when the cache is still empty (cold start):
+                        // an empty first emission must not flash the
+                        // "empty library" state while the network is in flight.
+                        // A non-empty cache clears loading immediately.
+                        loading = if (books.isEmpty()) it.loading else false,
+                        error = if (books.isEmpty()) it.error else null,
+                    )
+                }
             }
         }
     }

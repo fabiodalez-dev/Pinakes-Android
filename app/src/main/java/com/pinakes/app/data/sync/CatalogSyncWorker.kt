@@ -9,6 +9,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.repository.CatalogRepository
 import com.pinakes.app.data.store.SessionStore
 import dagger.hilt.EntryPoint
@@ -45,14 +46,31 @@ class CatalogSyncWorker(
         // Nothing to sync for a signed-out user; succeed so the periodic chain continues.
         if (!deps.session().isLoggedIn()) return Result.success()
 
-        return when (deps.catalogRepository().refreshCatalog()) {
+        return when (val res = deps.catalogRepository().refreshCatalog()) {
             is ApiResult.Success -> Result.success()
-            is ApiResult.Failure -> Result.retry()
+            // Only retry TRANSIENT failures; give up (success) on permanent
+            // ones so the periodic chain keeps running without burning
+            // exponential-backoff cycles on a condition the background worker
+            // cannot heal. Classification is a pure function (unit-tested).
+            is ApiResult.Failure -> if (isPermanentFailure(res)) Result.success() else Result.retry()
         }
     }
 
     companion object {
         private const val UNIQUE_NAME = "catalog-periodic-sync"
+
+        /**
+         * A refresh failure the background worker cannot recover from by
+         * retrying: auth/authorization (401/403 — needs interactive re-login)
+         * and validation/not-found (won't change on retry). Everything else
+         * (network/timeout/5xx) is transient and worth a WorkManager retry.
+         * Pure + side-effect free so it is unit-testable without Android/Hilt.
+         */
+        fun isPermanentFailure(res: ApiResult.Failure): Boolean =
+            res.httpStatus == 401 || res.httpStatus == 403 ||
+                res.code == ErrorCodes.UNAUTHORIZED || res.code == ErrorCodes.FORBIDDEN ||
+                res.code == ErrorCodes.APP_DISABLED || res.code == ErrorCodes.VALIDATION ||
+                res.code == ErrorCodes.NOT_FOUND
 
         /**
          * Enqueue the unique periodic sync (every 6h, only on a connected network).
