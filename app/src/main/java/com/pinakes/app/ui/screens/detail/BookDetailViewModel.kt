@@ -143,13 +143,15 @@ class BookDetailViewModel @Inject constructor(
                     load()
                 }
                 is ApiResult.Failure -> {
+                    // Close the calendar dialog so the error is visible: the snackbar
+                    // lives at the screen Scaffold level, behind the open DatePickerDialog.
                     when {
                         res.code == ErrorCodes.CONFLICT ->
-                            _state.update { it.copy(reserveBusy = false, snackbar = null, snackbarRes = R.string.snackbar_request_conflict) }
+                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = null, snackbarRes = R.string.snackbar_request_conflict) }
                         res.message.isNotBlank() ->
-                            _state.update { it.copy(reserveBusy = false, snackbar = res.message, snackbarRes = null) }
+                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = res.message, snackbarRes = null) }
                         else ->
-                            _state.update { it.copy(reserveBusy = false, snackbar = null, snackbarRes = R.string.snackbar_request_error) }
+                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = null, snackbarRes = R.string.snackbar_request_error) }
                     }
                 }
             }
