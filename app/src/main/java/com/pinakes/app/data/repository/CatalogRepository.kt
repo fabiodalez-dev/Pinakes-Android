@@ -1,5 +1,8 @@
 package com.pinakes.app.data.repository
 
+import com.pinakes.app.data.local.CatalogDao
+import com.pinakes.app.data.local.toCached
+import com.pinakes.app.data.local.toSummary
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.BookSummary
@@ -9,6 +12,8 @@ import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.network.NetworkModule
 import com.pinakes.app.data.network.apiCall
 import com.pinakes.app.data.network.apiResponse
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /** Filters for a catalog search; nulls are omitted from the query. */
 data class SearchFilters(
@@ -33,10 +38,38 @@ data class SearchPage(
  * Catalog browsing: cursor-paginated search, book detail (with ETag/304 caching) and the
  * genre tree. The ETag cache lets a re-fetch of the same book reuse the last payload on 304.
  */
-class CatalogRepository(private val network: NetworkModule) {
+class CatalogRepository(
+    private val network: NetworkModule,
+    private val catalogDao: CatalogDao,
+) {
 
     // Small in-memory ETag cache for book detail: id -> (etag, payload).
     private val detailCache = HashMap<Int, Pair<String?, BookDetail>>()
+
+    /**
+     * Reactive cached catalog snapshot (offline-first). Emits whatever Room holds —
+     * including offline — so the UI can render instantly without a network round-trip
+     * for the list or, via Coil's disk cache, its covers. Empty until the first refresh.
+     */
+    fun observeCachedCatalog(): Flow<List<BookSummary>> =
+        catalogDao.observeAll().map { rows -> rows.map { it.toSummary() } }
+
+    /** True once a catalog snapshot has been cached at least once. */
+    suspend fun hasCachedCatalog(): Boolean = catalogDao.count() > 0
+
+    /**
+     * Refresh the cached catalog from the network (first page, unfiltered) and replace
+     * the Room snapshot atomically. On network failure the existing cache is kept, so a
+     * refresh-on-open that fails never wipes the offline catalog.
+     */
+    suspend fun refreshCatalog(limit: Int = 40): ApiResult<Unit> =
+        when (val res = search(SearchFilters(), limit = limit)) {
+            is ApiResult.Success -> {
+                catalogDao.replaceAll(res.data.items.mapIndexed { i, b -> b.toCached(i) })
+                ApiResult.Success(Unit, res.meta)
+            }
+            is ApiResult.Failure -> res
+        }
 
     suspend fun search(
         filters: SearchFilters,

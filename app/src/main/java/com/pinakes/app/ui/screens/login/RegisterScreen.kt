@@ -26,20 +26,21 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pinakes.app.R
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.AuthRepository
-import com.pinakes.app.ui.common.LocalServices
+import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.components.PasswordField
 import com.pinakes.app.ui.components.PinakesTextButton
 import com.pinakes.app.ui.components.PinakesTextField
 import com.pinakes.app.ui.components.PrimaryButton
 import com.pinakes.app.ui.theme.Spacing
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -61,7 +62,8 @@ data class RegisterUiState(
     val errorRes: Int? = null,
 )
 
-class RegisterViewModel(private val auth: AuthRepository) : ViewModel() {
+@HiltViewModel
+class RegisterViewModel @Inject constructor(private val auth: AuthRepository) : ViewModel() {
     private val _state = MutableStateFlow(RegisterUiState())
     val state: StateFlow<RegisterUiState> = _state.asStateFlow()
 
@@ -124,19 +126,13 @@ class RegisterViewModel(private val auth: AuthRepository) : ViewModel() {
             }
         }
     }
-
-    class Factory(private val auth: AuthRepository) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            RegisterViewModel(auth) as T
-    }
 }
 
 @Composable
 fun RegisterScreen(onBackToLogin: () -> Unit) {
-    val services = LocalServices.current
-    val features by services.features.features.collectAsStateWithLifecycle()
-    val vm: RegisterViewModel = viewModel(factory = RegisterViewModel.Factory(services.authRepository))
+    val app: AppViewModel = hiltViewModel()
+    val features by app.features.collectAsStateWithLifecycle()
+    val vm: RegisterViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val form = Modifier.fillMaxWidth().widthIn(max = 420.dp)
     val errorMessage = state.error ?: state.errorRes?.let { stringResource(it) }

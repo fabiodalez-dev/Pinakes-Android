@@ -39,12 +39,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.pinakes.app.R
 import com.pinakes.app.data.model.MyReview
 import com.pinakes.app.ui.common.DateFormat
-import com.pinakes.app.ui.common.LocalServices
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.EmptyState
@@ -61,8 +60,7 @@ fun MyReviewsScreen(
     onNavigateUp: () -> Unit,
     onOpenBook: (Int) -> Unit,
 ) {
-    val services = LocalServices.current
-    val vm: MyReviewsViewModel = viewModel(factory = MyReviewsViewModel.Factory(services.reviewsRepository))
+    val vm: MyReviewsViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
 
     Scaffold(

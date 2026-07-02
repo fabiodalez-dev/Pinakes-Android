@@ -9,28 +9,33 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.RateReview
 import com.pinakes.app.R
 import com.pinakes.app.data.model.BookReviews
 import com.pinakes.app.data.model.Review
+import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.ui.common.DateFormat
-import com.pinakes.app.ui.common.LocalServices
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.InlineErrorBanner
@@ -60,17 +65,22 @@ fun BookReviewsSection(
     onShowMessage: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val services = LocalServices.current
-    val vm: BookReviewsViewModel = viewModel(
-        key = "reviews_$bookId",
-        factory = BookReviewsViewModel.Factory(bookId, services.reviewsRepository),
-    )
+    // Hilt scopes this to the book-detail nav entry and feeds bookId through
+    // SavedStateHandle (same ARG_BOOK_ID as BookDetailViewModel), so no key/
+    // factory is needed — navigating to a different book gets a fresh entry.
+    val vm: BookReviewsViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
 
     val message = state.snackbar ?: state.snackbarRes?.let { stringResource(it) }
     LaunchedEffect(message) {
         message?.let { onShowMessage(it); vm.consumeSnackbar() }
     }
+
+    // Graceful degradation: if this instance's server doesn't expose the reviews
+    // endpoint (older build → 404 / not_found), collapse the whole section rather
+    // than showing an error banner on a book the user can't do anything about.
+    val content = state.content
+    if (content is UiState.Error && content.code == ErrorCodes.NOT_FOUND) return
 
     Column(modifier.fillMaxWidth()) {
         Text(
@@ -80,7 +90,7 @@ fun BookReviewsSection(
         )
         Spacer(Modifier.height(Spacing.sm))
 
-        when (val content = state.content) {
+        when (content) {
             is UiState.Loading -> Row(
                 Modifier.fillMaxWidth().padding(vertical = Spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
@@ -235,6 +245,27 @@ private fun ReviewEditor(
     onDelete: () -> Unit,
     onCancel: () -> Unit,
 ) {
+    // Deleting a review is destructive and can't be undone — confirm first
+    // instead of firing on the raw tap.
+    var confirmDelete by remember { mutableStateOf(false) }
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text(stringResource(R.string.reviews_delete_confirm_title)) },
+            text = { Text(stringResource(R.string.reviews_delete_confirm_message)) },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; onDelete() }) {
+                    Text(stringResource(R.string.reviews_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+    }
+
     Surface(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -267,7 +298,7 @@ private fun ReviewEditor(
                 if (canDelete) {
                     PinakesTextButton(
                         label = stringResource(R.string.reviews_delete),
-                        onClick = onDelete,
+                        onClick = { confirmDelete = true },
                         enabled = !submitting && !deleting,
                     )
                 }

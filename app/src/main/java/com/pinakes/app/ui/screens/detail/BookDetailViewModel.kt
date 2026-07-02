@@ -1,7 +1,7 @@
 package com.pinakes.app.ui.screens.detail
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
@@ -12,6 +12,9 @@ import com.pinakes.app.data.repository.LibraryRepository
 import com.pinakes.app.data.repository.WishlistRepository
 import com.pinakes.app.R
 import com.pinakes.app.ui.common.UiState
+import com.pinakes.app.ui.navigation.Routes
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,12 +39,16 @@ data class BookDetailUiState(
     val showLoanSheet: Boolean = false,
 )
 
-class BookDetailViewModel(
-    private val bookId: Int,
+@HiltViewModel
+class BookDetailViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val catalog: CatalogRepository,
     private val library: LibraryRepository,
     private val wishlist: WishlistRepository,
 ) : ViewModel() {
+
+    // The book id arrives as a navigation argument; Hilt populates SavedStateHandle from it.
+    private val bookId: Int = savedStateHandle.get<Int>(Routes.ARG_BOOK_ID) ?: 0
 
     private val _state = MutableStateFlow(BookDetailUiState())
     val state: StateFlow<BookDetailUiState> = _state.asStateFlow()
@@ -136,13 +143,15 @@ class BookDetailViewModel(
                     load()
                 }
                 is ApiResult.Failure -> {
+                    // Close the calendar dialog so the error is visible: the snackbar
+                    // lives at the screen Scaffold level, behind the open DatePickerDialog.
                     when {
                         res.code == ErrorCodes.CONFLICT ->
-                            _state.update { it.copy(reserveBusy = false, snackbar = null, snackbarRes = R.string.snackbar_request_conflict) }
+                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = null, snackbarRes = R.string.snackbar_request_conflict) }
                         res.message.isNotBlank() ->
-                            _state.update { it.copy(reserveBusy = false, snackbar = res.message, snackbarRes = null) }
+                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = res.message, snackbarRes = null) }
                         else ->
-                            _state.update { it.copy(reserveBusy = false, snackbar = null, snackbarRes = R.string.snackbar_request_error) }
+                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = null, snackbarRes = R.string.snackbar_request_error) }
                     }
                 }
             }
@@ -152,15 +161,4 @@ class BookDetailViewModel(
     fun consumeSnackbar() = _state.update { it.copy(snackbar = null, snackbarRes = null) }
 
     fun consumeRequestedDate() = _state.update { it.copy(requestedDate = null) }
-
-    class Factory(
-        private val bookId: Int,
-        private val catalog: CatalogRepository,
-        private val library: LibraryRepository,
-        private val wishlist: WishlistRepository,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            BookDetailViewModel(bookId, catalog, library, wishlist) as T
-    }
 }

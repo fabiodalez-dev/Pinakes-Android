@@ -34,11 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pinakes.app.R
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pinakes.app.data.model.BookSummary
-import com.pinakes.app.ui.common.LocalServices
 import com.pinakes.app.ui.components.AvailabilityStatus
 import com.pinakes.app.ui.components.BookCard
 import com.pinakes.app.ui.components.BookCardSkeleton
@@ -50,8 +49,7 @@ import com.pinakes.app.ui.theme.Spacing
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(onBookClick: (Int) -> Unit) {
-    val services = LocalServices.current
-    val vm: SearchViewModel = viewModel(factory = SearchViewModel.Factory(services.catalogRepository))
+    val vm: SearchViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)

@@ -1,13 +1,16 @@
 package com.pinakes.app.ui.screens.detail
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.R
 import com.pinakes.app.data.model.BookReviews
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.ReviewsRepository
 import com.pinakes.app.ui.common.UiState
+import com.pinakes.app.ui.navigation.Routes
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,10 +34,15 @@ data class BookReviewsUiState(
  * and drives the create/edit/delete composer. Lives alongside [BookDetailViewModel] but is scoped
  * to the reviews section so book detail stays focused on catalog data.
  */
-class BookReviewsViewModel(
-    private val bookId: Int,
+@HiltViewModel
+class BookReviewsViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val reviews: ReviewsRepository,
 ) : ViewModel() {
+
+    // The book id arrives as a navigation argument; Hilt populates SavedStateHandle
+    // from it (same nav backstack entry as BookDetailViewModel, so same arg).
+    private val bookId: Int = savedStateHandle.get<Int>(Routes.ARG_BOOK_ID) ?: 0
 
     private val _state = MutableStateFlow(BookReviewsUiState())
     val state: StateFlow<BookReviewsUiState> = _state.asStateFlow()
@@ -111,13 +119,4 @@ class BookReviewsViewModel(
     }
 
     fun consumeSnackbar() = _state.update { it.copy(snackbar = null, snackbarRes = null) }
-
-    class Factory(
-        private val bookId: Int,
-        private val reviews: ReviewsRepository,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            BookReviewsViewModel(bookId, reviews) as T
-    }
 }

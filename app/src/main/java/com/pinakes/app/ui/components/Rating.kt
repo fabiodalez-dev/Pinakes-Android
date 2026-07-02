@@ -15,10 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.pinakes.app.R
 import com.pinakes.app.ui.theme.Spacing
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -34,7 +37,13 @@ fun StarRating(
 ) {
     // Round to the nearest half star so an average like 3.7 shows 3.5 (3 full + 1 half).
     val halves = (rating.coerceIn(0.0, 5.0) * 2).roundToInt()
-    Row(modifier) {
+    // Screen readers should hear the rating once ("3.5 out of 5"), not five
+    // undescribed star icons — collapse the row into a single label.
+    val ratingLabel = stringResource(
+        R.string.reviews_rating_content_desc,
+        String.format(Locale.getDefault(), "%.1f", rating.coerceIn(0.0, 5.0)),
+    )
+    Row(modifier.clearAndSetSemantics { contentDescription = ratingLabel }) {
         for (i in 1..5) {
             val icon = when {
                 halves >= i * 2 -> Icons.Filled.Star

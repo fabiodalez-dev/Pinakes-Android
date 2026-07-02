@@ -6,6 +6,11 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    // kapt is already on the classpath via the Kotlin Gradle plugin — apply it
+    // without a version (declaring one conflicts: "already on the classpath").
+    id("org.jetbrains.kotlin.kapt")
+    alias(libs.plugins.sentry)
+    alias(libs.plugins.hilt)
 }
 
 // ---------------------------------------------------------------------------
@@ -160,8 +165,8 @@ android {
         applicationId = "com.pinakes.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.1.1"
+        versionCode = 5
+        versionName = "1.2.1"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -181,13 +186,14 @@ android {
 
     buildTypes {
         release {
-            // R8 shrinking is OFF by default so the verified runtime behaviour is
-            // preserved. Complete keep rules for Retrofit/OkHttp/kotlinx.serialization/
-            // Coil already live in proguard-rules.pro, so this can be flipped to `true`
-            // (add isShrinkResources = true) once a minified release has been smoke-
-            // tested on a device/emulator. Not enabled here because this checkout has
-            // no Android SDK to verify against.
-            isMinifyEnabled = false
+            // R8 code shrinking + resource shrinking ON. Complete keep rules for
+            // Retrofit/OkHttp/kotlinx.serialization/Coil/Room live in proguard-rules.pro,
+            // and `assembleRelease` is verified to run R8 cleanly in CI. NOTE: a minified
+            // release should still get one device/emulator smoke-test (login → catalog →
+            // loan request) before shipping, since reflection-based runtime breakage can
+            // only surface at runtime, not at build time.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -218,6 +224,13 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    testOptions {
+        unitTests {
+            // Robolectric needs the merged Android resources for in-JVM Room/DAO tests.
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 // Wire the generated res directory into every variant. addGeneratedSourceDirectory
@@ -230,6 +243,28 @@ androidComponents {
             GenerateI18nResTask::outputDir,
         )
     }
+}
+
+// ---------------------------------------------------------------------------
+// Sentry — crash reporting + ProGuard/R8 mapping upload (so release stack traces
+// deobfuscate). The DSN is a public ingest endpoint and lives in source; the AUTH
+// TOKEN (used only to UPLOAD mappings) is a secret and is read from the env or a
+// git-ignored sentry.properties — never committed. Mapping upload is skipped (with
+// a warning, not a failure) when no auth token is present, so CI/contributor builds
+// without the secret still succeed.
+// ---------------------------------------------------------------------------
+sentry {
+    org.set("fabiodalez")
+    projectName.set("android")
+    authToken.set(System.getenv("SENTRY_AUTH_TOKEN"))
+    // Upload R8 mapping files so crash stack traces are readable in Sentry.
+    includeProguardMapping.set(true)
+    autoUploadProguardMapping.set(!System.getenv("SENTRY_AUTH_TOKEN").isNullOrBlank())
+    // We call SentryAndroid.init() ourselves in PinakesApplication, so let the SDK's
+    // auto-install add the dependency but keep our explicit init in control.
+    autoInstallation { enabled.set(true) }
+    // Don't phone home build telemetry from this repo's builds.
+    telemetry.set(false)
 }
 
 dependencies {
@@ -267,4 +302,24 @@ dependencies {
     // Per-app language preferences (AppCompatDelegate.setApplicationLocales) +
     // autoStoreLocales backport for API < 33.
     implementation(libs.androidx.appcompat)
+
+    // Local cache: Room (offline catalog) + app-open refresh via the process lifecycle.
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    kapt(libs.androidx.room.compiler)
+    implementation(libs.androidx.lifecycle.process)
+    implementation(libs.androidx.work.runtime.ktx)
+
+    // Hilt — dependency injection (trial: Home slice migrated, ServiceLocator bridges the rest).
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
+
+    // Unit tests (JVM + Robolectric for Room DAO).
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.work.testing)
 }

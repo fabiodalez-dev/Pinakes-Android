@@ -21,10 +21,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pinakes.app.R
-import com.pinakes.app.ui.common.LocalServices
+import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.components.EmptyState
 import com.pinakes.app.ui.components.PinakesTextField
 import com.pinakes.app.ui.components.PinakesTopBar
@@ -34,8 +34,8 @@ import com.pinakes.app.ui.theme.Spacing
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactScreen(onNavigateUp: () -> Unit) {
-    val services = LocalServices.current
-    val features by services.features.features.collectAsStateWithLifecycle()
+    val app: AppViewModel = hiltViewModel()
+    val features by app.features.collectAsStateWithLifecycle()
     if (!features.messages) {
         Scaffold(
             topBar = { PinakesTopBar(title = stringResource(R.string.title_message_library), onNavigateUp = onNavigateUp) },
@@ -50,7 +50,7 @@ fun ContactScreen(onNavigateUp: () -> Unit) {
         return
     }
 
-    val vm: ContactViewModel = viewModel(factory = ContactViewModel.Factory(services.messagesRepository))
+    val vm: ContactViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
 
     Scaffold(

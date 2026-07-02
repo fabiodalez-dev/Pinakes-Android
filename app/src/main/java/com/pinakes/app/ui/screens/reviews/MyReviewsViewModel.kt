@@ -1,13 +1,14 @@
 package com.pinakes.app.ui.screens.reviews
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.R
 import com.pinakes.app.data.model.MyReview
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.ReviewsRepository
 import com.pinakes.app.ui.common.UiState
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +25,8 @@ data class MyReviewsUiState(
 }
 
 /** The user's own reviews across all books, cursor-paginated (load-more). */
-class MyReviewsViewModel(
+@HiltViewModel
+class MyReviewsViewModel @Inject constructor(
     private val reviews: ReviewsRepository,
 ) : ViewModel() {
 
@@ -71,8 +73,13 @@ class MyReviewsViewModel(
         viewModelScope.launch {
             when (val res = reviews.myReviews(cursor = cursor)) {
                 is ApiResult.Success -> _state.update {
+                    // Dedup by id on append: a cursor overlap (or a review that
+                    // moved pages between requests) must not surface the same
+                    // row twice — LazyColumn keys on id would then crash.
+                    val seen = current.mapTo(HashSet()) { r -> r.id }
+                    val merged = current + res.data.items.filter { r -> seen.add(r.id) }
                     it.copy(
-                        content = UiState.Success(current + res.data.items),
+                        content = UiState.Success(merged),
                         nextCursor = res.data.nextCursor,
                         loadingMore = false,
                     )
@@ -80,11 +87,5 @@ class MyReviewsViewModel(
                 is ApiResult.Failure -> _state.update { it.copy(loadingMore = false) }
             }
         }
-    }
-
-    class Factory(private val reviews: ReviewsRepository) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            MyReviewsViewModel(reviews) as T
     }
 }

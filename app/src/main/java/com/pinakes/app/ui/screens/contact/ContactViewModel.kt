@@ -1,11 +1,12 @@
 package com.pinakes.app.ui.screens.contact
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.MessagesRepository
 import com.pinakes.app.R
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,7 +24,8 @@ data class ContactUiState(
     val canSend: Boolean get() = subject.isNotBlank() && body.isNotBlank() && !sending
 }
 
-class ContactViewModel(private val messages: MessagesRepository) : ViewModel() {
+@HiltViewModel
+class ContactViewModel @Inject constructor(private val messages: MessagesRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(ContactUiState())
     val state: StateFlow<ContactUiState> = _state.asStateFlow()
@@ -44,10 +46,5 @@ class ContactViewModel(private val messages: MessagesRepository) : ViewModel() {
                 }
             }
         }
-    }
-
-    class Factory(private val messages: MessagesRepository) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = ContactViewModel(messages) as T
     }
 }

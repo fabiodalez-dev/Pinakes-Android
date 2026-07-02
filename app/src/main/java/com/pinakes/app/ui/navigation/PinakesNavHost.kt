@@ -15,8 +15,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.pinakes.app.data.store.AuthState
-import com.pinakes.app.ui.common.LocalServices
+import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.screens.contact.ContactScreen
 import com.pinakes.app.ui.screens.detail.BookDetailScreen
 import com.pinakes.app.ui.screens.login.ForgotPasswordScreen
@@ -32,8 +33,8 @@ import com.pinakes.app.ui.screens.reviews.MyReviewsScreen
  */
 @Composable
 fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
-    val services = LocalServices.current
-    val authState by services.session.authState.collectAsStateWithLifecycle()
+    val app: AppViewModel = hiltViewModel()
+    val authState by app.authState.collectAsStateWithLifecycle()
 
     val start = when (authState) {
         AuthState.NeedsOnboarding -> Routes.ONBOARDING
@@ -109,9 +110,8 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
             arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.IntType }),
             enterTransition = slideIn,
             popExitTransition = slideOut,
-        ) { backStack ->
-            val bookId = backStack.arguments?.getInt(Routes.ARG_BOOK_ID) ?: 0
-            BookDetailScreen(bookId = bookId, onNavigateUp = { navController.popBackStack() })
+        ) {
+            BookDetailScreen(onNavigateUp = { navController.popBackStack() })
         }
 
         composable(

@@ -55,14 +55,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.SubcomposeAsyncImage
 import com.pinakes.app.R
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.PersonalHistory
-import com.pinakes.app.ui.common.LocalServices
+import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.AudioPlayer
@@ -88,19 +88,11 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookDetailScreen(
-    bookId: Int,
     onNavigateUp: () -> Unit,
 ) {
-    val services = LocalServices.current
-    val features by services.features.features.collectAsStateWithLifecycle()
-    val vm: BookDetailViewModel = viewModel(
-        factory = BookDetailViewModel.Factory(
-            bookId,
-            services.catalogRepository,
-            services.libraryRepository,
-            services.wishlistRepository,
-        )
-    )
+    val app: AppViewModel = hiltViewModel()
+    val features by app.features.collectAsStateWithLifecycle()
+    val vm: BookDetailViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbarHost = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()

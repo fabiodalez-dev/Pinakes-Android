@@ -2,7 +2,6 @@ package com.pinakes.app.ui.screens.search
 
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.R
 import com.pinakes.app.data.model.BookSummary
@@ -10,6 +9,8 @@ import com.pinakes.app.data.model.GenreNode
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.CatalogRepository
 import com.pinakes.app.data.repository.SearchFilters
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,7 +65,8 @@ val SearchLanguageOptions: List<LanguageOption> = listOf(
     LanguageOption("lat", R.string.lang_latin),
 )
 
-class SearchViewModel(private val catalog: CatalogRepository) : ViewModel() {
+@HiltViewModel
+class SearchViewModel @Inject constructor(private val catalog: CatalogRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(SearchUiState())
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
@@ -183,10 +185,5 @@ class SearchViewModel(private val catalog: CatalogRepository) : ViewModel() {
                 }
             }
         }
-    }
-
-    class Factory(private val catalog: CatalogRepository) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchViewModel(catalog) as T
     }
 }

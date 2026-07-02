@@ -1,16 +1,17 @@
 package com.pinakes.app.ui.screens.home
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.BookSummary
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.CatalogRepository
-import com.pinakes.app.data.repository.SearchFilters
 import com.pinakes.app.data.store.SessionStore
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -24,7 +25,8 @@ data class HomeUiState(
     val isEmpty: Boolean get() = !loading && error == null && available.isEmpty()
 }
 
-class HomeViewModel(
+@HiltViewModel
+class HomeViewModel @Inject constructor(
     private val catalog: CatalogRepository,
     private val session: SessionStore,
 ) : ViewModel() {
@@ -34,31 +36,57 @@ class HomeViewModel(
     )
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
 
-    init { load() }
+    init {
+        observeCache()
+        refresh()
+    }
 
-    fun load() {
-        _state.update { it.copy(loading = true, error = null) }
+    /**
+     * Offline-first: render the "Available now" shelf from the locally-cached catalog
+     * snapshot immediately (works with no network), filtering to currently-loanable
+     * copies. The shelf updates automatically when [refresh] replaces the cache.
+     */
+    private fun observeCache() {
         viewModelScope.launch {
-            // "Available now" shelf: full catalog filtered to currently-loanable copies.
-            when (val res = catalog.search(SearchFilters(availableOnly = true), limit = 20)) {
-                is ApiResult.Success -> _state.update {
-                    it.copy(available = res.data.items, loading = false, error = null)
-                }
-                is ApiResult.Failure -> _state.update {
-                    it.copy(loading = false, error = res.message.takeIf { m -> m.isNotBlank() })
+            catalog.observeCachedCatalog().collectLatest { books ->
+                val available = books.filter { it.available }
+                _state.update {
+                    it.copy(
+                        available = available,
+                        // Keep the loading skeleton until the first [refresh]
+                        // resolves when the cache is still empty (cold start):
+                        // an empty first emission must not flash the
+                        // "empty library" state while the network is in flight.
+                        // A non-empty cache clears loading immediately.
+                        loading = if (books.isEmpty()) it.loading else false,
+                        error = if (books.isEmpty()) it.error else null,
+                    )
                 }
             }
         }
     }
 
-    fun retry() = load()
-
-    class Factory(
-        private val catalog: CatalogRepository,
-        private val session: SessionStore,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            HomeViewModel(catalog, session) as T
+    /**
+     * Pull a fresh catalog snapshot from the network into the cache. Called on init and
+     * on every app foreground. A failure only surfaces an error when there is nothing
+     * cached to show — otherwise the cached catalog stays on screen.
+     */
+    fun refresh() {
+        viewModelScope.launch {
+            when (val res = catalog.refreshCatalog()) {
+                is ApiResult.Success -> _state.update { it.copy(loading = false, error = null) }
+                is ApiResult.Failure -> {
+                    val hasCache = catalog.hasCachedCatalog()
+                    _state.update {
+                        it.copy(
+                            loading = false,
+                            error = if (hasCache) null else res.message.takeIf { m -> m.isNotBlank() },
+                        )
+                    }
+                }
+            }
+        }
     }
+
+    fun retry() = refresh()
 }

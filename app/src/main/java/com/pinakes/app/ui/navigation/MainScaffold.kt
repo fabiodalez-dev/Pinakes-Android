@@ -13,9 +13,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pinakes.app.R
-import com.pinakes.app.ui.common.LocalServices
+import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.components.PinakesListTopBar
 import com.pinakes.app.ui.components.PinakesTab
 import com.pinakes.app.ui.components.PinakesBottomBar
@@ -39,8 +40,8 @@ fun MainScaffold(
     onOpenContact: () -> Unit,
     onOpenMyReviews: () -> Unit,
 ) {
-    val services = LocalServices.current
-    val features by services.features.features.collectAsStateWithLifecycle()
+    val app: AppViewModel = hiltViewModel()
+    val features by app.features.collectAsStateWithLifecycle()
 
     var tab by rememberSaveable { mutableStateOf(PinakesTab.Home) }
 
