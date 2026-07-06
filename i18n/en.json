@@ -39,6 +39,8 @@
   "action_discover_library": "Discover library",
   "action_continue": "Continue",
   "onboarding_http_warning": "This library uses an insecure (http) connection. Use https to continue.",
+  "onboarding_allow_http_label": "Allow insecure HTTP",
+  "onboarding_allow_http_hint": "Only for a self-hosted instance without HTTPS. The connection won’t be encrypted — use at your own risk.",
   "onboarding_status_secure_ok": "Secure connection (https)",
   "onboarding_status_secure_warn": "Insecure connection (http) — not recommended",
   "onboarding_status_app_access_ok": "Mobile app access is enabled",

@@ -47,4 +47,34 @@ class NetworkUrlTest {
         assertTrue(NetworkModule.isTransportAllowed("http://127.0.0.1/api/v1/"))
         assertFalse(NetworkModule.isTransportAllowed("http://lib.example.org/api/v1/"))
     }
+
+    // --- Insecure-HTTP opt-in (issue #16: HTTP-only self-hosted instances) ---
+
+    @Test fun allowInsecurePrependsHttpForBareHost() {
+        assertEquals(
+            "http://lib.example.org/api/v1/",
+            NetworkModule.deriveApiBaseUrl("lib.example.org", allowInsecure = true),
+        )
+    }
+
+    @Test fun allowInsecureKeepsExplicitHttpsScheme() {
+        // An explicit scheme always wins over the opt-in default.
+        assertEquals(
+            "https://lib.example.org/api/v1/",
+            NetworkModule.deriveApiBaseUrl("https://lib.example.org", allowInsecure = true),
+        )
+    }
+
+    @Test fun allowInsecureOriginKeepsHttp() {
+        assertEquals("http://lib.example.org", NetworkModule.deriveOrigin("lib.example.org", allowInsecure = true))
+    }
+
+    @Test fun allowInsecurePermitsAnyHttpHost() {
+        assertTrue(NetworkModule.isTransportAllowed("http://lib.example.org/api/v1/", allowInsecure = true))
+    }
+
+    @Test fun defaultStillRejectsRemoteHttp() {
+        // Regression guard: without the opt-in, a remote HTTP host stays blocked.
+        assertFalse(NetworkModule.isTransportAllowed("http://lib.example.org/api/v1/", allowInsecure = false))
+    }
 }

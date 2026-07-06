@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -105,6 +106,31 @@ fun OnboardingScreen(onContinue: () -> Unit) {
             Spacer(Modifier.height(Spacing.lg))
 
             if (state.discovery == null) {
+                Row(
+                    modifier = form,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.onboarding_allow_http_label),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            stringResource(R.string.onboarding_allow_http_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(Spacing.md))
+                    Switch(
+                        checked = state.allowInsecureHttp,
+                        onCheckedChange = vm::onAllowInsecureChange,
+                    )
+                }
+
+                Spacer(Modifier.height(Spacing.lg))
+
                 PrimaryButton(
                     label = stringResource(R.string.action_discover_library),
                     onClick = vm::discover,

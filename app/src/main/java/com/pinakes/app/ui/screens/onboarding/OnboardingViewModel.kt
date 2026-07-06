@@ -20,6 +20,8 @@ data class OnboardingUiState(
     val discovery: HealthDiscovery? = null,
     val error: String? = null,
     val errorRes: Int? = null,
+    /** User opt-in: allow a plain-HTTP instance (off by default, they own the risk). */
+    val allowInsecureHttp: Boolean = false,
 )
 
 /**
@@ -36,6 +38,12 @@ class OnboardingViewModel @Inject constructor(private val auth: AuthRepository) 
         _state.update { it.copy(url = value, error = null, errorRes = null, discovery = null) }
     }
 
+    /** Toggle the "allow insecure HTTP" opt-in; clears any stale discovery so the next
+     *  probe re-derives the scheme (http vs https) from the new choice. */
+    fun onAllowInsecureChange(value: Boolean) {
+        _state.update { it.copy(allowInsecureHttp = value, error = null, errorRes = null, discovery = null) }
+    }
+
     fun discover() {
         val url = _state.value.url.trim()
         if (url.isBlank()) {
@@ -44,7 +52,7 @@ class OnboardingViewModel @Inject constructor(private val auth: AuthRepository) 
         }
         _state.update { it.copy(checking = true, error = null, errorRes = null, discovery = null) }
         viewModelScope.launch {
-            when (val res = auth.discover(url)) {
+            when (val res = auth.discover(url, _state.value.allowInsecureHttp)) {
                 is ApiResult.Success ->
                     _state.update { it.copy(checking = false, discovery = res.data, error = null, errorRes = null) }
                 is ApiResult.Failure ->

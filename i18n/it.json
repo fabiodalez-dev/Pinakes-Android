@@ -39,6 +39,8 @@
   "action_discover_library": "Trova biblioteca",
   "action_continue": "Continua",
   "onboarding_http_warning": "Questa biblioteca usa una connessione non sicura (http). Usa https per continuare.",
+  "onboarding_allow_http_label": "Consenti HTTP non sicuro",
+  "onboarding_allow_http_hint": "Solo per un’istanza self-hosted senza HTTPS. La connessione non sarà cifrata — usalo a tuo rischio.",
   "onboarding_status_secure_ok": "Connessione sicura (https)",
   "onboarding_status_secure_warn": "Connessione non sicura (http) — sconsigliata",
   "onboarding_status_app_access_ok": "L'accesso da app mobile è attivo",

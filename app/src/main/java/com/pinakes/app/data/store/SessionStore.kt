@@ -45,6 +45,9 @@ class SessionStore(context: Context) {
 
     val libraryName: String? get() = prefs.getString(KEY_LIBRARY_NAME, null)
 
+    /** Whether the committed instance was accepted over insecure (plain HTTP) transport. */
+    val allowInsecureHttp: Boolean get() = prefs.getBoolean(KEY_ALLOW_INSECURE, false)
+
     /** A stable per-install device id used in the login request. Generated once. */
     val deviceId: String
         get() = prefs.getString(KEY_DEVICE_ID, null) ?: UUID.randomUUID().toString().also {
@@ -59,11 +62,12 @@ class SessionStore(context: Context) {
      * Persist the chosen instance. [origin] is the user-entered URL; [apiBaseUrl] is the
      * derived `${origin}/api/v1/`. Clears any existing token (new instance ⇒ new session).
      */
-    fun saveInstance(origin: String, apiBaseUrl: String, libraryName: String?) {
+    fun saveInstance(origin: String, apiBaseUrl: String, libraryName: String?, allowInsecure: Boolean = false) {
         prefs.edit()
             .putString(KEY_INSTANCE_ORIGIN, origin)
             .putString(KEY_INSTANCE_URL, apiBaseUrl)
             .putString(KEY_LIBRARY_NAME, libraryName)
+            .putBoolean(KEY_ALLOW_INSECURE, allowInsecure)
             .remove(KEY_TOKEN)
             .apply()
         _authState.value = readAuthState()
@@ -99,6 +103,7 @@ class SessionStore(context: Context) {
         private const val KEY_INSTANCE_URL = "instance_api_url"
         private const val KEY_TOKEN = "bearer_token"
         private const val KEY_LIBRARY_NAME = "library_name"
+        private const val KEY_ALLOW_INSECURE = "allow_insecure_http"
         private const val KEY_DEVICE_ID = "device_id"
     }
 }

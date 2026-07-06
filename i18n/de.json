@@ -39,6 +39,8 @@
   "action_discover_library": "Bibliothek finden",
   "action_continue": "Weiter",
   "onboarding_http_warning": "Diese Bibliothek verwendet eine unsichere Verbindung (http). Verwende https, um fortzufahren.",
+  "onboarding_allow_http_label": "Unsicheres HTTP zulassen",
+  "onboarding_allow_http_hint": "Nur für eine selbst gehostete Instanz ohne HTTPS. Die Verbindung ist nicht verschlüsselt — Nutzung auf eigenes Risiko.",
   "onboarding_status_secure_ok": "Sichere Verbindung (https)",
   "onboarding_status_secure_warn": "Unsichere Verbindung (http) — nicht empfohlen",
   "onboarding_status_app_access_ok": "Der Zugriff über die mobile App ist aktiviert",

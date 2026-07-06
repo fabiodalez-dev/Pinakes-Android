@@ -8,7 +8,10 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import com.pinakes.app.data.sync.CatalogSyncWorker
+import com.pinakes.app.data.network.CleartextGuardInterceptor
+import com.pinakes.app.data.network.NetworkEntryPoint
 import dagger.hilt.android.EntryPointAccessors
+import okhttp3.OkHttpClient
 import dagger.hilt.android.HiltAndroidApp
 import io.sentry.android.core.SentryAndroid
 import kotlinx.coroutines.CoroutineScope
@@ -65,8 +68,18 @@ class PinakesApplication : Application(), ImageLoaderFactory {
      * headers, so book covers are downloaded once and reused across sessions instead of
      * being re-fetched on every screen / app open.
      */
-    override fun newImageLoader(): ImageLoader =
-        ImageLoader.Builder(this)
+    override fun newImageLoader(): ImageLoader {
+        // Route Coil through the same cleartext gate as the API client, so a book cover
+        // served over plain HTTP can't silently downgrade the connection on an HTTPS
+        // instance (only allowed for loopback or when the user opted into insecure HTTP).
+        val session = EntryPointAccessors
+            .fromApplication(this, NetworkEntryPoint::class.java)
+            .sessionStore()
+        val guardedClient = OkHttpClient.Builder()
+            .addInterceptor(CleartextGuardInterceptor { session.allowInsecureHttp })
+            .build()
+        return ImageLoader.Builder(this)
+            .okHttpClient(guardedClient)
             .crossfade(true)
             .respectCacheHeaders(false)
             .diskCache {
@@ -76,4 +89,5 @@ class PinakesApplication : Application(), ImageLoaderFactory {
                     .build()
             }
             .build()
+    }
 }

@@ -28,6 +28,7 @@ class NetworkModule(private val session: SessionStore) {
 
     private val okHttpClient: OkHttpClient by lazy {
         val builder = OkHttpClient.Builder()
+            .addInterceptor(CleartextGuardInterceptor { session.allowInsecureHttp })
             .addInterceptor(AuthInterceptor(session))
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
@@ -107,17 +108,18 @@ class NetworkModule(private val session: SessionStore) {
     companion object {
         /**
          * Derive the API base URL from a user-entered instance URL.
-         * - prepends `https://` when no scheme is given
+         * - when no scheme is given, prepends `https://` — or `http://` when the user has
+         *   opted into insecure transport ([allowInsecure]); an explicit scheme is kept as-is
          * - strips a trailing slash / `/api/v1` if the user pasted it
          * - appends `/api/v1/`
          */
-        fun deriveApiBaseUrl(rawInput: String): String {
+        fun deriveApiBaseUrl(rawInput: String, allowInsecure: Boolean = false): String {
             var s = rawInput.trim()
             if (s.isEmpty()) return s
             if (!s.startsWith("http://", ignoreCase = true) &&
                 !s.startsWith("https://", ignoreCase = true)
             ) {
-                s = "https://$s"
+                s = if (allowInsecure) "http://$s" else "https://$s"
             }
             s = s.trimEnd('/')
             // Strip any user-supplied /api or /api/v1 suffix to avoid duplication.
@@ -126,15 +128,20 @@ class NetworkModule(private val session: SessionStore) {
         }
 
         /** Origin (scheme://host[:port]) for display, derived from the same raw input. */
-        fun deriveOrigin(rawInput: String): String {
-            val api = deriveApiBaseUrl(rawInput)
+        fun deriveOrigin(rawInput: String, allowInsecure: Boolean = false): String {
+            val api = deriveApiBaseUrl(rawInput, allowInsecure)
             return api.removeSuffix("/api/v1/").trimEnd('/')
         }
 
-        /** HTTPS is required except for localhost / loopback addresses. */
-        fun isTransportAllowed(apiBaseUrl: String): Boolean {
+        /**
+         * HTTPS is required except for localhost / loopback addresses — UNLESS the user has
+         * explicitly opted into insecure transport ([allowInsecure]), in which case any
+         * `http://` host is accepted (they own the risk; see the onboarding opt-in).
+         */
+        fun isTransportAllowed(apiBaseUrl: String, allowInsecure: Boolean = false): Boolean {
             val lower = apiBaseUrl.lowercase()
             if (lower.startsWith("https://")) return true
+            if (allowInsecure && lower.startsWith("http://")) return true
             return lower.startsWith("http://localhost") ||
                 lower.startsWith("http://127.0.0.1") ||
                 lower.startsWith("http://10.0.2.2") ||
