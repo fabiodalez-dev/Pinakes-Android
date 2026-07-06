@@ -8,6 +8,7 @@ import com.pinakes.app.data.model.HealthPayload
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 /**
  * Instance feature flags that gate the UI for CATALOGUE-ONLY MODE.
@@ -113,7 +114,7 @@ class FeatureStore(context: Context) {
     /** Persist + publish the Book Club plugin availability (from its own health probe). */
     fun setBookClubAvailable(available: Boolean) {
         prefs.edit().putBoolean(KEY_BOOK_CLUB, available).apply()
-        _features.value = _features.value.copy(bookClubAvailable = available)
+        _features.update { it.copy(bookClubAvailable = available) }
     }
 
     /** Reset to all-enabled (e.g. when forgetting the instance). */

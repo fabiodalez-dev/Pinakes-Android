@@ -12,6 +12,7 @@ import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.network.NetworkModule
 import com.pinakes.app.data.network.bookClubCall
+import com.pinakes.app.data.network.bookClubCallUnit
 import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.store.SessionStore
 
@@ -36,7 +37,7 @@ class BookClubRepository(
      * section on a network blip.
      */
     suspend fun probeAvailability(): Boolean? =
-        when (val res = bookClubCall { network.bookClubApi().health() }) {
+        when (val res = bookClubCallUnit { network.bookClubApi().health() }) {
             is ApiResult.Success -> true
             is ApiResult.Failure ->
                 if (res.httpStatus == 404 || res.code == ErrorCodes.NOT_FOUND) false else null
@@ -47,10 +48,11 @@ class BookClubRepository(
      * previous instance (the user tapped "change library" mid-flight) must not resurrect
      * or clobber the flag of the instance now configured. Null keeps the last-known value.
      */
-    fun applyAvailability(available: Boolean?, probedInstanceUrl: String?) {
-        if (available == null) return
-        if (probedInstanceUrl == null || session.instanceUrl != probedInstanceUrl) return
+    fun applyAvailability(available: Boolean?, probedInstanceUrl: String?): Boolean {
+        if (available == null) return false
+        if (probedInstanceUrl == null || session.instanceUrl != probedInstanceUrl) return false
         features.setBookClubAvailable(available)
+        return true
     }
 
     suspend fun clubs(): ApiResult<BookClubClubs> =
@@ -66,16 +68,16 @@ class BookClubRepository(
         bookClubCall { network.bookClubApi().join(slug) }
 
     suspend fun propose(slug: String, libroId: Int, motivation: String?): ApiResult<Unit> =
-        bookClubCall { network.bookClubApi().propose(slug, ClubProposalRequest(libroId, motivation)) }
+        bookClubCallUnit { network.bookClubApi().propose(slug, ClubProposalRequest(libroId, motivation)) }
 
     suspend fun vote(slug: String, pollId: Int, optionIds: List<Int>): ApiResult<Unit> =
-        bookClubCall { network.bookClubApi().vote(slug, pollId, ClubVoteRequest(optionIds)) }
+        bookClubCallUnit { network.bookClubApi().vote(slug, pollId, ClubVoteRequest(optionIds)) }
 
     suspend fun rsvp(slug: String, meetingId: Int, response: String): ApiResult<Unit> =
-        bookClubCall { network.bookClubApi().rsvp(slug, meetingId, ClubRsvpRequest(response)) }
+        bookClubCallUnit { network.bookClubApi().rsvp(slug, meetingId, ClubRsvpRequest(response)) }
 
     suspend fun progress(slug: String, clubBookId: Int, percent: Int, finished: Boolean?): ApiResult<Unit> =
-        bookClubCall { network.bookClubApi().progress(slug, clubBookId, ClubProgressRequest(percent, finished)) }
+        bookClubCallUnit { network.bookClubApi().progress(slug, clubBookId, ClubProgressRequest(percent, finished)) }
 
     /**
      * A bookclub endpoint answered 404: re-probe the plugin health and, when the
@@ -86,8 +88,11 @@ class BookClubRepository(
     suspend fun confirmGone(): Boolean {
         val instance = session.instanceUrl
         val available = probeAvailability()
-        applyAvailability(available, instance)
-        return available == false
+        // Only treat the plugin as gone when the probe actually applied to the
+        // still-current instance — a stale 404 from a since-switched instance
+        // must not drive pluginGone on the now-current screen.
+        val applied = applyAvailability(available, instance)
+        return applied && available == false
     }
 
     /** Web URL of a poll page — the deep-link target for ballots the app can't render. */
