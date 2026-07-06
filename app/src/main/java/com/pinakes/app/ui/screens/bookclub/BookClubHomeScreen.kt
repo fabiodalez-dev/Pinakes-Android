@@ -65,7 +65,8 @@ fun BookClubHomeScreen(
     val snackbarHost = remember { SnackbarHostState() }
 
     val snackbarMessage = state.snackbarRes?.let { stringResource(it) }
-    LaunchedEffect(snackbarMessage) {
+    // Key on the nonce, not the message: two identical consecutive messages must both show.
+    LaunchedEffect(state.snackbarNonce) {
         snackbarMessage?.let { snackbarHost.showSnackbar(it); vm.consumeSnackbar() }
     }
 

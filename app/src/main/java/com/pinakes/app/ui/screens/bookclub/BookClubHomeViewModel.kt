@@ -32,6 +32,8 @@ data class BookClubHomeUiState(
     val refreshing: Boolean = false,
     /** Partial-failure notice (e.g. the dashboard fetch failed while clubs loaded). */
     val snackbarRes: Int? = null,
+    /** Bumped on every snackbar post so two identical consecutive messages still both show. */
+    val snackbarNonce: Int = 0,
     /** The plugin was deactivated server-side (confirmed via health re-probe). */
     val pluginGone: Boolean = false,
 )
@@ -71,6 +73,7 @@ class BookClubHomeViewModel @Inject constructor(
                             content = UiState.Success(BookClubHome(dashboard = dashboard, clubs = clubsRes.data)),
                             refreshing = false,
                             snackbarRes = if (dashboardFailed) R.string.book_club_error_dashboard else it.snackbarRes,
+                            snackbarNonce = if (dashboardFailed) it.snackbarNonce + 1 else it.snackbarNonce,
                         )
                     }
                 }

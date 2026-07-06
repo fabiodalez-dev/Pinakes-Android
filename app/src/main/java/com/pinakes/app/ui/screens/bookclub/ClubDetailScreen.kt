@@ -76,7 +76,8 @@ fun ClubDetailScreen(onNavigateUp: () -> Unit) {
     val snackbarHost = remember { SnackbarHostState() }
 
     val snackbarMessage = state.snackbar ?: state.snackbarRes?.let { stringResource(it) }
-    LaunchedEffect(snackbarMessage) {
+    // Key on the nonce, not the message: two identical consecutive messages must both show.
+    LaunchedEffect(state.snackbarNonce) {
         snackbarMessage?.let { snackbarHost.showSnackbar(it); vm.consumeSnackbar() }
     }
 
@@ -116,12 +117,19 @@ fun ClubDetailScreen(onNavigateUp: () -> Unit) {
     }
 
     progressBook?.let { book ->
+        // Keep the dialog open (showing its `saving` loading state) until the save round-trip
+        // finishes — the VM clears progressBookId back to null when the network call returns
+        // (success shows a snackbar, failure the error), and only then do we dismiss.
+        var saveRequested by remember(book.id) { mutableStateOf(false) }
+        LaunchedEffect(state.progressBookId, saveRequested) {
+            if (saveRequested && state.progressBookId == null) progressBook = null
+        }
         ProgressDialog(
             book = book,
             saving = state.progressBookId == book.id,
             onSave = { percent, finished ->
+                saveRequested = true
                 vm.updateProgress(book.id, percent, finished)
-                progressBook = null
             },
             onDismiss = { progressBook = null },
         )
