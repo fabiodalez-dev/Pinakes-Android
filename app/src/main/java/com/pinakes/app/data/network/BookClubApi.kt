@@ -4,15 +4,11 @@ import com.pinakes.app.data.model.BookClubClubs
 import com.pinakes.app.data.model.BookClubDashboard
 import com.pinakes.app.data.model.BookClubDetail
 import com.pinakes.app.data.model.BookClubEnvelope
-import com.pinakes.app.data.model.BookClubHealth
 import com.pinakes.app.data.model.ClubProgressRequest
 import com.pinakes.app.data.model.ClubProposalRequest
 import com.pinakes.app.data.model.ClubRsvpRequest
 import com.pinakes.app.data.model.ClubVoteRequest
 import com.pinakes.app.data.model.JoinResult
-import com.pinakes.app.data.model.ProgressResult
-import com.pinakes.app.data.model.RsvpResult
-import com.pinakes.app.data.model.VoteResult
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Headers
@@ -27,13 +23,15 @@ import retrofit2.http.Path
  *
  * These responses use the Book Club envelope ([BookClubEnvelope]: `{success, data, error}`),
  * NOT the core `{data, meta, error}` one — so they are wrapped with `bookClubCall`, not `apiCall`.
+ * Endpoints whose payload the app doesn't consume are declared as `Envelope<Unit>` (the
+ * server body is a plain JSON object; `Unit` decoding ignores its keys).
  */
 interface BookClubApi {
 
     /** Discovery — no token. 2xx means the section is available; 404 means the plugin is off. */
     @GET("bookclub/health")
-    @Headers(NO_AUTH)
-    suspend fun health(): BookClubEnvelope<BookClubHealth>
+    @Headers(PinakesApi.NO_AUTH)
+    suspend fun health(): BookClubEnvelope<Unit>
 
     // ---- Reads ----
     @GET("bookclub/clubs")
@@ -60,24 +58,19 @@ interface BookClubApi {
         @Path("slug") slug: String,
         @Path("pollId") pollId: Int,
         @Body body: ClubVoteRequest,
-    ): BookClubEnvelope<VoteResult>
+    ): BookClubEnvelope<Unit>
 
     @POST("bookclub/clubs/{slug}/meetings/{meetingId}/rsvp")
     suspend fun rsvp(
         @Path("slug") slug: String,
         @Path("meetingId") meetingId: Int,
         @Body body: ClubRsvpRequest,
-    ): BookClubEnvelope<RsvpResult>
+    ): BookClubEnvelope<Unit>
 
     @POST("bookclub/clubs/{slug}/books/{clubBookId}/progress")
     suspend fun progress(
         @Path("slug") slug: String,
         @Path("clubBookId") clubBookId: Int,
         @Body body: ClubProgressRequest,
-    ): BookClubEnvelope<ProgressResult>
-
-    companion object {
-        /** Same value-less marker [AuthInterceptor] uses to skip bearer injection on public calls. */
-        const val NO_AUTH = "X-Pinakes-No-Auth: true"
-    }
+    ): BookClubEnvelope<Unit>
 }

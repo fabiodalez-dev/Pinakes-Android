@@ -18,24 +18,8 @@ import kotlinx.serialization.Serializable
 data class BookClubEnvelope<T>(
     val success: Boolean = false,
     val data: T? = null,
-    val error: BookClubError? = null,
-)
-
-@Serializable
-data class BookClubError(
-    val code: String = "unknown",
-    val message: String = "",
-)
-
-// ---------- Discovery ----------
-// GET /bookclub/health (no token). A 2xx means the plugin + mobile module are active.
-@Serializable
-data class BookClubHealth(
-    val plugin: String = "",
-    val enabled: Boolean = false,
-    val version: String = "",
-    val requires: List<String> = emptyList(),
-    val endpoints: List<String> = emptyList(),
+    // Same {code, message} shape as the core envelope's error — reuse the shared model.
+    val error: ApiError? = null,
 )
 
 // ---------- Clubs list ----------
@@ -69,9 +53,7 @@ data class DirectoryClub(
     val privacy: String = "",
     @SerialName("member_count") val memberCount: Int = 0,
     @SerialName("max_members") val maxMembers: Int? = null,
-) {
-    val isFull: Boolean get() = maxMembers != null && memberCount >= maxMembers
-}
+)
 
 // ---------- Club detail ----------
 // GET /bookclub/clubs/{slug}
@@ -89,8 +71,18 @@ data class BookClubDetail(
     val isGuest: Boolean get() = myMembership?.role == "guest"
     /** Can take part (vote, RSVP, track progress): active member that is not a guest. */
     val canParticipate: Boolean get() = isActiveMember && !isGuest
+
+    /**
+     * Mirrors the server's join rules: the membership row survives leaving, so 'left'
+     * (and 'suspended') members can re-join exactly like on the web — the join endpoint
+     * only short-circuits active/pending and rejects banned.
+     */
     val canJoin: Boolean
-        get() = myMembership == null && (club.privacy == "public" || club.privacy == "private")
+        get() {
+            val status = myMembership?.status
+            val joinable = status == null || status !in listOf("active", "pending", "banned")
+            return joinable && (club.privacy == "public" || club.privacy == "private")
+        }
 }
 
 @Serializable
@@ -256,24 +248,7 @@ data class ClubProposalRequest(
 )
 
 // ---------- Action responses ----------
+// vote/rsvp/progress just echo the request (no recomputed aggregates), so their bodies are
+// ignored and the calls are declared as Envelope<Unit>; only join's status is consumed.
 @Serializable
 data class JoinResult(val status: String = "") // active | pending
-
-@Serializable
-data class VoteResult(
-    @SerialName("poll_id") val pollId: Int = 0,
-    val options: List<Int> = emptyList(),
-)
-
-@Serializable
-data class RsvpResult(
-    @SerialName("meeting_id") val meetingId: Int = 0,
-    val response: String = "",
-)
-
-@Serializable
-data class ProgressResult(
-    @SerialName("club_book_id") val clubBookId: Int = 0,
-    val percent: Int = 0,
-    val finished: Boolean = false,
-)

@@ -77,7 +77,6 @@ fun ProfileScreen(
     onOpenContact: () -> Unit,
     onOpenMyReviews: () -> Unit,
     onOpenBookClub: () -> Unit,
-    showBookClub: Boolean,
 ) {
     val app: AppViewModel = hiltViewModel()
     val vm: ProfileViewModel = hiltViewModel()
@@ -110,7 +109,7 @@ fun ProfileScreen(
                     showNotifications = features.notifications,
                     showContact = features.messages,
                     showReviews = features.showReviews,
-                    showBookClub = showBookClub,
+                    showBookClub = features.bookClubAvailable,
                 )
             }
         }

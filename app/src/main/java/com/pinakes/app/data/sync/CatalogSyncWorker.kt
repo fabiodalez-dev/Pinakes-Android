@@ -69,7 +69,7 @@ class CatalogSyncWorker(
         fun isPermanentFailure(res: ApiResult.Failure): Boolean =
             res.httpStatus == 401 || res.httpStatus == 403 ||
                 res.code == ErrorCodes.UNAUTHORIZED || res.code == ErrorCodes.FORBIDDEN ||
-                res.code == ErrorCodes.APP_DISABLED || res.code == ErrorCodes.VALIDATION ||
+                res.code == ErrorCodes.APP_ACCESS_DISABLED || res.code == ErrorCodes.VALIDATION ||
                 res.code == ErrorCodes.NOT_FOUND
 
         /**

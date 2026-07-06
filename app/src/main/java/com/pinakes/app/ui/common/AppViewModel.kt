@@ -1,7 +1,6 @@
 package com.pinakes.app.ui.common
 
 import androidx.lifecycle.ViewModel
-import com.pinakes.app.data.store.BookClubStore
 import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.store.SessionStore
 import com.pinakes.app.data.store.ThemeStore
@@ -22,16 +21,13 @@ import javax.inject.Inject
 class AppViewModel @Inject constructor(
     session: SessionStore,
     featureStore: FeatureStore,
-    bookClubStore: BookClubStore,
     private val themeStore: ThemeStore,
 ) : ViewModel() {
 
     val authState = session.authState
+    // Includes bookClubAvailable, the Book Club plugin gate (from its own health probe).
     val features = featureStore.features
     val themeMode = themeStore.mode
-
-    /** Whether the instance exposes the optional Book Club plugin (gates the Profile entry). */
-    val bookClubAvailable = bookClubStore.available
 
     fun setThemeMode(mode: ThemeMode) = themeStore.setMode(mode)
 }

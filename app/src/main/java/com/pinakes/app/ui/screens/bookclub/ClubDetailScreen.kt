@@ -55,10 +55,12 @@ import com.pinakes.app.data.model.BookClubDetail
 import com.pinakes.app.data.model.ClubBook
 import com.pinakes.app.data.model.ClubMeeting
 import com.pinakes.app.data.model.ClubPoll
+import com.pinakes.app.ui.common.DateFormat
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.ErrorState
 import com.pinakes.app.ui.components.LoadingState
+import com.pinakes.app.ui.components.PinakesTextButton
 import com.pinakes.app.ui.components.PinakesTopBar
 import com.pinakes.app.ui.components.PrimaryButton
 import com.pinakes.app.ui.components.SecondaryButton
@@ -101,8 +103,8 @@ fun ClubDetailScreen(onNavigateUp: () -> Unit) {
                     onVote = vm::vote,
                     onRsvp = vm::rsvp,
                     onUpdateProgress = { book -> progressBook = book },
-                    onOpenWeb = { url -> openWeb(context, url) },
-                    webBaseUrl = vm.webBaseUrl,
+                    onOpenPollWeb = { poll -> openWeb(context, vm.pollWebUrl(poll.id)) },
+                    onOpenVideo = { url -> openWeb(context, url) },
                 )
             }
         }
@@ -129,8 +131,8 @@ private fun ClubDetailContent(
     onVote: (Int, List<Int>) -> Unit,
     onRsvp: (Int, String) -> Unit,
     onUpdateProgress: (ClubBook) -> Unit,
-    onOpenWeb: (String) -> Unit,
-    webBaseUrl: String,
+    onOpenPollWeb: (ClubPoll) -> Unit,
+    onOpenVideo: (String) -> Unit,
 ) {
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -158,7 +160,7 @@ private fun ClubDetailContent(
                     canParticipate = detail.canParticipate,
                     voting = state.votingPollId == poll.id,
                     onVote = { options -> onVote(poll.id, options) },
-                    onOpenWeb = { onOpenWeb("$webBaseUrl/book-club/${detail.club.slug}/polls/${poll.id}") },
+                    onOpenWeb = { onOpenPollWeb(poll) },
                 )
             }
         }
@@ -171,7 +173,7 @@ private fun ClubDetailContent(
                     canParticipate = detail.canParticipate,
                     rsvping = state.rsvpMeetingId == meeting.id,
                     onRsvp = { response -> onRsvp(meeting.id, response) },
-                    onOpenVideo = { onOpenWeb(meeting.videoUrl) },
+                    onOpenVideo = { onOpenVideo(meeting.videoUrl) },
                 )
             }
         }
@@ -306,7 +308,11 @@ private fun PollCard(
 ) {
     // Selection is seeded from the user's existing ballot and resets when the poll reloads.
     var selected by remember(poll.id, poll.myOptionIds) { mutableStateOf(poll.myOptionIds.toSet()) }
-    val interactive = canParticipate && poll.isOpen && poll.votableInApp
+    // The server only flips status to 'closed' from the cron or the web page (never on the
+    // mobile read path), yet vote() rejects past-deadline ballots with 409 poll_closed —
+    // treat an expired closes_at as closed so we never render a ballot that can only fail.
+    val open = poll.isOpen && !DateFormat.isPast(poll.closesAt)
+    val interactive = canParticipate && open && poll.votableInApp
 
     Surface(
         shape = MaterialTheme.shapes.medium,
@@ -316,8 +322,8 @@ private fun PollCard(
         Column(Modifier.padding(Spacing.lg)) {
             Text(poll.title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
             val meta = buildList {
-                add(stringResource(if (poll.isOpen) R.string.book_club_poll_open else R.string.book_club_poll_closed))
-                poll.closesAt?.let { add(stringResource(R.string.book_club_poll_closes, clubDateTime(it))) }
+                add(stringResource(if (open) R.string.book_club_poll_open else R.string.book_club_poll_closed))
+                poll.closesAt?.let { add(stringResource(R.string.book_club_poll_closes, DateFormat.dateTime(it))) }
                 add(stringResource(R.string.book_club_poll_voters, poll.voterCount))
             }.joinToString(" · ")
             Text(meta, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -367,7 +373,7 @@ private fun PollCard(
                     loading = voting,
                     modifier = Modifier.fillMaxWidth(),
                 )
-            } else if (canParticipate && poll.isOpen && !poll.votableInApp) {
+            } else if (canParticipate && open && !poll.votableInApp) {
                 // Advanced ballots (stars/ranking/elimination) are web-only per the API contract.
                 Spacer(Modifier.height(Spacing.sm))
                 SecondaryButton(
@@ -396,7 +402,7 @@ private fun MeetingCard(
     ) {
         Column(Modifier.padding(Spacing.lg)) {
             Text(meeting.title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-            Text(clubDateTime(meeting.startsAt), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(DateFormat.dateTime(meeting.startsAt), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (meeting.location.isNotBlank()) {
                 Text(meeting.location, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -421,7 +427,11 @@ private fun MeetingCard(
             if (canParticipate && meeting.status == "scheduled") {
                 Spacer(Modifier.height(Spacing.sm))
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    RsvpChip(stringResource(R.string.book_club_rsvp_yes), meeting.myRsvp == "yes", rsvping) { onRsvp("yes") }
+                    // A full meeting always 409s (no_seats) on a NEW 'yes' — mirror the
+                    // server rule client-side; users already going stay free to re-confirm,
+                    // and 'maybe'/'no' are never seat-gated.
+                    val yesBlocked = meeting.isFull && meeting.myRsvp != "yes"
+                    RsvpChip(stringResource(R.string.book_club_rsvp_yes), meeting.myRsvp == "yes", rsvping || yesBlocked) { onRsvp("yes") }
                     RsvpChip(stringResource(R.string.book_club_rsvp_maybe), meeting.myRsvp == "maybe", rsvping) { onRsvp("maybe") }
                     RsvpChip(stringResource(R.string.book_club_rsvp_no), meeting.myRsvp == "no", rsvping) { onRsvp("no") }
                 }
@@ -493,7 +503,7 @@ private fun ProgressDialog(
             )
         },
         dismissButton = {
-            com.pinakes.app.ui.components.PinakesTextButton(label = stringResource(R.string.action_cancel), onClick = onDismiss)
+            PinakesTextButton(label = stringResource(R.string.action_cancel), onClick = onDismiss)
         },
     )
 }

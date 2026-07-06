@@ -29,6 +29,8 @@ data class BookClubHome(
 data class BookClubHomeUiState(
     val content: UiState<BookClubHome> = UiState.Loading,
     val refreshing: Boolean = false,
+    /** Partial-failure notice (e.g. the dashboard fetch failed while clubs loaded). */
+    val snackbarRes: Int? = null,
 )
 
 @HiltViewModel
@@ -56,10 +58,16 @@ class BookClubHomeViewModel @Inject constructor(
             when (clubsRes) {
                 is ApiResult.Success -> {
                     val dashboard = (dashboardRes as? ApiResult.Success)?.data?.clubs ?: emptyList()
+                    // Partial failure: clubs loaded but the personal dashboard didn't.
+                    // Never swallow it — the member's "Your reading" section would vanish
+                    // (or the friendly empty state would show) with no signal at all.
+                    val dashboardFailed =
+                        dashboardRes is ApiResult.Failure && clubsRes.data.myClubs.isNotEmpty()
                     _state.update {
                         it.copy(
                             content = UiState.Success(BookClubHome(dashboard = dashboard, clubs = clubsRes.data)),
                             refreshing = false,
+                            snackbarRes = if (dashboardFailed) R.string.book_club_error_dashboard else it.snackbarRes,
                         )
                     }
                 }
@@ -73,4 +81,6 @@ class BookClubHomeViewModel @Inject constructor(
             }
         }
     }
+
+    fun consumeSnackbar() = _state.update { it.copy(snackbarRes = null) }
 }

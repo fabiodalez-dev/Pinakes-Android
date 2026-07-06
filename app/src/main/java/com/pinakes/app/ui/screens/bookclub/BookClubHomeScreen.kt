@@ -25,11 +25,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -41,6 +45,7 @@ import com.pinakes.app.R
 import com.pinakes.app.data.model.DashboardCard
 import com.pinakes.app.data.model.DirectoryClub
 import com.pinakes.app.data.model.MyClub
+import com.pinakes.app.ui.common.DateFormat
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.EmptyState
@@ -57,9 +62,16 @@ fun BookClubHomeScreen(
 ) {
     val vm: BookClubHomeViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
+    val snackbarHost = remember { SnackbarHostState() }
+
+    val snackbarMessage = state.snackbarRes?.let { stringResource(it) }
+    LaunchedEffect(snackbarMessage) {
+        snackbarMessage?.let { snackbarHost.showSnackbar(it); vm.consumeSnackbar() }
+    }
 
     Scaffold(
         topBar = { PinakesTopBar(title = stringResource(R.string.book_club_title), onNavigateUp = onNavigateUp) },
+        snackbarHost = { SnackbarHost(snackbarHost) },
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = state.refreshing,
@@ -180,7 +192,7 @@ private fun DashboardCardView(card: DashboardCard, onClick: () -> Unit) {
             card.nextMeeting?.let { meeting ->
                 Spacer(Modifier.height(Spacing.sm))
                 Text(
-                    stringResource(R.string.book_club_next_meeting, meeting.title, clubDateTime(meeting.startsAt)),
+                    stringResource(R.string.book_club_next_meeting, meeting.title, DateFormat.dateTime(meeting.startsAt)),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

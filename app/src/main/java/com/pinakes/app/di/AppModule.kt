@@ -13,7 +13,6 @@ import com.pinakes.app.data.repository.NotificationsRepository
 import com.pinakes.app.data.repository.ProfileRepository
 import com.pinakes.app.data.repository.ReviewsRepository
 import com.pinakes.app.data.repository.WishlistRepository
-import com.pinakes.app.data.store.BookClubStore
 import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.store.SessionStore
 import com.pinakes.app.data.store.ThemeStore
@@ -42,9 +41,6 @@ object AppModule {
     fun features(@ApplicationContext context: Context): FeatureStore = FeatureStore(context)
 
     @Provides @Singleton
-    fun bookClubStore(@ApplicationContext context: Context): BookClubStore = BookClubStore(context)
-
-    @Provides @Singleton
     fun network(session: SessionStore): NetworkModule = NetworkModule(session)
 
     @Provides @Singleton
@@ -58,8 +54,8 @@ object AppModule {
         CatalogRepository(network, dao)
 
     @Provides @Singleton
-    fun bookClubRepository(network: NetworkModule, store: BookClubStore, session: SessionStore): BookClubRepository =
-        BookClubRepository(network, store, session)
+    fun bookClubRepository(network: NetworkModule, features: FeatureStore, session: SessionStore): BookClubRepository =
+        BookClubRepository(network, features, session)
 
     @Provides @Singleton
     fun authRepository(
@@ -67,7 +63,8 @@ object AppModule {
         session: SessionStore,
         features: FeatureStore,
         bookClub: BookClubRepository,
-    ): AuthRepository = AuthRepository(network, session, features, bookClub)
+        catalog: CatalogRepository,
+    ): AuthRepository = AuthRepository(network, session, features, bookClub, catalog)
 
     @Provides @Singleton
     fun libraryRepository(network: NetworkModule): LibraryRepository = LibraryRepository(network)

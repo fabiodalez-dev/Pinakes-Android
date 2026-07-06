@@ -395,5 +395,6 @@
   "book_club_privacy_public": "Public",
   "book_club_privacy_private": "Private",
   "book_club_privacy_invite": "Invite only",
-  "book_club_privacy_hidden": "Hidden"
+  "book_club_privacy_hidden": "Hidden",
+  "book_club_error_dashboard": "Couldn't load your reading section. Pull to refresh."
 }

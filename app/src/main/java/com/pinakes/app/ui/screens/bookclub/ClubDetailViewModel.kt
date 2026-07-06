@@ -39,8 +39,8 @@ class ClubDetailViewModel @Inject constructor(
     private val _state = MutableStateFlow(ClubDetailUiState())
     val state: StateFlow<ClubDetailUiState> = _state.asStateFlow()
 
-    /** Instance web origin, for deep-linking the flows the API marks web-only. */
-    val webBaseUrl: String get() = repo.webBaseUrl()
+    /** Web page of a poll — deep-link target for the ballots the app can't render. */
+    fun pollWebUrl(pollId: Int): String = repo.pollWebUrl(slug, pollId)
 
     init { load(initial = true) }
 

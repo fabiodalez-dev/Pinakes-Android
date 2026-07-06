@@ -30,7 +30,8 @@ sealed interface ApiResult<out T> {
 /** Well-known error codes (from `error.code` or derived from the HTTP status). */
 object ErrorCodes {
     const val INVALID_CREDENTIALS = "invalid_credentials"
-    const val APP_DISABLED = "app_disabled"
+    // Emitted by the server's AppAuthMiddleware (403) when mobile app access is disabled.
+    const val APP_ACCESS_DISABLED = "app_access_disabled"
     const val RATE_LIMITED = "rate_limited"
     const val UNAUTHORIZED = "unauthorized"          // 401 without a body code → force re-login
     const val FORBIDDEN = "forbidden"
@@ -105,7 +106,7 @@ suspend fun <T> apiResponse(block: suspend () -> Response<Envelope<T>>): Pair<Ap
 private fun ApiError.toFailure(httpStatus: Int): ApiResult.Failure =
     ApiResult.Failure(code = code, message = message, httpStatus = httpStatus)
 
-private fun HttpException.toFailure(): ApiResult.Failure {
+internal fun HttpException.toFailure(): ApiResult.Failure {
     val status = code()
     val retryAfter = response()?.headers()?.get("Retry-After")?.toLongOrNull()
     val body = try { response()?.errorBody()?.string() } catch (_: Throwable) { null }

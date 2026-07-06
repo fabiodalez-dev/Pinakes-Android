@@ -43,7 +43,6 @@ fun MainScaffold(
 ) {
     val app: AppViewModel = hiltViewModel()
     val features by app.features.collectAsStateWithLifecycle()
-    val bookClubAvailable by app.bookClubAvailable.collectAsStateWithLifecycle()
 
     var tab by rememberSaveable { mutableStateOf(PinakesTab.Home) }
 
@@ -98,7 +97,6 @@ fun MainScaffold(
                     onOpenContact = onOpenContact,
                     onOpenMyReviews = onOpenMyReviews,
                     onOpenBookClub = onOpenBookClub,
-                    showBookClub = bookClubAvailable,
                 )
             }
         }

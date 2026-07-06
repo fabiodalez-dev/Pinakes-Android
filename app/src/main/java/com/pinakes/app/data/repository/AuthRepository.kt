@@ -10,6 +10,8 @@ import com.pinakes.app.data.network.NetworkModule
 import com.pinakes.app.data.network.apiCall
 import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.store.SessionStore
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 /**
  * Onboarding + authentication: instance discovery (`/health`), login (persists token + URL),
@@ -20,6 +22,7 @@ class AuthRepository(
     private val session: SessionStore,
     private val features: FeatureStore,
     private val bookClub: BookClubRepository,
+    private val catalog: CatalogRepository,
 ) {
 
     /**
@@ -64,14 +67,27 @@ class AuthRepository(
      * updated (reactively gating the UI); on failure the last-known flags are kept untouched.
      */
     suspend fun refreshHealth() {
-        if (!session.hasInstance()) return
-        when (val res = apiCall { network.api().health() }) {
-            is ApiResult.Success -> features.update(res.data)
-            is ApiResult.Failure -> { /* keep last-known flags; never lock the user out */ }
+        val instance = session.instanceUrl ?: return
+        coroutineScope {
+            // The core /health and the Book Club plugin probe are independent requests to
+            // the same instance — run them concurrently so the refresh costs max(RTT), not
+            // the sum (this path gates the post-login spinner).
+            val probe = async { bookClub.probeAvailability() }
+            var appAccessEnabled: Boolean? = null
+            when (val res = apiCall { network.api().health() }) {
+                is ApiResult.Success -> {
+                    features.update(res.data)
+                    appAccessEnabled = res.data.appAccessEnabled
+                }
+                is ApiResult.Failure -> { /* keep last-known flags; never lock the user out */ }
+            }
+            // The plugin's health endpoint is public and answers 2xx even when the instance
+            // has mobile app access switched off — gate the section on the core flag so it
+            // hides instead of rendering entries whose calls can only 403.
+            val probed = probe.await()
+            val available = if (appAccessEnabled == false) false else probed
+            bookClub.applyAvailability(available, probedInstanceUrl = instance)
         }
-        // Probe the optional Book Club plugin surface too, so the section shows/hides in step
-        // with the instance's plugin state. Best-effort: a failure keeps the last-known flag.
-        bookClub.refreshAvailability()
     }
 
     suspend fun login(email: String, password: String): ApiResult<Unit> {
@@ -133,10 +149,12 @@ class AuthRepository(
     }
 
     /** Forget the instance entirely (back to onboarding). */
-    fun forgetInstance() {
+    suspend fun forgetInstance() {
         session.clearAll()
-        features.clear()
-        bookClub.clearAvailability()
+        features.clear() // resets the Book Club availability flag too
+        // Purge the offline catalog cache (Room + in-memory ETags): it belongs to the old
+        // instance and must never surface under the next library's name.
+        catalog.clearCache()
         network.invalidate()
     }
 

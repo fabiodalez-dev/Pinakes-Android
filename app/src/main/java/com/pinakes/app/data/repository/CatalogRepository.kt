@@ -58,6 +58,16 @@ class CatalogRepository(
     suspend fun hasCachedCatalog(): Boolean = catalogDao.count() > 0
 
     /**
+     * Drop every per-instance catalog artifact: the Room snapshot and the in-memory ETag
+     * cache. Called when the instance is forgotten so library A's titles, covers and 304
+     * payloads can never surface under library B.
+     */
+    suspend fun clearCache() {
+        detailCache.clear()
+        catalogDao.clear()
+    }
+
+    /**
      * Refresh the cached catalog from the network (first page, unfiltered) and replace
      * the Room snapshot atomically. On network failure the existing cache is kept, so a
      * refresh-on-open that fails never wipes the offline catalog.

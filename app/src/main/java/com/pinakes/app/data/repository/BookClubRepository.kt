@@ -8,42 +8,49 @@ import com.pinakes.app.data.model.ClubProposalRequest
 import com.pinakes.app.data.model.ClubRsvpRequest
 import com.pinakes.app.data.model.ClubVoteRequest
 import com.pinakes.app.data.model.JoinResult
-import com.pinakes.app.data.model.ProgressResult
-import com.pinakes.app.data.model.RsvpResult
-import com.pinakes.app.data.model.VoteResult
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.network.NetworkModule
 import com.pinakes.app.data.network.bookClubCall
-import com.pinakes.app.data.store.BookClubStore
+import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.store.SessionStore
 
 /**
  * Book Club plugin surface (`/api/v1/bookclub/…`): availability discovery, reads (clubs,
  * detail, personal dashboard) and the write actions (join, propose, vote, RSVP, progress).
  *
- * Availability is probed once per `/health` refresh and cached in [BookClubStore] so the app
- * only shows the section when the plugin's `mobile` module is active for this instance.
+ * Availability is probed alongside every `/health` refresh and stored as an
+ * [com.pinakes.app.data.store.InstanceFeatures] flag, so the UI only shows the section when
+ * the plugin's `mobile` module is active for this instance.
  */
 class BookClubRepository(
     private val network: NetworkModule,
-    private val store: BookClubStore,
+    private val features: FeatureStore,
     private val session: SessionStore,
 ) {
 
     /**
-     * Re-probe `GET /bookclub/health`. A 2xx flips the section on; an explicit 404 flips it off;
-     * a network/other failure keeps the last-known flag (never hide a working section on a blip).
-     * No token is required, so this is safe to call at app start alongside the core health refresh.
+     * Probe `GET /bookclub/health` (public, no token).
+     * Returns true on 2xx (plugin on), false on an explicit 404 (plugin off), and null on
+     * any other failure — the caller keeps the last-known flag rather than hiding a working
+     * section on a network blip.
      */
-    suspend fun refreshAvailability() {
-        if (!session.hasInstance()) return
+    suspend fun probeAvailability(): Boolean? =
         when (val res = bookClubCall { network.bookClubApi().health() }) {
-            is ApiResult.Success -> store.setAvailable(true)
-            is ApiResult.Failure -> if (res.httpStatus == 404 || res.code == ErrorCodes.NOT_FOUND) {
-                store.setAvailable(false)
-            }
+            is ApiResult.Success -> true
+            is ApiResult.Failure ->
+                if (res.httpStatus == 404 || res.code == ErrorCodes.NOT_FOUND) false else null
         }
+
+    /**
+     * Apply a probe result, guarded against instance switches: a late response from the
+     * previous instance (the user tapped "change library" mid-flight) must not resurrect
+     * or clobber the flag of the instance now configured. Null keeps the last-known value.
+     */
+    fun applyAvailability(available: Boolean?, probedInstanceUrl: String?) {
+        if (available == null) return
+        if (probedInstanceUrl == null || session.instanceUrl != probedInstanceUrl) return
+        features.setBookClubAvailable(available)
     }
 
     suspend fun clubs(): ApiResult<BookClubClubs> =
@@ -61,18 +68,16 @@ class BookClubRepository(
     suspend fun propose(slug: String, libroId: Int, motivation: String?): ApiResult<Unit> =
         bookClubCall { network.bookClubApi().propose(slug, ClubProposalRequest(libroId, motivation)) }
 
-    suspend fun vote(slug: String, pollId: Int, optionIds: List<Int>): ApiResult<VoteResult> =
+    suspend fun vote(slug: String, pollId: Int, optionIds: List<Int>): ApiResult<Unit> =
         bookClubCall { network.bookClubApi().vote(slug, pollId, ClubVoteRequest(optionIds)) }
 
-    suspend fun rsvp(slug: String, meetingId: Int, response: String): ApiResult<RsvpResult> =
+    suspend fun rsvp(slug: String, meetingId: Int, response: String): ApiResult<Unit> =
         bookClubCall { network.bookClubApi().rsvp(slug, meetingId, ClubRsvpRequest(response)) }
 
-    suspend fun progress(slug: String, clubBookId: Int, percent: Int, finished: Boolean?): ApiResult<ProgressResult> =
+    suspend fun progress(slug: String, clubBookId: Int, percent: Int, finished: Boolean?): ApiResult<Unit> =
         bookClubCall { network.bookClubApi().progress(slug, clubBookId, ClubProgressRequest(percent, finished)) }
 
-    /** Forget the availability flag (instance forgotten). */
-    fun clearAvailability() = store.clear()
-
-    /** Origin (scheme://host[:port]) of the instance, for deep-linking web-only flows. */
-    fun webBaseUrl(): String = session.instanceOrigin.orEmpty()
+    /** Web URL of a poll page — the deep-link target for ballots the app can't render. */
+    fun pollWebUrl(slug: String, pollId: Int): String =
+        "${session.instanceOrigin.orEmpty()}/book-club/$slug/polls/$pollId"
 }
