@@ -20,3 +20,6 @@ app/src/main/res/values*/strings.xml
 
 # Sentry auth token (mapping upload) — secret, never commit
 sentry.properties
+
+# Kotlin compiler session data (created by local builds)
+.kotlin/
