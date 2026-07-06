@@ -1,5 +1,7 @@
 package com.pinakes.app.ui.navigation
 
+import android.net.Uri
+
 /** Centralized navigation route keys. Nested routes carry typed args via path segments. */
 object Routes {
     // Top-level auth graph
@@ -26,7 +28,7 @@ object Routes {
     // Book Club (optional plugin)
     const val BOOK_CLUB = "book-club"
     const val CLUB_DETAIL = "book-club/{slug}"
-    fun clubDetail(slug: String): String = "book-club/$slug"
+    fun clubDetail(slug: String): String = "book-club/${Uri.encode(slug)}"
     const val ARG_CLUB_SLUG = "slug"
 
     /** Graph hosting the bottom-nav + nested authed screens. */
