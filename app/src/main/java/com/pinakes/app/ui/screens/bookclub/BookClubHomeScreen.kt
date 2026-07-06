@@ -65,7 +65,8 @@ fun BookClubHomeScreen(
     val snackbarHost = remember { SnackbarHostState() }
 
     val snackbarMessage = state.snackbarRes?.let { stringResource(it) }
-    LaunchedEffect(snackbarMessage) {
+    // Key on the nonce, not the message: two identical consecutive messages must both show.
+    LaunchedEffect(state.snackbarNonce) {
         snackbarMessage?.let { snackbarHost.showSnackbar(it); vm.consumeSnackbar() }
     }
 
@@ -94,6 +95,11 @@ fun BookClubHomeScreen(
                             title = stringResource(R.string.book_club_empty_title),
                             subtitle = stringResource(R.string.book_club_empty_subtitle),
                             icon = Icons.Outlined.Groups,
+                            // Explicit refresh: the empty state fills the viewport and isn't
+                            // scrollable, so the PullToRefreshBox gesture never fires on it —
+                            // a user who joins a club on the web needs a button to reload.
+                            actionLabel = stringResource(R.string.book_club_refresh),
+                            onAction = vm::refresh,
                         )
                     } else {
                         LazyColumn(

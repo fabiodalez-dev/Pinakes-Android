@@ -3,6 +3,7 @@ package com.pinakes.app.ui.screens.bookclub
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
 import com.pinakes.app.R
@@ -37,10 +38,16 @@ fun privacyLabelRes(privacy: String): Int = when (privacy) {
 
 /** Open a web URL (deep-links the flows the Book Club API marks as web-only). */
 fun openWeb(context: Context, url: String) {
-    if (url.isBlank()) return
+    if (url.isBlank()) {
+        Toast.makeText(context, context.getString(R.string.book_club_no_browser), Toast.LENGTH_SHORT).show()
+        return
+    }
     runCatching {
         context.startActivity(
             Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
+    }.onFailure {
+        // No browser / no handling activity — tell the user instead of silently no-op-ing.
+        Toast.makeText(context, context.getString(R.string.book_club_no_browser), Toast.LENGTH_SHORT).show()
     }
 }

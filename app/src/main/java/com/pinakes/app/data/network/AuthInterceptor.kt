@@ -28,7 +28,16 @@ class AuthInterceptor(private val session: SessionStore) : Interceptor {
         } else {
             original
         }
-        return chain.proceed(request)
+        val response = chain.proceed(request)
+        // App-wide session expiry: a 401 on an authenticated request means the bearer
+        // token is no longer valid. Clear it so SessionStore.authState flips and the nav
+        // host routes every screen (Book Club included) back to login, instead of leaving
+        // the user on a permanent retryable error. Public endpoints returned early above,
+        // so this only fires for genuinely-authenticated calls.
+        if (response.code == 401 && !token.isNullOrBlank()) {
+            session.clearToken()
+        }
+        return response
     }
 
     companion object {

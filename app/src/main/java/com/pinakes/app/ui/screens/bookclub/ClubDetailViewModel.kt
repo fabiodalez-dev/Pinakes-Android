@@ -27,6 +27,8 @@ data class ClubDetailUiState(
     val progressBookId: Int? = null,
     val snackbar: String? = null,
     val snackbarRes: Int? = null,
+    /** Bumped on every snackbar post so two identical consecutive messages still both show. */
+    val snackbarNonce: Int = 0,
     /** The plugin was deactivated server-side (confirmed via health re-probe). */
     val pluginGone: Boolean = false,
 )
@@ -84,10 +86,13 @@ class ClubDetailViewModel @Inject constructor(
                 is ApiResult.Success -> {
                     val res2 = if (res.data.status == "pending") R.string.book_club_join_pending
                     else R.string.book_club_join_active
-                    _state.update { it.copy(joining = false, snackbarRes = res2) }
+                    _state.update { it.copy(joining = false).snackRes(res2) }
                     load(initial = false)
                 }
-                is ApiResult.Failure -> _state.update { it.copy(joining = false).withError(res) }
+                is ApiResult.Failure -> {
+                    _state.update { it.copy(joining = false).withError(res) }
+                    reloadIfPluginGone(res)
+                }
             }
         }
     }
@@ -95,17 +100,20 @@ class ClubDetailViewModel @Inject constructor(
     fun vote(pollId: Int, optionIds: List<Int>) {
         if (_state.value.votingPollId != null) return
         if (optionIds.isEmpty()) {
-            _state.update { it.copy(snackbarRes = R.string.book_club_vote_empty) }
+            _state.update { it.snackRes(R.string.book_club_vote_empty) }
             return
         }
         _state.update { it.copy(votingPollId = pollId) }
         viewModelScope.launch {
             when (val res = repo.vote(slug, pollId, optionIds)) {
                 is ApiResult.Success -> {
-                    _state.update { it.copy(votingPollId = null, snackbarRes = R.string.book_club_vote_saved) }
+                    _state.update { it.copy(votingPollId = null).snackRes(R.string.book_club_vote_saved) }
                     load(initial = false)
                 }
-                is ApiResult.Failure -> _state.update { it.copy(votingPollId = null).withError(res) }
+                is ApiResult.Failure -> {
+                    _state.update { it.copy(votingPollId = null).withError(res) }
+                    reloadIfPluginGone(res)
+                }
             }
         }
     }
@@ -116,10 +124,13 @@ class ClubDetailViewModel @Inject constructor(
         viewModelScope.launch {
             when (val res = repo.rsvp(slug, meetingId, response)) {
                 is ApiResult.Success -> {
-                    _state.update { it.copy(rsvpMeetingId = null, snackbarRes = R.string.book_club_rsvp_saved) }
+                    _state.update { it.copy(rsvpMeetingId = null).snackRes(R.string.book_club_rsvp_saved) }
                     load(initial = false)
                 }
-                is ApiResult.Failure -> _state.update { it.copy(rsvpMeetingId = null).withError(res) }
+                is ApiResult.Failure -> {
+                    _state.update { it.copy(rsvpMeetingId = null).withError(res) }
+                    reloadIfPluginGone(res)
+                }
             }
         }
     }
@@ -130,18 +141,37 @@ class ClubDetailViewModel @Inject constructor(
         viewModelScope.launch {
             when (val res = repo.progress(slug, clubBookId, percent, finished)) {
                 is ApiResult.Success -> {
-                    _state.update { it.copy(progressBookId = null, snackbarRes = R.string.book_club_progress_saved) }
+                    _state.update { it.copy(progressBookId = null).snackRes(R.string.book_club_progress_saved) }
                     load(initial = false)
                 }
-                is ApiResult.Failure -> _state.update { it.copy(progressBookId = null).withError(res) }
+                is ApiResult.Failure -> {
+                    _state.update { it.copy(progressBookId = null).withError(res) }
+                    reloadIfPluginGone(res)
+                }
             }
+        }
+    }
+
+    /**
+     * When an action (join/vote/rsvp/progress) fails with 404 and the plugin is confirmed
+     * gone, reload so the load() path flips the screen to the friendly "gone" EmptyState —
+     * keeping mid-session deactivation degradation consistent with the initial-load path.
+     */
+    private suspend fun reloadIfPluginGone(res: ApiResult.Failure) {
+        if ((res.httpStatus == 404 || res.code == ErrorCodes.NOT_FOUND) && repo.confirmGone()) {
+            load(initial = false)
         }
     }
 
     fun consumeSnackbar() = _state.update { it.copy(snackbar = null, snackbarRes = null) }
 
+    /** Post a string-resource snackbar; the nonce bump makes identical consecutive messages re-fire. */
+    private fun ClubDetailUiState.snackRes(res: Int): ClubDetailUiState =
+        copy(snackbar = null, snackbarRes = res, snackbarNonce = snackbarNonce + 1)
+
     /** Prefer the server's (localized) message; fall back to a generic string when it's blank. */
     private fun ClubDetailUiState.withError(failure: ApiResult.Failure): ClubDetailUiState =
-        if (failure.message.isNotBlank()) copy(snackbar = failure.message, snackbarRes = null)
-        else copy(snackbar = null, snackbarRes = R.string.book_club_action_error)
+        (if (failure.message.isNotBlank()) copy(snackbar = failure.message, snackbarRes = null)
+        else copy(snackbar = null, snackbarRes = R.string.book_club_action_error))
+            .copy(snackbarNonce = snackbarNonce + 1)
 }
