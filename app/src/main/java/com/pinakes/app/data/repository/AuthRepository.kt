@@ -19,6 +19,7 @@ class AuthRepository(
     private val network: NetworkModule,
     private val session: SessionStore,
     private val features: FeatureStore,
+    private val bookClub: BookClubRepository,
 ) {
 
     /**
@@ -68,6 +69,9 @@ class AuthRepository(
             is ApiResult.Success -> features.update(res.data)
             is ApiResult.Failure -> { /* keep last-known flags; never lock the user out */ }
         }
+        // Probe the optional Book Club plugin surface too, so the section shows/hides in step
+        // with the instance's plugin state. Best-effort: a failure keeps the last-known flag.
+        bookClub.refreshAvailability()
     }
 
     suspend fun login(email: String, password: String): ApiResult<Unit> {
@@ -132,6 +136,7 @@ class AuthRepository(
     fun forgetInstance() {
         session.clearAll()
         features.clear()
+        bookClub.clearAvailability()
         network.invalidate()
     }
 

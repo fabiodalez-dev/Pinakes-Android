@@ -5,6 +5,7 @@ import com.pinakes.app.data.local.AppDatabase
 import com.pinakes.app.data.local.CatalogDao
 import com.pinakes.app.data.network.NetworkModule
 import com.pinakes.app.data.repository.AuthRepository
+import com.pinakes.app.data.repository.BookClubRepository
 import com.pinakes.app.data.repository.CatalogRepository
 import com.pinakes.app.data.repository.LibraryRepository
 import com.pinakes.app.data.repository.MessagesRepository
@@ -12,6 +13,7 @@ import com.pinakes.app.data.repository.NotificationsRepository
 import com.pinakes.app.data.repository.ProfileRepository
 import com.pinakes.app.data.repository.ReviewsRepository
 import com.pinakes.app.data.repository.WishlistRepository
+import com.pinakes.app.data.store.BookClubStore
 import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.store.SessionStore
 import com.pinakes.app.data.store.ThemeStore
@@ -40,6 +42,9 @@ object AppModule {
     fun features(@ApplicationContext context: Context): FeatureStore = FeatureStore(context)
 
     @Provides @Singleton
+    fun bookClubStore(@ApplicationContext context: Context): BookClubStore = BookClubStore(context)
+
+    @Provides @Singleton
     fun network(session: SessionStore): NetworkModule = NetworkModule(session)
 
     @Provides @Singleton
@@ -53,8 +58,16 @@ object AppModule {
         CatalogRepository(network, dao)
 
     @Provides @Singleton
-    fun authRepository(network: NetworkModule, session: SessionStore, features: FeatureStore): AuthRepository =
-        AuthRepository(network, session, features)
+    fun bookClubRepository(network: NetworkModule, store: BookClubStore, session: SessionStore): BookClubRepository =
+        BookClubRepository(network, store, session)
+
+    @Provides @Singleton
+    fun authRepository(
+        network: NetworkModule,
+        session: SessionStore,
+        features: FeatureStore,
+        bookClub: BookClubRepository,
+    ): AuthRepository = AuthRepository(network, session, features, bookClub)
 
     @Provides @Singleton
     fun libraryRepository(network: NetworkModule): LibraryRepository = LibraryRepository(network)

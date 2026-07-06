@@ -81,6 +81,29 @@ two genuine bugs that a build-only check could not have caught:
    availability logic (`loanable_now || copies_available > 0`). Verified: titles, authors and the
    green *Available* / red *On loan* chips now render correctly.
 
+## Book Club plugin integration
+
+The optional server-side **Book Club** plugin is now surfaced in the app. It is
+**auto-discovered and gated**: after login the app probes `GET /api/v1/bookclub/health`
+(public, no token) and only shows the section when the plugin + its `mobile` module are
+active for the instance (a 404 hides it). The flag is cached in an encrypted store and
+refreshed alongside `/health`, so the entry never flickers and a first-run/offline probe
+keeps it hidden — same "confirm before showing" rule as public registration.
+
+- **Data layer** — `BookClubApi` (Retrofit) + `BookClubRepository` + `BookClubStore`, all
+  reusing the same base URL and bearer token as the core client. The plugin uses a
+  **different envelope** (`{success, data, error}` vs the core `{data, meta, error}`), handled
+  by a dedicated `bookClubCall` that maps into the shared `ApiResult`/`ErrorCodes`.
+- **Screens** — a **Book Club home** (your reading dashboard, your clubs, discover directory,
+  reached from Profile) and a **club detail** (reading list with state chips + progress,
+  polls, meetings). Actions wired end-to-end: **join**, **vote** (simple / multi / weighted,
+  with the ballot pre-seeded from `my_option_ids`), **RSVP** (yes / maybe / no), and
+  **reading progress**. Guests are read-only. Advanced poll modes and proposing a title
+  deep-link to the web page (per the API contract).
+- **i18n** — all new strings added to the 4 locale JSONs (it/en/fr/de), in parity.
+- **Build** — `assembleDebug`, `lintDebug` and `assembleRelease` (R8/minify — exercises the
+  keep rules for the new `@Serializable` models) all **BUILD SUCCESSFUL**.
+
 ## Partial / TODO
 
 - **Push (UnifiedPush): STUBBED — not wired.** The data layer is ready (`/me/push/subscribe`,
