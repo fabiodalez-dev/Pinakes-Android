@@ -28,6 +28,7 @@ class NetworkModule(private val session: SessionStore) {
 
     private val okHttpClient: OkHttpClient by lazy {
         val builder = OkHttpClient.Builder()
+            .addInterceptor(CleartextGuardInterceptor { session.allowInsecureHttp })
             .addInterceptor(AuthInterceptor(session))
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)

@@ -13,6 +13,12 @@
       user has explicitly enabled the "Allow insecure HTTP" opt-in (off by
       default — see OnboardingViewModel / SessionStore.allowInsecureHttp).
 
+  The gate covers EVERY OkHttp client, not just the API one — the
+  CleartextGuardInterceptor is wired into NetworkModule, the Coil image loader
+  (PinakesApplication) and the ebook PDF downloader (PdfReaderDialog) — so a
+  cover or PDF served over plain HTTP cannot silently downgrade the connection
+  on an otherwise-HTTPS instance either.
+
   So a cleartext request is only ever issued for loopback/dev hosts or for an
   instance the user has knowingly accepted as insecure. The domain-config below
   is kept as belt-and-braces documentation of the always-allowed dev hosts.

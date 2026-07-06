@@ -39,6 +39,10 @@ import androidx.compose.ui.window.DialogProperties
 import com.pinakes.app.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.content.Context
+import com.pinakes.app.data.network.CleartextGuardInterceptor
+import com.pinakes.app.data.network.NetworkEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -66,7 +70,7 @@ fun PdfReaderDialog(
     LaunchedEffect(pdfUrl) {
         state = withContext(Dispatchers.IO) {
             runCatching {
-                val file = downloadToCache(pdfUrl, context.cacheDir)
+                val file = downloadToCache(pdfUrl, context.cacheDir, guardedHttpClient(context))
                 val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
                 val renderer = PdfRenderer(pfd)
                 PdfState.Ready(renderer.pageCount, renderer, pfd) as PdfState
@@ -184,13 +188,26 @@ private fun PdfPage(renderer: PdfRenderer, index: Int, pageCount: Int) {
     }
 }
 
-private val pdfHttpClient by lazy { OkHttpClient() }
+/**
+ * OkHttp client for the PDF download, carrying the same cleartext gate as the API client so an
+ * ebook served over plain HTTP can't downgrade the connection on an HTTPS instance (allowed only
+ * for loopback or when the user opted into insecure HTTP). Reaches [SessionStore] via the Hilt
+ * EntryPoint since this download path isn't constructor-injected.
+ */
+private fun guardedHttpClient(context: Context): OkHttpClient {
+    val session = EntryPointAccessors
+        .fromApplication(context.applicationContext, NetworkEntryPoint::class.java)
+        .sessionStore()
+    return OkHttpClient.Builder()
+        .addInterceptor(CleartextGuardInterceptor { session.allowInsecureHttp })
+        .build()
+}
 
 /** Streams [url] into a temp file under [cacheDir] and returns it. Throws on a non-2xx response. */
-private fun downloadToCache(url: String, cacheDir: File): File {
+private fun downloadToCache(url: String, cacheDir: File, client: OkHttpClient): File {
     val out = File.createTempFile("pinakes-ebook-", ".pdf", cacheDir)
     val request = Request.Builder().url(url).build()
-    pdfHttpClient.newCall(request).execute().use { response ->
+    client.newCall(request).execute().use { response ->
         if (!response.isSuccessful) {
             out.delete()
             error("HTTP ${response.code}")
