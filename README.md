@@ -62,6 +62,7 @@ catalogue-only mode, push availability).
 | **Ebooks** | In-app PDF reader (PdfRenderer); other formats open externally |
 | **My Library** | Loans grouped into Overdue / On loan / Ready & scheduled / Pending, with due dates; reservations with cancel |
 | **Wishlist** | Add and remove titles |
+| **Book Club** | When the instance runs the **Book Club** plugin: browse your clubs and the directory, open a club's reading list / polls / meetings, join, vote in-app (simple / multi / weighted ballots), RSVP to meetings and track your reading progress — advanced poll modes and proposing a title deep-link to the web |
 | **Profile** | Edit profile, change password, device list, theme switcher, language switcher, logout |
 | **Notifications** | Loan due/overdue, reservation ready, book available |
 | **Themes** | Material 3 light and dark, light by default; pick light/dark/system in Profile |
@@ -125,6 +126,15 @@ admin enables it once:
 `/api/v1/health` and the interactive docs at `/api/v1/docs` are always reachable.
 See the [Mobile API documentation](https://fabiodalez-dev.github.io/Pinakes/#/admin/mobile-api).
 
+### Book Club (optional plugin)
+
+If the instance runs the **Book Club** plugin (with its `mobile` module enabled),
+the app auto-discovers it via `GET /api/v1/bookclub/health` (a 2xx after login) and
+adds a **Book Club** entry to the Profile tab; otherwise the section stays hidden.
+It reuses the same bearer token — no extra login — and talks to the plugin's
+`/api/v1/bookclub/*` surface. Advanced poll modes (stars / ranking / elimination)
+and proposing a title open the corresponding web page.
+
 ## Internationalization
 
 Translations live in `i18n/{en,it,fr,de}.json` (one flat key/value map per
@@ -158,7 +168,7 @@ app/src/main/java/com/pinakes/app/
     ├── theme/        Color / Type / Theme (magenta #D70161 brand, light default)
     ├── components/   BookCard, AvailabilityChip, AudioPlayer, bottom bar …
     ├── navigation/   NavHost + scaffold
-    └── screens/      onboarding, login, home, search, detail, library, wishlist, profile …
+    └── screens/      onboarding, login, home, search, detail, library, wishlist, profile, bookclub …
 i18n/                 en/it/fr/de.json  (source of truth for strings)
 _contract/            OpenAPI snapshot + API spec the app is built against
 ```

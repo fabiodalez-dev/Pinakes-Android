@@ -23,6 +23,12 @@ object Routes {
     fun bookDetail(bookId: Int): String = "book/$bookId"
     const val ARG_BOOK_ID = "bookId"
 
+    // Book Club (optional plugin)
+    const val BOOK_CLUB = "book-club"
+    const val CLUB_DETAIL = "book-club/{slug}"
+    fun clubDetail(slug: String): String = "book-club/$slug"
+    const val ARG_CLUB_SLUG = "slug"
+
     /** Graph hosting the bottom-nav + nested authed screens. */
     const val MAIN_GRAPH = "main"
 }

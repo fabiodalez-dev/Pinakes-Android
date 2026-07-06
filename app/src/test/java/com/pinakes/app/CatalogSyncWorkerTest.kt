@@ -25,7 +25,7 @@ class CatalogSyncWorkerTest {
         // Auth/authorization: a background worker can't re-login.
         assertTrue(CatalogSyncWorker.isPermanentFailure(failure(ErrorCodes.UNAUTHORIZED, 401)))
         assertTrue(CatalogSyncWorker.isPermanentFailure(failure(ErrorCodes.FORBIDDEN, 403)))
-        assertTrue(CatalogSyncWorker.isPermanentFailure(failure(ErrorCodes.APP_DISABLED, 403)))
+        assertTrue(CatalogSyncWorker.isPermanentFailure(failure(ErrorCodes.APP_ACCESS_DISABLED, 403)))
         // A bare 401/403 status with no matching body code still counts.
         assertTrue(CatalogSyncWorker.isPermanentFailure(failure(ErrorCodes.UNKNOWN, 401)))
         assertTrue(CatalogSyncWorker.isPermanentFailure(failure(ErrorCodes.UNKNOWN, 403)))

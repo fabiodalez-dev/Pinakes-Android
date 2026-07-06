@@ -81,6 +81,61 @@ two genuine bugs that a build-only check could not have caught:
    availability logic (`loanable_now || copies_available > 0`). Verified: titles, authors and the
    green *Available* / red *On loan* chips now render correctly.
 
+## Book Club plugin integration
+
+The optional server-side **Book Club** plugin is now surfaced in the app. It is
+**auto-discovered and gated**: after login the app probes `GET /api/v1/bookclub/health`
+(public, no token) and only shows the section when the plugin + its `mobile` module are
+active for the instance (a 404 hides it). The flag is cached in an encrypted store and
+refreshed alongside `/health`, so the entry never flickers and a first-run/offline probe
+keeps it hidden — same "confirm before showing" rule as public registration.
+
+- **Data layer** — `BookClubApi` (Retrofit) + `BookClubRepository`, reusing the same base URL
+  and bearer token as the core client; the availability flag lives in `FeatureStore`
+  (`InstanceFeatures.bookClubAvailable`) next to the other instance gates. The plugin uses a
+  **different envelope** (`{success, data, error}` vs the core `{data, meta, error}`), handled
+  by a dedicated `bookClubCall` that reuses the core error pipeline (`parseErrorBody`,
+  status fallbacks, `Retry-After`) and the shared `ApiResult`/`ErrorCodes`.
+- **Screens** — a **Book Club home** (your reading dashboard, your clubs, discover directory,
+  reached from Profile) and a **club detail** (reading list with state chips + progress,
+  polls, meetings). Actions wired end-to-end: **join**, **vote** (simple / multi / weighted,
+  with the ballot pre-seeded from `my_option_ids`), **RSVP** (yes / maybe / no), and
+  **reading progress**. Guests are read-only. Advanced poll modes and proposing a title
+  deep-link to the web page (per the API contract).
+- **i18n** — all new strings added to the 4 locale JSONs (it/en/fr/de), in parity.
+- **Build** — `testDebugUnitTest`, `assembleDebug`, `lintDebug` and `assembleRelease`
+  (R8/minify — exercises the keep rules for the new `@Serializable` models) all
+  **BUILD SUCCESSFUL**.
+
+### PHP-compatibility review (verified against the live plugin sources)
+
+A full adversarial review against the Book Club plugin + mobile-api PHP sources confirmed
+the wire contract (paths, regexes, casts, nullability, envelopes, error codes) and fixed
+every confirmed finding:
+
+- **Rejoin parity**: `canJoin` now mirrors the server — members with status `left`/`suspended`
+  can re-join (the web shows the join form for them; only `banned` is blocked).
+- **Expired polls**: the mobile API never lazy-closes polls (only the web page/cron do), so a
+  past `closes_at` now renders as *Closed* instead of a ballot that can only 409 `poll_closed`.
+- **Full meetings**: the *Going* chip disables when `yes_count >= seats` (unless already
+  going), mirroring the server's 409 `no_seats` rule; *maybe*/*no* stay enabled.
+- **MySQL DATETIME timestamps**: the server emits raw `Y-m-d H:i:s` for reviews, devices and
+  book club dates — `DateFormat` now parses wall-clock values, fixing raw strings that
+  previously rendered verbatim on review cards and the device list.
+- **Home "Available now" shelf**: restored the server-side `available=true` query (the cached
+  first page is only the offline fallback), so availability beyond the newest 40 titles shows
+  again.
+- **Instance switch hygiene**: `forgetInstance()` now purges the Room catalog cache + ETag
+  cache (no cross-library leak), and a late availability probe can no longer resurrect the
+  Book Club flag after switching (probe results are guarded by instance URL).
+- **App-access gate**: the Book Club section also hides when core `/health` reports
+  `app_access_enabled=false` (the plugin's public health answers 200 regardless).
+- **Startup/login latency**: the core health call and the plugin probe now run concurrently.
+- **Error codes**: `ErrorCodes` now matches the server's real `app_access_disabled` (the old
+  `app_disabled` constant matched nothing the server emits).
+- **Partial failures**: a dashboard fetch failure on the Book Club home now surfaces a
+  snackbar instead of silently dropping the "Your reading" section.
+
 ## Partial / TODO
 
 - **Push (UnifiedPush): STUBBED — not wired.** The data layer is ready (`/me/push/subscribe`,

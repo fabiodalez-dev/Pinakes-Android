@@ -18,6 +18,8 @@ import androidx.navigation.NavType
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pinakes.app.data.store.AuthState
 import com.pinakes.app.ui.common.AppViewModel
+import com.pinakes.app.ui.screens.bookclub.BookClubHomeScreen
+import com.pinakes.app.ui.screens.bookclub.ClubDetailScreen
 import com.pinakes.app.ui.screens.contact.ContactScreen
 import com.pinakes.app.ui.screens.detail.BookDetailScreen
 import com.pinakes.app.ui.screens.login.ForgotPasswordScreen
@@ -95,6 +97,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                 onOpenContact = { navController.navigate(Routes.CONTACT) },
                 onOpenMyReviews = { navController.navigate(Routes.MY_REVIEWS) },
+                onOpenBookClub = { navController.navigate(Routes.BOOK_CLUB) },
             )
         }
 
@@ -139,6 +142,26 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onNavigateUp = { navController.popBackStack() },
                 onOpenBook = { id -> navController.navigate(Routes.bookDetail(id)) },
             )
+        }
+
+        composable(
+            Routes.BOOK_CLUB,
+            enterTransition = slideIn,
+            popExitTransition = slideOut,
+        ) {
+            BookClubHomeScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpenClub = { slug -> navController.navigate(Routes.clubDetail(slug)) },
+            )
+        }
+
+        composable(
+            route = Routes.CLUB_DETAIL,
+            arguments = listOf(navArgument(Routes.ARG_CLUB_SLUG) { type = NavType.StringType }),
+            enterTransition = slideIn,
+            popExitTransition = slideOut,
+        ) {
+            ClubDetailScreen(onNavigateUp = { navController.popBackStack() })
         }
     }
 }

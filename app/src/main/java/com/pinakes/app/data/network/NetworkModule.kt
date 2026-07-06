@@ -44,19 +44,21 @@ class NetworkModule(private val session: SessionStore) {
     private var cachedBaseUrl: String? = null
 
     @Volatile
+    private var cachedRetrofit: Retrofit? = null
+
+    @Volatile
     private var cachedApi: PinakesApi? = null
 
-    /**
-     * Returns a [PinakesApi] bound to [baseUrl] (must end with `/api/v1/`). Falls back to the
-     * persisted instance URL when [baseUrl] is null. Throws if no base URL is available — call
-     * sites in onboarding pass an explicit URL; authenticated repositories rely on the stored one.
-     */
+    @Volatile
+    private var cachedBookClubApi: BookClubApi? = null
+
+    /** Shared Retrofit for a given base URL, rebuilt only when the instance URL changes. */
     @Synchronized
-    fun api(baseUrl: String? = null): PinakesApi {
+    private fun retrofit(baseUrl: String?): Retrofit {
         val target = baseUrl ?: session.instanceUrl
         requireNotNull(target) { "No instance URL configured. Complete onboarding first." }
         val normalized = if (target.endsWith("/")) target else "$target/"
-        val existing = cachedApi
+        val existing = cachedRetrofit
         if (existing != null && normalized == cachedBaseUrl) return existing
 
         val contentType = "application/json".toMediaType()
@@ -65,17 +67,41 @@ class NetworkModule(private val session: SessionStore) {
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
-        val api = retrofit.create(PinakesApi::class.java)
         cachedBaseUrl = normalized
-        cachedApi = api
-        return api
+        cachedRetrofit = retrofit
+        cachedApi = null
+        cachedBookClubApi = null
+        return retrofit
+    }
+
+    /**
+     * Returns a [PinakesApi] bound to [baseUrl] (must end with `/api/v1/`). Falls back to the
+     * persisted instance URL when [baseUrl] is null. Throws if no base URL is available — call
+     * sites in onboarding pass an explicit URL; authenticated repositories rely on the stored one.
+     */
+    @Synchronized
+    fun api(baseUrl: String? = null): PinakesApi {
+        val retrofit = retrofit(baseUrl)
+        return cachedApi ?: retrofit.create(PinakesApi::class.java).also { cachedApi = it }
+    }
+
+    /**
+     * Returns the [BookClubApi] bound to the same instance base URL as [api]. The Book Club
+     * plugin lives under `/api/v1/bookclub/…` and reuses the same bearer token.
+     */
+    @Synchronized
+    fun bookClubApi(baseUrl: String? = null): BookClubApi {
+        val retrofit = retrofit(baseUrl)
+        return cachedBookClubApi ?: retrofit.create(BookClubApi::class.java).also { cachedBookClubApi = it }
     }
 
     /** Drop the cached Retrofit so the next [api] call rebuilds against a new instance URL. */
     @Synchronized
     fun invalidate() {
         cachedBaseUrl = null
+        cachedRetrofit = null
         cachedApi = null
+        cachedBookClubApi = null
     }
 
     companion object {

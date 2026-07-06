@@ -25,6 +25,7 @@ class AppViewModel @Inject constructor(
 ) : ViewModel() {
 
     val authState = session.authState
+    // Includes bookClubAvailable, the Book Club plugin gate (from its own health probe).
     val features = featureStore.features
     val themeMode = themeStore.mode
 

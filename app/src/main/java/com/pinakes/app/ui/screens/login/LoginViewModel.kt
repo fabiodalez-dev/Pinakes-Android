@@ -70,13 +70,15 @@ class LoginViewModel @Inject constructor(
 
     /** Forget the instance — back to onboarding (e.g. "wrong library"). */
     fun changeLibrary(onDone: () -> Unit) {
-        auth.forgetInstance()
-        onDone()
+        viewModelScope.launch {
+            auth.forgetInstance()
+            onDone()
+        }
     }
 
     private fun applyError(state: LoginUiState, failure: ApiResult.Failure): LoginUiState = when (failure.code) {
         ErrorCodes.INVALID_CREDENTIALS -> state.copy(error = null, errorRes = R.string.login_error_invalid_credentials, errorArg = null)
-        ErrorCodes.APP_DISABLED -> state.copy(error = null, errorRes = R.string.login_error_app_disabled, errorArg = null)
+        ErrorCodes.APP_ACCESS_DISABLED -> state.copy(error = null, errorRes = R.string.login_error_app_disabled, errorArg = null)
         ErrorCodes.RATE_LIMITED -> {
             val s = failure.retryAfterSeconds
             if (s != null) state.copy(error = null, errorRes = R.string.login_error_rate_limited_seconds, errorArg = s)

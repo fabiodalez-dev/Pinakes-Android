@@ -1,0 +1,98 @@
+package com.pinakes.app.ui.screens.bookclub
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.pinakes.app.R
+import com.pinakes.app.data.model.BookClubClubs
+import com.pinakes.app.data.model.DashboardCard
+import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.network.ErrorCodes
+import com.pinakes.app.data.repository.BookClubRepository
+import com.pinakes.app.ui.common.UiState
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+/** Landing data: the personal dashboard cards on top, then the clubs directory. */
+data class BookClubHome(
+    val dashboard: List<DashboardCard> = emptyList(),
+    val clubs: BookClubClubs = BookClubClubs(),
+) {
+    val isEmpty: Boolean
+        get() = dashboard.isEmpty() && clubs.myClubs.isEmpty() && clubs.directory.isEmpty()
+}
+
+data class BookClubHomeUiState(
+    val content: UiState<BookClubHome> = UiState.Loading,
+    val refreshing: Boolean = false,
+    /** Partial-failure notice (e.g. the dashboard fetch failed while clubs loaded). */
+    val snackbarRes: Int? = null,
+    /** The plugin was deactivated server-side (confirmed via health re-probe). */
+    val pluginGone: Boolean = false,
+)
+
+@HiltViewModel
+class BookClubHomeViewModel @Inject constructor(
+    private val repo: BookClubRepository,
+) : ViewModel() {
+
+    private val _state = MutableStateFlow(BookClubHomeUiState())
+    val state: StateFlow<BookClubHomeUiState> = _state.asStateFlow()
+
+    init { load(initial = true) }
+
+    fun refresh() = load(initial = false)
+
+    private fun load(initial: Boolean) {
+        if (initial) _state.update { it.copy(content = UiState.Loading) }
+        else _state.update { it.copy(refreshing = true) }
+        viewModelScope.launch {
+            // The two reads are independent — fetch them together.
+            val clubsDeferred = async { repo.clubs() }
+            val dashboardDeferred = async { repo.dashboard() }
+            val clubsRes = clubsDeferred.await()
+            val dashboardRes = dashboardDeferred.await()
+
+            when (clubsRes) {
+                is ApiResult.Success -> {
+                    val dashboard = (dashboardRes as? ApiResult.Success)?.data?.clubs ?: emptyList()
+                    // Partial failure: clubs loaded but the personal dashboard didn't.
+                    // Never swallow it — the member's "Your reading" section would vanish
+                    // (or the friendly empty state would show) with no signal at all.
+                    val dashboardFailed =
+                        dashboardRes is ApiResult.Failure && clubsRes.data.myClubs.isNotEmpty()
+                    _state.update {
+                        it.copy(
+                            content = UiState.Success(BookClubHome(dashboard = dashboard, clubs = clubsRes.data)),
+                            refreshing = false,
+                            snackbarRes = if (dashboardFailed) R.string.book_club_error_dashboard else it.snackbarRes,
+                        )
+                    }
+                }
+                is ApiResult.Failure -> {
+                    // 404 usually means the plugin was deactivated: confirm via the
+                    // health probe (which also flips the feature flag so the Profile
+                    // entry hides) and degrade to a friendly "gone" state instead of
+                    // a retryable error banner.
+                    val gone = (clubsRes.httpStatus == 404 || clubsRes.code == ErrorCodes.NOT_FOUND) &&
+                        repo.confirmGone()
+                    _state.update {
+                        it.copy(
+                            content = if (!gone && it.content is UiState.Success) it.content
+                            else UiState.Error(clubsRes.message, clubsRes.code, R.string.book_club_error_load),
+                            refreshing = false,
+                            pluginGone = gone,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun consumeSnackbar() = _state.update { it.copy(snackbarRes = null) }
+}

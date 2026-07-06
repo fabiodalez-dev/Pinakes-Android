@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.DevicesOther
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
@@ -75,6 +76,7 @@ fun ProfileScreen(
     onOpenNotifications: () -> Unit,
     onOpenContact: () -> Unit,
     onOpenMyReviews: () -> Unit,
+    onOpenBookClub: () -> Unit,
 ) {
     val app: AppViewModel = hiltViewModel()
     val vm: ProfileViewModel = hiltViewModel()
@@ -103,9 +105,11 @@ fun ProfileScreen(
                     onOpenNotifications = onOpenNotifications,
                     onOpenContact = onOpenContact,
                     onOpenMyReviews = onOpenMyReviews,
+                    onOpenBookClub = onOpenBookClub,
                     showNotifications = features.notifications,
                     showContact = features.messages,
                     showReviews = features.showReviews,
+                    showBookClub = features.bookClubAvailable,
                 )
             }
         }
@@ -151,9 +155,11 @@ private fun ProfileContent(
     onOpenNotifications: () -> Unit,
     onOpenContact: () -> Unit,
     onOpenMyReviews: () -> Unit,
+    onOpenBookClub: () -> Unit,
     showNotifications: Boolean,
     showContact: Boolean,
     showReviews: Boolean,
+    showBookClub: Boolean,
 ) {
     Column(
         Modifier
@@ -203,6 +209,9 @@ private fun ProfileContent(
         ActionRow(Icons.Outlined.Lock, stringResource(R.string.profile_action_change_password), onClick = onChangePassword)
         if (showReviews) {
             ActionRow(Icons.Outlined.RateReview, stringResource(R.string.profile_action_my_reviews), onClick = onOpenMyReviews)
+        }
+        if (showBookClub) {
+            ActionRow(Icons.Outlined.Groups, stringResource(R.string.profile_action_book_club), onClick = onOpenBookClub)
         }
         if (showNotifications) {
             ActionRow(Icons.Outlined.Notifications, stringResource(R.string.profile_action_notifications), onClick = onOpenNotifications)

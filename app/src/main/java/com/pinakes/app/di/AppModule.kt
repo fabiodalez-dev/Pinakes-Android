@@ -5,6 +5,7 @@ import com.pinakes.app.data.local.AppDatabase
 import com.pinakes.app.data.local.CatalogDao
 import com.pinakes.app.data.network.NetworkModule
 import com.pinakes.app.data.repository.AuthRepository
+import com.pinakes.app.data.repository.BookClubRepository
 import com.pinakes.app.data.repository.CatalogRepository
 import com.pinakes.app.data.repository.LibraryRepository
 import com.pinakes.app.data.repository.MessagesRepository
@@ -53,8 +54,17 @@ object AppModule {
         CatalogRepository(network, dao)
 
     @Provides @Singleton
-    fun authRepository(network: NetworkModule, session: SessionStore, features: FeatureStore): AuthRepository =
-        AuthRepository(network, session, features)
+    fun bookClubRepository(network: NetworkModule, features: FeatureStore, session: SessionStore): BookClubRepository =
+        BookClubRepository(network, features, session)
+
+    @Provides @Singleton
+    fun authRepository(
+        network: NetworkModule,
+        session: SessionStore,
+        features: FeatureStore,
+        bookClub: BookClubRepository,
+        catalog: CatalogRepository,
+    ): AuthRepository = AuthRepository(network, session, features, bookClub, catalog)
 
     @Provides @Singleton
     fun libraryRepository(network: NetworkModule): LibraryRepository = LibraryRepository(network)
