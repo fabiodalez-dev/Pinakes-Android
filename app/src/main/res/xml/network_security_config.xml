@@ -1,13 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Cleartext (HTTP) is blocked by default on Android 9+. The Pinakes app only
-  permits an http instance URL for loopback / the emulator-to-host alias (mirrors
-  the app's own "HTTPS required except loopback" onboarding rule); every other
-  host must be HTTPS. So we whitelist cleartext for exactly those dev hosts and
-  keep the secure default everywhere else.
+  Transport policy is enforced in APP CODE, not here.
+
+  A static network-security-config can only whitelist cleartext for hosts known
+  at build time — but a self-hosted instance URL is entered by the user at
+  runtime, so we can't list it here. We therefore permit cleartext at the OS
+  level and make the app the sole gatekeeper:
+
+    * NetworkModule.isTransportAllowed() enforces "HTTPS required, except
+      loopback" for every instance URL, and
+    * the onboarding flow refuses to commit a plain-HTTP instance UNLESS the
+      user has explicitly enabled the "Allow insecure HTTP" opt-in (off by
+      default — see OnboardingViewModel / SessionStore.allowInsecureHttp).
+
+  So a cleartext request is only ever issued for loopback/dev hosts or for an
+  instance the user has knowingly accepted as insecure. The domain-config below
+  is kept as belt-and-braces documentation of the always-allowed dev hosts.
 -->
 <network-security-config>
-    <base-config cleartextTrafficPermitted="false" />
+    <base-config cleartextTrafficPermitted="true" />
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">localhost</domain>
         <domain includeSubdomains="false">127.0.0.1</domain>

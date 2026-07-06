@@ -29,9 +29,9 @@ class AuthRepository(
      * Discovery against a candidate instance URL. Does not persist anything — the caller decides
      * to continue based on [HealthPayload.appAccessEnabled] and the transport warning.
      */
-    suspend fun discover(rawInstanceUrl: String): ApiResult<HealthDiscovery> {
-        val apiBaseUrl = NetworkModule.deriveApiBaseUrl(rawInstanceUrl)
-        val origin = NetworkModule.deriveOrigin(rawInstanceUrl)
+    suspend fun discover(rawInstanceUrl: String, allowInsecure: Boolean = false): ApiResult<HealthDiscovery> {
+        val apiBaseUrl = NetworkModule.deriveApiBaseUrl(rawInstanceUrl, allowInsecure)
+        val origin = NetworkModule.deriveOrigin(rawInstanceUrl, allowInsecure)
         val api = network.api(apiBaseUrl)
         return when (val res = apiCall { api.health() }) {
             is ApiResult.Success -> ApiResult.Success(
@@ -41,7 +41,8 @@ class AuthRepository(
                     apiBaseUrl = apiBaseUrl,
                     insecureTransport = res.meta?.warning == "insecure_transport" ||
                         res.meta?.https == false,
-                    transportAllowed = NetworkModule.isTransportAllowed(apiBaseUrl),
+                    transportAllowed = NetworkModule.isTransportAllowed(apiBaseUrl, allowInsecure),
+                    allowInsecure = allowInsecure,
                 ),
                 res.meta,
             )
@@ -55,6 +56,7 @@ class AuthRepository(
             origin = discovery.origin,
             apiBaseUrl = discovery.apiBaseUrl,
             libraryName = discovery.health.name,
+            allowInsecure = discovery.allowInsecure,
         )
         // Capture the instance feature flags from discovery so the UI is gated immediately.
         features.update(discovery.health)
@@ -172,4 +174,6 @@ data class HealthDiscovery(
     val apiBaseUrl: String,
     val insecureTransport: Boolean,
     val transportAllowed: Boolean,
+    /** The user opted into plain-HTTP transport for this instance. */
+    val allowInsecure: Boolean = false,
 )
