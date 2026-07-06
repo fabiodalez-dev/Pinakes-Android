@@ -58,11 +58,19 @@ object DateFormat {
     }
 
     /**
-     * True when [raw] parses to a moment strictly in the past (device clock). False for
-     * null/unparseable input — callers use this to gate optimistic UI, so unknown ≠ expired.
+     * True when [raw] parses to a moment strictly in the past. False for null/unparseable
+     * input — callers use this to gate optimistic UI, so unknown ≠ expired.
+     *
+     * TZ contract: an ISO-8601 instant (the bridge sends deadlines like `closes_at` as UTC
+     * `…Z` via its `isoUtc()` helper) is compared as an absolute [Instant], so the verdict is
+     * timezone-independent and correct regardless of the device zone. Only a bare wall-clock
+     * DATETIME (no zone) falls back to a best-effort device-local comparison.
      */
-    fun isPast(raw: String?): Boolean =
-        parseServerDateTime(raw)?.isBefore(LocalDateTime.now()) == true
+    fun isPast(raw: String?): Boolean {
+        if (raw.isNullOrBlank()) return false
+        parseInstant(raw)?.let { return it.isBefore(Instant.now()) }
+        return parseServerDateTime(raw)?.isBefore(LocalDateTime.now()) == true
+    }
 
     private fun parseInstant(iso: String): Instant? = runCatching { Instant.parse(iso) }.getOrNull()
 

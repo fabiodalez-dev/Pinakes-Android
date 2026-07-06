@@ -348,6 +348,7 @@
   "book_club_gone_title": "Book Club unavailable",
   "book_club_gone_subtitle": "The Book Club is no longer active on this library.",
   "book_club_empty_title": "No book clubs yet",
+  "book_club_refresh": "Refresh",
   "book_club_empty_subtitle": "When your library opens a reading group, you'll find it here.",
   "book_club_section_reading": "Your reading",
   "book_club_section_my_clubs": "Your clubs",

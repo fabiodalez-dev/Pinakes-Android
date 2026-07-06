@@ -94,6 +94,11 @@ fun BookClubHomeScreen(
                             title = stringResource(R.string.book_club_empty_title),
                             subtitle = stringResource(R.string.book_club_empty_subtitle),
                             icon = Icons.Outlined.Groups,
+                            // Explicit refresh: the empty state fills the viewport and isn't
+                            // scrollable, so the PullToRefreshBox gesture never fires on it —
+                            // a user who joins a club on the web needs a button to reload.
+                            actionLabel = stringResource(R.string.book_club_refresh),
+                            onAction = vm::refresh,
                         )
                     } else {
                         LazyColumn(

@@ -87,7 +87,10 @@ class ClubDetailViewModel @Inject constructor(
                     _state.update { it.copy(joining = false, snackbarRes = res2) }
                     load(initial = false)
                 }
-                is ApiResult.Failure -> _state.update { it.copy(joining = false).withError(res) }
+                is ApiResult.Failure -> {
+                    _state.update { it.copy(joining = false).withError(res) }
+                    reloadIfPluginGone(res)
+                }
             }
         }
     }
@@ -105,7 +108,10 @@ class ClubDetailViewModel @Inject constructor(
                     _state.update { it.copy(votingPollId = null, snackbarRes = R.string.book_club_vote_saved) }
                     load(initial = false)
                 }
-                is ApiResult.Failure -> _state.update { it.copy(votingPollId = null).withError(res) }
+                is ApiResult.Failure -> {
+                    _state.update { it.copy(votingPollId = null).withError(res) }
+                    reloadIfPluginGone(res)
+                }
             }
         }
     }
@@ -119,7 +125,10 @@ class ClubDetailViewModel @Inject constructor(
                     _state.update { it.copy(rsvpMeetingId = null, snackbarRes = R.string.book_club_rsvp_saved) }
                     load(initial = false)
                 }
-                is ApiResult.Failure -> _state.update { it.copy(rsvpMeetingId = null).withError(res) }
+                is ApiResult.Failure -> {
+                    _state.update { it.copy(rsvpMeetingId = null).withError(res) }
+                    reloadIfPluginGone(res)
+                }
             }
         }
     }
@@ -133,8 +142,22 @@ class ClubDetailViewModel @Inject constructor(
                     _state.update { it.copy(progressBookId = null, snackbarRes = R.string.book_club_progress_saved) }
                     load(initial = false)
                 }
-                is ApiResult.Failure -> _state.update { it.copy(progressBookId = null).withError(res) }
+                is ApiResult.Failure -> {
+                    _state.update { it.copy(progressBookId = null).withError(res) }
+                    reloadIfPluginGone(res)
+                }
             }
+        }
+    }
+
+    /**
+     * When an action (join/vote/rsvp/progress) fails with 404 and the plugin is confirmed
+     * gone, reload so the load() path flips the screen to the friendly "gone" EmptyState —
+     * keeping mid-session deactivation degradation consistent with the initial-load path.
+     */
+    private suspend fun reloadIfPluginGone(res: ApiResult.Failure) {
+        if ((res.httpStatus == 404 || res.code == ErrorCodes.NOT_FOUND) && repo.confirmGone()) {
+            load(initial = false)
         }
     }
 
