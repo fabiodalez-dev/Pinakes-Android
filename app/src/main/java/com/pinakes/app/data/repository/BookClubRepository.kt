@@ -77,7 +77,20 @@ class BookClubRepository(
     suspend fun progress(slug: String, clubBookId: Int, percent: Int, finished: Boolean?): ApiResult<Unit> =
         bookClubCall { network.bookClubApi().progress(slug, clubBookId, ClubProgressRequest(percent, finished)) }
 
+    /**
+     * A bookclub endpoint answered 404: re-probe the plugin health and, when the
+     * plugin is confirmed gone, flip the feature flag so every entry point hides
+     * immediately (instead of waiting for the next app-foreground health refresh).
+     * Returns true when the plugin is really unavailable (vs a single missing club).
+     */
+    suspend fun confirmGone(): Boolean {
+        val instance = session.instanceUrl
+        val available = probeAvailability()
+        applyAvailability(available, instance)
+        return available == false
+    }
+
     /** Web URL of a poll page — the deep-link target for ballots the app can't render. */
     fun pollWebUrl(slug: String, pollId: Int): String =
-        "${session.instanceOrigin.orEmpty()}/book-club/$slug/polls/$pollId"
+        session.instanceOrigin?.let { "$it/book-club/$slug/polls/$pollId" } ?: ""
 }

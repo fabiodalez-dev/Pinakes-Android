@@ -345,6 +345,8 @@
   "book_club_title": "Club de lecture",
   "book_club_loading": "Chargement des clubs…",
   "book_club_error_load": "Impossible de charger les clubs de lecture.",
+  "book_club_gone_title": "Book Club indisponible",
+  "book_club_gone_subtitle": "Le Book Club n'est plus actif sur cette bibliothèque.",
   "book_club_empty_title": "Aucun club de lecture",
   "book_club_empty_subtitle": "Lorsque votre bibliothèque ouvrira un club de lecture, il apparaîtra ici.",
   "book_club_section_reading": "Vos lectures",

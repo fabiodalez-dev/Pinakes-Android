@@ -58,6 +58,7 @@ import com.pinakes.app.data.model.ClubPoll
 import com.pinakes.app.ui.common.DateFormat
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
+import com.pinakes.app.ui.components.EmptyState
 import com.pinakes.app.ui.components.ErrorState
 import com.pinakes.app.ui.components.LoadingState
 import com.pinakes.app.ui.components.PinakesTextButton
@@ -95,7 +96,11 @@ fun ClubDetailScreen(onNavigateUp: () -> Unit) {
         ) {
             when (val content = state.content) {
                 is UiState.Loading -> LoadingState(label = stringResource(R.string.book_club_loading))
-                is UiState.Error -> ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
+                is UiState.Error ->
+                    if (state.pluginGone) EmptyState(
+                        title = stringResource(R.string.book_club_gone_title),
+                        subtitle = stringResource(R.string.book_club_gone_subtitle),
+                    ) else ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
                 is UiState.Success -> ClubDetailContent(
                     detail = content.data,
                     state = state,

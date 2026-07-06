@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.pinakes.app.R
 import com.pinakes.app.data.model.BookClubDetail
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.repository.BookClubRepository
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.navigation.Routes
@@ -26,6 +27,8 @@ data class ClubDetailUiState(
     val progressBookId: Int? = null,
     val snackbar: String? = null,
     val snackbarRes: Int? = null,
+    /** The plugin was deactivated server-side (confirmed via health re-probe). */
+    val pluginGone: Boolean = false,
 )
 
 @HiltViewModel
@@ -54,12 +57,20 @@ class ClubDetailViewModel @Inject constructor(
                 is ApiResult.Success -> _state.update {
                     it.copy(content = UiState.Success(res.data), refreshing = false)
                 }
-                is ApiResult.Failure -> _state.update {
-                    it.copy(
-                        content = if (it.content is UiState.Success) it.content
-                        else UiState.Error(res.message, res.code, R.string.book_club_error_load),
-                        refreshing = false,
-                    )
+                is ApiResult.Failure -> {
+                    // A 404 here can be either "this club is gone" or "the whole
+                    // plugin was deactivated". The health re-probe disambiguates and
+                    // flips the feature flag when it is the plugin.
+                    val gone = (res.httpStatus == 404 || res.code == ErrorCodes.NOT_FOUND) &&
+                        repo.confirmGone()
+                    _state.update {
+                        it.copy(
+                            content = if (!gone && it.content is UiState.Success) it.content
+                            else UiState.Error(res.message, res.code, R.string.book_club_error_load),
+                            refreshing = false,
+                            pluginGone = gone,
+                        )
+                    }
                 }
             }
         }

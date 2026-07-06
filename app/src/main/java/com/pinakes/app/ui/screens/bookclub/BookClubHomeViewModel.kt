@@ -6,6 +6,7 @@ import com.pinakes.app.R
 import com.pinakes.app.data.model.BookClubClubs
 import com.pinakes.app.data.model.DashboardCard
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.repository.BookClubRepository
 import com.pinakes.app.ui.common.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,6 +32,8 @@ data class BookClubHomeUiState(
     val refreshing: Boolean = false,
     /** Partial-failure notice (e.g. the dashboard fetch failed while clubs loaded). */
     val snackbarRes: Int? = null,
+    /** The plugin was deactivated server-side (confirmed via health re-probe). */
+    val pluginGone: Boolean = false,
 )
 
 @HiltViewModel
@@ -71,12 +74,21 @@ class BookClubHomeViewModel @Inject constructor(
                         )
                     }
                 }
-                is ApiResult.Failure -> _state.update {
-                    it.copy(
-                        content = if (it.content is UiState.Success) it.content
-                        else UiState.Error(clubsRes.message, clubsRes.code, R.string.book_club_error_load),
-                        refreshing = false,
-                    )
+                is ApiResult.Failure -> {
+                    // 404 usually means the plugin was deactivated: confirm via the
+                    // health probe (which also flips the feature flag so the Profile
+                    // entry hides) and degrade to a friendly "gone" state instead of
+                    // a retryable error banner.
+                    val gone = (clubsRes.httpStatus == 404 || clubsRes.code == ErrorCodes.NOT_FOUND) &&
+                        repo.confirmGone()
+                    _state.update {
+                        it.copy(
+                            content = if (!gone && it.content is UiState.Success) it.content
+                            else UiState.Error(clubsRes.message, clubsRes.code, R.string.book_club_error_load),
+                            refreshing = false,
+                            pluginGone = gone,
+                        )
+                    }
                 }
             }
         }

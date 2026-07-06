@@ -80,7 +80,13 @@ fun BookClubHomeScreen(
         ) {
             when (val content = state.content) {
                 is UiState.Loading -> LoadingState(label = stringResource(R.string.book_club_loading))
-                is UiState.Error -> ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
+                is UiState.Error ->
+                    // Plugin deactivated server-side: a friendly terminal state, not
+                    // a retryable error (the feature flag is already flipped off).
+                    if (state.pluginGone) EmptyState(
+                        title = stringResource(R.string.book_club_gone_title),
+                        subtitle = stringResource(R.string.book_club_gone_subtitle),
+                    ) else ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
                 is UiState.Success -> {
                     val home = content.data
                     if (home.isEmpty) {
