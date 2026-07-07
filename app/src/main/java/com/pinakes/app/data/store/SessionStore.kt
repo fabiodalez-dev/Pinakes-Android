@@ -48,6 +48,16 @@ class SessionStore(context: Context) {
     /** Whether the committed instance was accepted over insecure (plain HTTP) transport. */
     val allowInsecureHttp: Boolean get() = prefs.getBoolean(KEY_ALLOW_INSECURE, false)
 
+    /**
+     * Transient "insecure HTTP allowed" flag for the ONBOARDING probe, before an instance is
+     * committed (so [allowInsecureHttp] isn't persisted yet). Set by AuthRepository.discover()
+     * from the onboarding toggle; read by the cleartext gate so the discovery request to a
+     * plain-HTTP host isn't blocked. In-memory only — a fresh process re-derives it from the
+     * next discover() call. The persisted flag takes over once the instance is committed.
+     */
+    @Volatile
+    var pendingAllowInsecureHttp: Boolean = false
+
     /** A stable per-install device id used in the login request. Generated once. */
     val deviceId: String
         get() = prefs.getString(KEY_DEVICE_ID, null) ?: UUID.randomUUID().toString().also {
@@ -88,6 +98,7 @@ class SessionStore(context: Context) {
     fun clearAll() {
         val savedDevice = deviceId
         prefs.edit().clear().putString(KEY_DEVICE_ID, savedDevice).apply()
+        pendingAllowInsecureHttp = false
         _authState.value = readAuthState()
     }
 

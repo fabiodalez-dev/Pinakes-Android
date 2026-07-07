@@ -30,6 +30,9 @@ class AuthRepository(
      * to continue based on [HealthPayload.appAccessEnabled] and the transport warning.
      */
     suspend fun discover(rawInstanceUrl: String, allowInsecure: Boolean = false): ApiResult<HealthDiscovery> {
+        // Carry the onboarding toggle into the cleartext gate: the instance isn't committed
+        // yet, so the persisted flag is still false and would block a plain-HTTP probe.
+        session.pendingAllowInsecureHttp = allowInsecure
         val apiBaseUrl = NetworkModule.deriveApiBaseUrl(rawInstanceUrl, allowInsecure)
         val origin = NetworkModule.deriveOrigin(rawInstanceUrl, allowInsecure)
         val api = network.api(apiBaseUrl)

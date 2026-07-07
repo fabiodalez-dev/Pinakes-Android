@@ -28,7 +28,10 @@ class NetworkModule(private val session: SessionStore) {
 
     private val okHttpClient: OkHttpClient by lazy {
         val builder = OkHttpClient.Builder()
-            .addInterceptor(CleartextGuardInterceptor { session.allowInsecureHttp })
+            // Also honour the transient onboarding opt-in: during discovery the instance isn't
+            // committed yet, so session.allowInsecureHttp is still false — pendingAllowInsecureHttp
+            // carries the toggle so the discovery probe to a plain-HTTP host isn't blocked.
+            .addInterceptor(CleartextGuardInterceptor { session.allowInsecureHttp || session.pendingAllowInsecureHttp })
             .addInterceptor(AuthInterceptor(session))
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
