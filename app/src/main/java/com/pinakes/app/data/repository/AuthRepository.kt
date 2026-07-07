@@ -30,26 +30,34 @@ class AuthRepository(
      * to continue based on [HealthPayload.appAccessEnabled] and the transport warning.
      */
     suspend fun discover(rawInstanceUrl: String, allowInsecure: Boolean = false): ApiResult<HealthDiscovery> {
-        // Carry the onboarding toggle into the cleartext gate: the instance isn't committed
-        // yet, so the persisted flag is still false and would block a plain-HTTP probe.
+        // Carry the onboarding toggle into the cleartext gate ONLY for the duration of this
+        // probe: the instance isn't committed yet, so the persisted flag is still false and
+        // would block a plain-HTTP health check. The NetworkModule OkHttp client is a shared
+        // singleton, so the flag is reset in finally() — otherwise a toggle-on discovery that
+        // fails or is abandoned would leave cleartext allowed for every later request. On a
+        // successful connect, commitInstance() persists the real per-instance flag.
         session.pendingAllowInsecureHttp = allowInsecure
-        val apiBaseUrl = NetworkModule.deriveApiBaseUrl(rawInstanceUrl, allowInsecure)
-        val origin = NetworkModule.deriveOrigin(rawInstanceUrl, allowInsecure)
-        val api = network.api(apiBaseUrl)
-        return when (val res = apiCall { api.health() }) {
-            is ApiResult.Success -> ApiResult.Success(
-                HealthDiscovery(
-                    health = res.data,
-                    origin = origin,
-                    apiBaseUrl = apiBaseUrl,
-                    insecureTransport = res.meta?.warning == "insecure_transport" ||
-                        res.meta?.https == false,
-                    transportAllowed = NetworkModule.isTransportAllowed(apiBaseUrl, allowInsecure),
-                    allowInsecure = allowInsecure,
-                ),
-                res.meta,
-            )
-            is ApiResult.Failure -> res
+        try {
+            val apiBaseUrl = NetworkModule.deriveApiBaseUrl(rawInstanceUrl, allowInsecure)
+            val origin = NetworkModule.deriveOrigin(rawInstanceUrl, allowInsecure)
+            val api = network.api(apiBaseUrl)
+            return when (val res = apiCall { api.health() }) {
+                is ApiResult.Success -> ApiResult.Success(
+                    HealthDiscovery(
+                        health = res.data,
+                        origin = origin,
+                        apiBaseUrl = apiBaseUrl,
+                        insecureTransport = res.meta?.warning == "insecure_transport" ||
+                            res.meta?.https == false,
+                        transportAllowed = NetworkModule.isTransportAllowed(apiBaseUrl, allowInsecure),
+                        allowInsecure = allowInsecure,
+                    ),
+                    res.meta,
+                )
+                is ApiResult.Failure -> res
+            }
+        } finally {
+            session.pendingAllowInsecureHttp = false
         }
     }
 

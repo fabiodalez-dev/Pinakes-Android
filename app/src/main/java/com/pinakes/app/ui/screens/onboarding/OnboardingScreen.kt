@@ -2,6 +2,7 @@ package com.pinakes.app.ui.screens.onboarding
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pinakes.app.R
@@ -107,7 +109,15 @@ fun OnboardingScreen(onContinue: () -> Unit) {
 
             if (state.discovery == null) {
                 Row(
-                    modifier = form,
+                    // Toggle from the whole row (not just the switch): a screen reader
+                    // announces the label together with the on/off state, and the larger
+                    // touch target is easier to hit. onCheckedChange = null makes the Switch
+                    // a passive indicator of the row's toggle state.
+                    modifier = form.toggleable(
+                        value = state.allowInsecureHttp,
+                        role = Role.Switch,
+                        onValueChange = vm::onAllowInsecureChange,
+                    ),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
@@ -125,7 +135,7 @@ fun OnboardingScreen(onContinue: () -> Unit) {
                     Spacer(Modifier.width(Spacing.md))
                     Switch(
                         checked = state.allowInsecureHttp,
-                        onCheckedChange = vm::onAllowInsecureChange,
+                        onCheckedChange = null,
                     )
                 }
 
