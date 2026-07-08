@@ -3,6 +3,7 @@ package com.pinakes.app.data.network
 import com.pinakes.app.data.model.BookClubEnvelope
 import retrofit2.HttpException
 import java.io.IOException
+import javax.net.ssl.SSLException
 
 /**
  * Bridges the Book Club envelope (`{success, data, error}`) into the shared [ApiResult] the
@@ -34,6 +35,8 @@ suspend fun <T> bookClubCall(block: suspend () -> BookClubEnvelope<T>): ApiResul
     }
 } catch (e: HttpException) {
     e.toFailure()
+} catch (e: SSLException) {
+    ApiResult.Failure(ErrorCodes.TLS, e.message ?: "TLS error", 0)
 } catch (e: IOException) {
     ApiResult.Failure(ErrorCodes.NETWORK, e.message ?: "Network error", 0)
 } catch (e: Throwable) {
@@ -53,6 +56,8 @@ suspend fun bookClubCallUnit(block: suspend () -> BookClubEnvelope<Unit>): ApiRe
     }
 } catch (e: HttpException) {
     e.toFailure()
+} catch (e: SSLException) {
+    ApiResult.Failure(ErrorCodes.TLS, e.message ?: "TLS error", 0)
 } catch (e: IOException) {
     ApiResult.Failure(ErrorCodes.NETWORK, e.message ?: "Network error", 0)
 } catch (e: Throwable) {

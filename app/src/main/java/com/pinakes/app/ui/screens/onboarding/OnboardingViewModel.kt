@@ -71,6 +71,7 @@ class OnboardingViewModel @Inject constructor(private val auth: AuthRepository) 
 
     private fun applyError(state: OnboardingUiState, failure: ApiResult.Failure): OnboardingUiState = when (failure.code) {
         "network" -> state.copy(error = null, errorRes = R.string.onboarding_error_network)
+        "tls" -> state.copy(error = null, errorRes = R.string.onboarding_error_tls)
         "not_found" -> state.copy(error = null, errorRes = R.string.onboarding_error_not_found)
         else ->
             if (failure.message.isNotBlank()) state.copy(error = failure.message, errorRes = null)

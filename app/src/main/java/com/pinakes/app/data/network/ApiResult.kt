@@ -7,6 +7,7 @@ import kotlinx.serialization.json.Json
 import retrofit2.HttpException
 import retrofit2.Response
 import java.io.IOException
+import javax.net.ssl.SSLException
 
 /**
  * A normalized result for every API call. Maps the {data, meta, error} envelope and
@@ -40,6 +41,10 @@ object ErrorCodes {
     const val VALIDATION = "validation"              // 400 / 422
     const val SERVER_ERROR = "server_error"          // 5xx
     const val NETWORK = "network"                    // no connectivity / timeout
+    // TLS/certificate failure (SSLException — a subtype of IOException). Kept distinct
+    // from NETWORK so the UI can say "the server's certificate isn't trusted" instead of
+    // sending the user to chase DNS/connectivity when a browser reaches the same host fine.
+    const val TLS = "tls"
     const val UNKNOWN = "unknown"
 }
 
@@ -73,6 +78,10 @@ suspend fun <T> apiCall(block: suspend () -> Envelope<T>): ApiResult<T> = try {
     }
 } catch (e: HttpException) {
     e.toFailure()
+} catch (e: SSLException) {
+    // SSLException extends IOException — catch it first so a TLS/certificate failure is
+    // reported as TLS (not the generic "check your connection" network message).
+    ApiResult.Failure(ErrorCodes.TLS, e.message ?: "TLS error", 0)
 } catch (e: IOException) {
     ApiResult.Failure(ErrorCodes.NETWORK, e.message ?: "Network error", 0)
 } catch (e: Throwable) {
@@ -97,6 +106,8 @@ suspend fun <T> apiResponse(block: suspend () -> Response<Envelope<T>>): Pair<Ap
     } else {
         parseErrorBody(response.errorBody()?.string(), response.code()) to response
     }
+} catch (e: SSLException) {
+    ApiResult.Failure(ErrorCodes.TLS, e.message ?: "TLS error", 0) to null
 } catch (e: IOException) {
     ApiResult.Failure(ErrorCodes.NETWORK, e.message ?: "Network error", 0) to null
 } catch (e: Throwable) {
