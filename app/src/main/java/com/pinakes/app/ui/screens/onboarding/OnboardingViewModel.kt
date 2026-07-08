@@ -3,6 +3,7 @@ package com.pinakes.app.ui.screens.onboarding
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.repository.AuthRepository
 import com.pinakes.app.data.repository.HealthDiscovery
 import com.pinakes.app.R
@@ -70,9 +71,9 @@ class OnboardingViewModel @Inject constructor(private val auth: AuthRepository) 
     }
 
     private fun applyError(state: OnboardingUiState, failure: ApiResult.Failure): OnboardingUiState = when (failure.code) {
-        "network" -> state.copy(error = null, errorRes = R.string.onboarding_error_network)
-        "tls" -> state.copy(error = null, errorRes = R.string.onboarding_error_tls)
-        "not_found" -> state.copy(error = null, errorRes = R.string.onboarding_error_not_found)
+        ErrorCodes.NETWORK -> state.copy(error = null, errorRes = R.string.onboarding_error_network)
+        ErrorCodes.TLS -> state.copy(error = null, errorRes = R.string.onboarding_error_tls)
+        ErrorCodes.NOT_FOUND -> state.copy(error = null, errorRes = R.string.onboarding_error_not_found)
         else ->
             if (failure.message.isNotBlank()) state.copy(error = failure.message, errorRes = null)
             else state.copy(error = null, errorRes = R.string.onboarding_error_generic)
