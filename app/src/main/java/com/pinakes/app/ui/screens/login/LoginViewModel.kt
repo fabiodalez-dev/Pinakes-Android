@@ -85,6 +85,7 @@ class LoginViewModel @Inject constructor(
             else state.copy(error = null, errorRes = R.string.login_error_rate_limited, errorArg = null)
         }
         ErrorCodes.NETWORK -> state.copy(error = null, errorRes = R.string.login_error_network, errorArg = null)
+        ErrorCodes.TLS -> state.copy(error = null, errorRes = R.string.login_error_tls, errorArg = null)
         ErrorCodes.FORBIDDEN -> state.copy(error = null, errorRes = R.string.login_error_forbidden, errorArg = null)
         else ->
             if (failure.message.isNotBlank()) state.copy(error = failure.message, errorRes = null, errorArg = null)
