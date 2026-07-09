@@ -1759,6 +1759,21 @@
                         "description": "If true, return only books with at least one loanable copy"
                     },
                     {
+                        "name": "sort",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "newest",
+                                "oldest",
+                                "title_asc",
+                                "title_desc"
+                            ],
+                            "default": "newest"
+                        },
+                        "description": "Sort order: newest, oldest, title_asc, or title_desc"
+                    },
+                    {
                         "name": "cursor",
                         "in": "query",
                         "schema": {

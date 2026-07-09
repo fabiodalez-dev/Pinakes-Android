@@ -53,19 +53,22 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * Offline fallback: render the "Available now" shelf from the locally-cached catalog
-     * snapshot immediately (works with no network), filtering to currently-loanable
-     * copies. Only a partial answer — the cache holds the first unfiltered page — so it is
-     * superseded as soon as [refresh] gets the server-side availability query through.
+     * Offline fallback: render the home shelf from the locally-cached catalog snapshot
+     * immediately. Loan mode keeps the "Available now" shelf filtered to currently-loanable
+     * copies; catalogue-only mode labels the shelf "Recently added", so the cache fallback
+     * must stay unfiltered. Only a partial answer — the cache holds the first unfiltered page —
+     * so it is superseded as soon as [refresh] gets the server-side query through.
      */
     private fun observeCache() {
         viewModelScope.launch {
             catalog.observeCachedCatalog().collectLatest { books ->
                 if (hasFreshShelf) return@collectLatest
-                val available = books.filter { it.available }
+                val shelfBooks =
+                    if (features.features.value.catalogueMode) books
+                    else books.filter { it.available }
                 _state.update {
                     it.copy(
-                        available = available,
+                        available = shelfBooks,
                         // Keep the loading skeleton until the first [refresh]
                         // resolves when the cache is still empty (cold start):
                         // an empty first emission must not flash the
