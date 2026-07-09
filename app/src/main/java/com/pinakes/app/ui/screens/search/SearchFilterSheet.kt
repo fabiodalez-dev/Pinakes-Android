@@ -107,9 +107,18 @@ fun SearchFilterSheet(
 
             Spacer(Modifier.height(Spacing.lg))
 
-            // --- Genre (top-level catalog genres from /catalog/genres) ---
+            // --- Genre (cascade from /catalog/genres) ---
+            // The backend `genre` filter matches at ANY level, so whatever node the user
+            // selects — a top category or a sub-category several levels deep — its id is
+            // sent as `genre`. Selecting a top category still means "everything under it".
             if (state.genres.isNotEmpty()) {
                 SectionLabel(stringResource(R.string.filters_section_genre))
+                // Root→selected node path; drives which sub-category rows are revealed and
+                // which chip is highlighted at each level (a breadcrumb of the chosen branch).
+                val path: List<GenreNode> =
+                    state.selectedGenreId?.let { genrePath(state.genres, it) } ?: emptyList()
+
+                // Level 0: "All" + top categories.
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     FilterChip(
                         selected = state.selectedGenreId == null,
@@ -119,11 +128,30 @@ fun SearchFilterSheet(
                     )
                     state.genres.forEach { g: GenreNode ->
                         FilterChip(
-                            selected = state.selectedGenreId == g.id,
+                            selected = path.getOrNull(0)?.id == g.id,
                             onClick = { onGenreChange(g.id) },
                             label = { Text(g.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             colors = chipColors,
                         )
+                    }
+                }
+
+                // Deeper levels: for each selected node that has children, drill into its
+                // sub-categories. Tapping a sub-category narrows the filter to that id.
+                path.forEachIndexed { level, node ->
+                    if (node.children.isNotEmpty()) {
+                        Spacer(Modifier.height(Spacing.md))
+                        SectionLabel(stringResource(R.string.filters_section_subgenre))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            node.children.forEach { child: GenreNode ->
+                                FilterChip(
+                                    selected = path.getOrNull(level + 1)?.id == child.id,
+                                    onClick = { onGenreChange(child.id) },
+                                    label = { Text(child.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                    colors = chipColors,
+                                )
+                            }
+                        }
                     }
                 }
                 Spacer(Modifier.height(Spacing.lg))
@@ -192,6 +220,19 @@ fun SearchFilterSheet(
             Spacer(Modifier.height(Spacing.lg))
         }
     }
+}
+
+/**
+ * Depth-first search for [id] in the genre tree, returning the root→node path (inclusive)
+ * or an empty list if not found. Used to reveal the selected branch's sub-category rows.
+ */
+private fun genrePath(nodes: List<GenreNode>, id: Int): List<GenreNode> {
+    for (node in nodes) {
+        if (node.id == id) return listOf(node)
+        val sub = genrePath(node.children, id)
+        if (sub.isNotEmpty()) return listOf(node) + sub
+    }
+    return emptyList()
 }
 
 @Composable

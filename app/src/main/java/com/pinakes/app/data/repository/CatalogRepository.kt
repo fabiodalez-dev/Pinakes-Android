@@ -85,6 +85,8 @@ class CatalogRepository(
         filters: SearchFilters,
         cursor: String? = null,
         limit: Int = 20,
+        // newest (default) | oldest | title_asc | title_desc; null → server default (newest).
+        sort: String? = null,
     ): ApiResult<SearchPage> {
         val api = network.api()
         return when (
@@ -98,6 +100,7 @@ class CatalogRepository(
                     available = filters.availableOnly,
                     cursor = cursor,
                     limit = limit.coerceIn(1, 50),
+                    sort = sort?.takeIf { it.isNotBlank() },
                 )
             }
         ) {

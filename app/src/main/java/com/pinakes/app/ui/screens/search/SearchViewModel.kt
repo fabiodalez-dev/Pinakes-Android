@@ -19,6 +19,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * Catalog sort order. `apiValue` is the exact `sort` query param the backend accepts on
+ * `/catalog/search`; `labelRes` is the localized label shown in the sort picker. Author
+ * sorts are intentionally absent — the backend does not support them.
+ */
+enum class BookSort(val apiValue: String, @StringRes val labelRes: Int) {
+    NEWEST("newest", R.string.sort_newest),
+    OLDEST("oldest", R.string.sort_oldest),
+    TITLE_ASC("title_asc", R.string.sort_title_asc),
+    TITLE_DESC("title_desc", R.string.sort_title_desc),
+}
+
 data class SearchUiState(
     val query: String = "",
     val availableOnly: Boolean = false,
@@ -26,6 +38,7 @@ data class SearchUiState(
     val author: String = "",
     val publisher: String = "",
     val language: String? = null,
+    val sort: BookSort = BookSort.NEWEST,
     val genres: List<GenreNode> = emptyList(),
     val items: List<BookSummary> = emptyList(),
     val nextCursor: String? = null,
@@ -117,6 +130,16 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
 
     fun setGenreDraft(id: Int?) = _state.update { it.copy(selectedGenreId = id) }
 
+    /**
+     * Change the catalog sort order. The cursor is sort-specific, so a change resets
+     * pagination and reloads from the first page. No-op if the order is unchanged.
+     */
+    fun setSort(sort: BookSort) {
+        if (_state.value.sort == sort) return
+        _state.update { it.copy(sort = sort) }
+        runSearch(reset = true)
+    }
+
     /** Run the search with the currently staged facet filters. */
     fun applyFilters() = runSearch(reset = true)
 
@@ -152,7 +175,7 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
         if (s.loadingMore || s.loading || !s.hasMore) return
         _state.update { it.copy(loadingMore = true) }
         viewModelScope.launch {
-            when (val res = catalog.search(filters(), cursor = s.nextCursor)) {
+            when (val res = catalog.search(filters(), cursor = s.nextCursor, sort = s.sort.apiValue)) {
                 is ApiResult.Success -> _state.update {
                     it.copy(
                         items = it.items + res.data.items,
@@ -168,8 +191,9 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
 
     private fun runSearch(reset: Boolean) {
         _state.update { it.copy(loading = true, error = null, items = if (reset) emptyList() else it.items, nextCursor = null) }
+        val sort = _state.value.sort.apiValue
         viewModelScope.launch {
-            when (val res = catalog.search(filters())) {
+            when (val res = catalog.search(filters(), sort = sort)) {
                 is ApiResult.Success -> _state.update {
                     it.copy(
                         items = res.data.items,
