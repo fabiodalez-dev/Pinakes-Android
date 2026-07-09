@@ -36,6 +36,16 @@ class NetworkModule(private val session: SessionStore) {
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+        // Complete incomplete server certificate chains via AIA, like a browser does. Self-hosted
+        // instances behind QNAP/Synology proxies often serve a chain missing its intermediate, which
+        // the default Android TLS stack rejects ("Trust anchor for certification path not found")
+        // even for valid Let's Encrypt certs. This never weakens validation — the platform trust
+        // manager still makes the final decision. Guarded so any setup failure falls back to the
+        // default TLS behaviour rather than breaking the client.
+        runCatching {
+            val (factory, trustManager) = AiaCompletingTrustManager.sslSocketFactory()
+            builder.sslSocketFactory(factory, trustManager)
+        }
         if (BuildConfig.DEBUG) {
             builder.addInterceptor(
                 HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
