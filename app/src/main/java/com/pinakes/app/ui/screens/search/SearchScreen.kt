@@ -39,6 +39,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -195,9 +198,24 @@ fun SearchScreen(onBookClick: (Int) -> Unit) {
                                         )
                                     }
                                 }
-                                if (header != null) {
+                                // Surface the active sort order alongside the result count so the
+                                // current order is visible without opening the sort menu.
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
                                     Text(
-                                        header,
+                                        text = header.orEmpty(),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.weight(1f, fill = false),
+                                    )
+                                    Text(
+                                        text = stringResource(
+                                            R.string.sort_label,
+                                            stringResource(state.sort.labelRes),
+                                        ),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -245,8 +263,13 @@ fun SearchScreen(onBookClick: (Int) -> Unit) {
 @Composable
 private fun SortMenu(current: BookSort, onSelect: (BookSort) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    // Announce the active order to TalkBack as the button's state (e.g. "Sort, Newest").
+    val activeSortLabel = stringResource(current.labelRes)
     Box {
-        IconButton(onClick = { expanded = true }) {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.semantics { stateDescription = activeSortLabel },
+        ) {
             Icon(
                 Icons.AutoMirrored.Outlined.Sort,
                 contentDescription = stringResource(R.string.cd_sort),
@@ -256,6 +279,7 @@ private fun SortMenu(current: BookSort, onSelect: (BookSort) -> Unit) {
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             BookSort.entries.forEach { option ->
                 DropdownMenuItem(
+                    modifier = Modifier.semantics { selected = (option == current) },
                     text = { Text(stringResource(option.labelRes)) },
                     onClick = {
                         expanded = false

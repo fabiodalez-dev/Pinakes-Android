@@ -6,6 +6,7 @@ import com.pinakes.app.data.model.BookSummary
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.CatalogRepository
 import com.pinakes.app.data.repository.SearchFilters
+import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.store.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -31,6 +32,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val catalog: CatalogRepository,
     private val session: SessionStore,
+    private val features: FeatureStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -86,7 +88,14 @@ class HomeViewModel @Inject constructor(
      */
     fun refresh() {
         viewModelScope.launch {
-            val shelf = async { catalog.search(SearchFilters(availableOnly = true), limit = SHELF_LIMIT) }
+            // Catalogue-only mode labels the shelf "Recently added / latest additions", so
+            // query the newest titles unfiltered (no availability filter) to make the label
+            // honest. Loan mode keeps the availability filter behind the "Available now" shelf.
+            // Both lean on the server's default newest-first sort.
+            val shelfFilters =
+                if (features.features.value.catalogueMode) SearchFilters()
+                else SearchFilters(availableOnly = true)
+            val shelf = async { catalog.search(shelfFilters, limit = SHELF_LIMIT) }
             launch { catalog.refreshCatalog() }
             when (val res = shelf.await()) {
                 is ApiResult.Success -> {

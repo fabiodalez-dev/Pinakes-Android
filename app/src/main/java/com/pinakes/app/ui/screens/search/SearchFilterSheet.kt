@@ -141,7 +141,9 @@ fun SearchFilterSheet(
                 path.forEachIndexed { level, node ->
                     if (node.children.isNotEmpty()) {
                         Spacer(Modifier.height(Spacing.md))
-                        SectionLabel(stringResource(R.string.filters_section_subgenre))
+                        // Label the revealed child row with its parent's name so the user can
+                        // tell which level of the drill-down each set of chips belongs to.
+                        SectionLabel(stringResource(R.string.filters_section_within, node.name))
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                             node.children.forEach { child: GenreNode ->
                                 FilterChip(
@@ -222,17 +224,28 @@ fun SearchFilterSheet(
     }
 }
 
+/** Guard against a pathological or cyclic genre tree overflowing the stack. */
+private const val MAX_GENRE_DEPTH = 8
+
 /**
  * Depth-first search for [id] in the genre tree, returning the root→node path (inclusive)
  * or an empty list if not found. Used to reveal the selected branch's sub-category rows.
+ *
+ * Bounded by [MAX_GENRE_DEPTH] and a visited-id set so a cyclic or unexpectedly deep tree
+ * (e.g. from a malformed server payload) can't cause unbounded recursion / a StackOverflow.
  */
 private fun genrePath(nodes: List<GenreNode>, id: Int): List<GenreNode> {
-    for (node in nodes) {
-        if (node.id == id) return listOf(node)
-        val sub = genrePath(node.children, id)
-        if (sub.isNotEmpty()) return listOf(node) + sub
+    fun walk(level: List<GenreNode>, depth: Int, visited: MutableSet<Int>): List<GenreNode> {
+        if (depth > MAX_GENRE_DEPTH) return emptyList()
+        for (node in level) {
+            if (!visited.add(node.id)) continue // repeat id (cycle) → don't descend again
+            if (node.id == id) return listOf(node)
+            val sub = walk(node.children, depth + 1, visited)
+            if (sub.isNotEmpty()) return listOf(node) + sub
+        }
+        return emptyList()
     }
-    return emptyList()
+    return walk(nodes, 0, mutableSetOf())
 }
 
 @Composable
