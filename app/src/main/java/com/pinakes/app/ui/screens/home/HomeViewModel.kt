@@ -11,10 +11,14 @@ import com.pinakes.app.data.store.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -49,7 +53,27 @@ class HomeViewModel @Inject constructor(
 
     init {
         observeCache()
-        refresh()
+        observeCatalogueMode()
+    }
+
+    /**
+     * `catalogueMode` alone, de-duplicated, so downstream only reacts when the lending↔catalogue
+     * flag actually flips — not on every unrelated `/health` emission that leaves it unchanged.
+     */
+    private fun catalogueMode(): Flow<Boolean> =
+        features.features.map { it.catalogueMode }.distinctUntilChanged()
+
+    /**
+     * Drive [refresh] off [catalogueMode]: once on the initial (persisted) value, then again each
+     * time the flag flips. This is what makes the shelf reactive — on a cold start `/health` can
+     * resolve AFTER the first refresh, and a mode switch can land at any time; either way the
+     * server-side shelf query (availableOnly vs unfiltered) is re-driven to match. [collectLatest]
+     * abandons a stale re-drive when the flag flips again mid-flight.
+     */
+    private fun observeCatalogueMode() {
+        viewModelScope.launch {
+            catalogueMode().collectLatest { refresh() }
+        }
     }
 
     /**
@@ -61,10 +85,16 @@ class HomeViewModel @Inject constructor(
      */
     private fun observeCache() {
         viewModelScope.launch {
-            catalog.observeCachedCatalog().collectLatest { books ->
+            // Re-run the filter whenever EITHER the cache OR catalogueMode changes, so a mode flip
+            // that lands before the first server-side shelf resolves still re-labels/re-filters the
+            // offline fallback instead of leaving it wrong until [refresh] gets through.
+            combine(
+                catalog.observeCachedCatalog(),
+                catalogueMode(),
+            ) { books, catalogueMode -> books to catalogueMode }.collectLatest { (books, catalogueMode) ->
                 if (hasFreshShelf) return@collectLatest
                 val shelfBooks =
-                    if (features.features.value.catalogueMode) books
+                    if (catalogueMode) books
                     else books.filter { it.available }
                 _state.update {
                     it.copy(
