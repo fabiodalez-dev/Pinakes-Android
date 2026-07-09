@@ -6,14 +6,19 @@ import com.pinakes.app.data.model.BookSummary
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.CatalogRepository
 import com.pinakes.app.data.repository.SearchFilters
+import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.store.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -31,6 +36,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val catalog: CatalogRepository,
     private val session: SessionStore,
+    private val features: FeatureStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -47,23 +53,52 @@ class HomeViewModel @Inject constructor(
 
     init {
         observeCache()
-        refresh()
+        observeCatalogueMode()
     }
 
     /**
-     * Offline fallback: render the "Available now" shelf from the locally-cached catalog
-     * snapshot immediately (works with no network), filtering to currently-loanable
-     * copies. Only a partial answer — the cache holds the first unfiltered page — so it is
-     * superseded as soon as [refresh] gets the server-side availability query through.
+     * `catalogueMode` alone, de-duplicated, so downstream only reacts when the lending↔catalogue
+     * flag actually flips — not on every unrelated `/health` emission that leaves it unchanged.
+     */
+    private fun catalogueMode(): Flow<Boolean> =
+        features.features.map { it.catalogueMode }.distinctUntilChanged()
+
+    /**
+     * Drive [refresh] off [catalogueMode]: once on the initial (persisted) value, then again each
+     * time the flag flips. This is what makes the shelf reactive — on a cold start `/health` can
+     * resolve AFTER the first refresh, and a mode switch can land at any time; either way the
+     * server-side shelf query (availableOnly vs unfiltered) is re-driven to match. [collectLatest]
+     * abandons a stale re-drive when the flag flips again mid-flight.
+     */
+    private fun observeCatalogueMode() {
+        viewModelScope.launch {
+            catalogueMode().collectLatest { refresh() }
+        }
+    }
+
+    /**
+     * Offline fallback: render the home shelf from the locally-cached catalog snapshot
+     * immediately. Loan mode keeps the "Available now" shelf filtered to currently-loanable
+     * copies; catalogue-only mode labels the shelf "Recently added", so the cache fallback
+     * must stay unfiltered. Only a partial answer — the cache holds the first unfiltered page —
+     * so it is superseded as soon as [refresh] gets the server-side query through.
      */
     private fun observeCache() {
         viewModelScope.launch {
-            catalog.observeCachedCatalog().collectLatest { books ->
+            // Re-run the filter whenever EITHER the cache OR catalogueMode changes, so a mode flip
+            // that lands before the first server-side shelf resolves still re-labels/re-filters the
+            // offline fallback instead of leaving it wrong until [refresh] gets through.
+            combine(
+                catalog.observeCachedCatalog(),
+                catalogueMode(),
+            ) { books, catalogueMode -> books to catalogueMode }.collectLatest { (books, catalogueMode) ->
                 if (hasFreshShelf) return@collectLatest
-                val available = books.filter { it.available }
+                val shelfBooks =
+                    if (catalogueMode) books
+                    else books.filter { it.available }
                 _state.update {
                     it.copy(
-                        available = available,
+                        available = shelfBooks,
                         // Keep the loading skeleton until the first [refresh]
                         // resolves when the cache is still empty (cold start):
                         // an empty first emission must not flash the
@@ -86,7 +121,14 @@ class HomeViewModel @Inject constructor(
      */
     fun refresh() {
         viewModelScope.launch {
-            val shelf = async { catalog.search(SearchFilters(availableOnly = true), limit = SHELF_LIMIT) }
+            // Catalogue-only mode labels the shelf "Recently added / latest additions", so
+            // query the newest titles unfiltered (no availability filter) to make the label
+            // honest. Loan mode keeps the availability filter behind the "Available now" shelf.
+            // Both lean on the server's default newest-first sort.
+            val shelfFilters =
+                if (features.features.value.catalogueMode) SearchFilters()
+                else SearchFilters(availableOnly = true)
+            val shelf = async { catalog.search(shelfFilters, limit = SHELF_LIMIT) }
             launch { catalog.refreshCatalog() }
             when (val res = shelf.await()) {
                 is ApiResult.Success -> {

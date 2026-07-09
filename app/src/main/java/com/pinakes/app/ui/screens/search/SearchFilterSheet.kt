@@ -107,9 +107,18 @@ fun SearchFilterSheet(
 
             Spacer(Modifier.height(Spacing.lg))
 
-            // --- Genre (top-level catalog genres from /catalog/genres) ---
+            // --- Genre (cascade from /catalog/genres) ---
+            // The backend `genre` filter matches at ANY level, so whatever node the user
+            // selects — a top category or a sub-category several levels deep — its id is
+            // sent as `genre`. Selecting a top category still means "everything under it".
             if (state.genres.isNotEmpty()) {
                 SectionLabel(stringResource(R.string.filters_section_genre))
+                // Root→selected node path; drives which sub-category rows are revealed and
+                // which chip is highlighted at each level (a breadcrumb of the chosen branch).
+                val path: List<GenreNode> =
+                    state.selectedGenreId?.let { genrePath(state.genres, it) } ?: emptyList()
+
+                // Level 0: "All" + top categories.
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     FilterChip(
                         selected = state.selectedGenreId == null,
@@ -119,11 +128,32 @@ fun SearchFilterSheet(
                     )
                     state.genres.forEach { g: GenreNode ->
                         FilterChip(
-                            selected = state.selectedGenreId == g.id,
+                            selected = path.getOrNull(0)?.id == g.id,
                             onClick = { onGenreChange(g.id) },
                             label = { Text(g.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             colors = chipColors,
                         )
+                    }
+                }
+
+                // Deeper levels: for each selected node that has children, drill into its
+                // sub-categories. Tapping a sub-category narrows the filter to that id.
+                path.forEachIndexed { level, node ->
+                    if (node.children.isNotEmpty()) {
+                        Spacer(Modifier.height(Spacing.md))
+                        // Label the revealed child row with its parent's name so the user can
+                        // tell which level of the drill-down each set of chips belongs to.
+                        SectionLabel(stringResource(R.string.filters_section_within, node.name))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            node.children.forEach { child: GenreNode ->
+                                FilterChip(
+                                    selected = path.getOrNull(level + 1)?.id == child.id,
+                                    onClick = { onGenreChange(child.id) },
+                                    label = { Text(child.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                    colors = chipColors,
+                                )
+                            }
+                        }
                     }
                 }
                 Spacer(Modifier.height(Spacing.lg))
@@ -192,6 +222,30 @@ fun SearchFilterSheet(
             Spacer(Modifier.height(Spacing.lg))
         }
     }
+}
+
+/** Guard against a pathological or cyclic genre tree overflowing the stack. */
+private const val MAX_GENRE_DEPTH = 8
+
+/**
+ * Depth-first search for [id] in the genre tree, returning the root→node path (inclusive)
+ * or an empty list if not found. Used to reveal the selected branch's sub-category rows.
+ *
+ * Bounded by [MAX_GENRE_DEPTH] and a visited-id set so a cyclic or unexpectedly deep tree
+ * (e.g. from a malformed server payload) can't cause unbounded recursion / a StackOverflow.
+ */
+private fun genrePath(nodes: List<GenreNode>, id: Int): List<GenreNode> {
+    fun walk(level: List<GenreNode>, depth: Int, visited: MutableSet<Int>): List<GenreNode> {
+        if (depth > MAX_GENRE_DEPTH) return emptyList()
+        for (node in level) {
+            if (!visited.add(node.id)) continue // repeat id (cycle) → don't descend again
+            if (node.id == id) return listOf(node)
+            val sub = walk(node.children, depth + 1, visited)
+            if (sub.isNotEmpty()) return listOf(node) + sub
+        }
+        return emptyList()
+    }
+    return walk(nodes, 0, mutableSetOf())
 }
 
 @Composable

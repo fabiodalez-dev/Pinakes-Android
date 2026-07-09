@@ -70,7 +70,7 @@ fun HomeScreen(
             HomePhase.Loading -> Column(Modifier.fillMaxSize()) {
                 HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode)
                 Column(Modifier.padding(horizontal = Spacing.lg)) {
-                    SectionHeader(showSeeAll = false, onSeeAll = {})
+                    SectionHeader(showSeeAll = false, catalogueMode = catalogueMode, onSeeAll = {})
                     Spacer(Modifier.height(Spacing.md))
                     repeat(4) {
                         BookCardSkeleton()
@@ -103,7 +103,7 @@ fun HomeScreen(
                 item { HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode) }
                 item {
                     Box(Modifier.padding(horizontal = Spacing.lg)) {
-                        SectionHeader(showSeeAll = true, onSeeAll = onBrowseCatalog)
+                        SectionHeader(showSeeAll = true, catalogueMode = catalogueMode, onSeeAll = onBrowseCatalog)
                     }
                 }
                 items(state.available, key = { it.id }) { book ->
@@ -178,20 +178,24 @@ private fun HomeHeader(libraryName: String?, catalogueMode: Boolean) {
 }
 
 @Composable
-private fun SectionHeader(showSeeAll: Boolean, onSeeAll: () -> Unit) {
+private fun SectionHeader(showSeeAll: Boolean, catalogueMode: Boolean, onSeeAll: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.home_section_available),
+                // In CATALOGUE-ONLY MODE the shelf isn't about borrowing — it's the newest
+                // titles added to the library, so label it "Recently added" to match.
+                text = if (catalogueMode) stringResource(R.string.home_section_recent)
+                else stringResource(R.string.home_section_available),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = stringResource(R.string.home_section_available_subtitle),
+                text = if (catalogueMode) stringResource(R.string.home_section_recent_subtitle)
+                else stringResource(R.string.home_section_available_subtitle),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

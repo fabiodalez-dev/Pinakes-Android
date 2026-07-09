@@ -97,6 +97,8 @@ interface PinakesApi {
         @Query("available") available: Boolean? = null,
         @Query("cursor") cursor: String? = null,
         @Query("limit") limit: Int? = null, // 1..50, default 20
+        // newest (default) | oldest | title_asc | title_desc
+        @Query("sort") sort: String? = null,
     ): Envelope<List<BookSummary>>
 
     @GET("catalog/books/{id}")

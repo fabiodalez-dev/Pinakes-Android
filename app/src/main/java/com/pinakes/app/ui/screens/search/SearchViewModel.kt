@@ -19,6 +19,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * Catalog sort order. `apiValue` is the exact `sort` query param the backend accepts on
+ * `/catalog/search`; `labelRes` is the localized label shown in the sort picker. Author
+ * sorts are intentionally absent — the backend does not support them.
+ */
+enum class BookSort(val apiValue: String, @StringRes val labelRes: Int) {
+    NEWEST("newest", R.string.sort_newest),
+    OLDEST("oldest", R.string.sort_oldest),
+    TITLE_ASC("title_asc", R.string.sort_title_asc),
+    TITLE_DESC("title_desc", R.string.sort_title_desc),
+}
+
 data class SearchUiState(
     val query: String = "",
     val availableOnly: Boolean = false,
@@ -26,6 +38,7 @@ data class SearchUiState(
     val author: String = "",
     val publisher: String = "",
     val language: String? = null,
+    val sort: BookSort = BookSort.NEWEST,
     val genres: List<GenreNode> = emptyList(),
     val items: List<BookSummary> = emptyList(),
     val nextCursor: String? = null,
@@ -73,6 +86,15 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
 
     private var searchJob: Job? = null
 
+    /**
+     * Monotonic request generation. Bumped on every reset ([runSearch] with `reset = true`,
+     * i.e. a new query/sort/filter set). Network coroutines capture the generation at launch
+     * and discard their result if it changed meanwhile, so a slow [loadMore] or debounced
+     * search that resolves AFTER a sort/filter reset can't append a stale-sort page or restore
+     * a mismatched cursor.
+     */
+    private var searchGeneration = 0
+
     init {
         loadGenres()
         // Catalog lands on the full listing — browse-all (empty query, no filters).
@@ -117,6 +139,16 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
 
     fun setGenreDraft(id: Int?) = _state.update { it.copy(selectedGenreId = id) }
 
+    /**
+     * Change the catalog sort order. The cursor is sort-specific, so a change resets
+     * pagination and reloads from the first page. No-op if the order is unchanged.
+     */
+    fun setSort(sort: BookSort) {
+        if (_state.value.sort == sort) return
+        _state.update { it.copy(sort = sort) }
+        runSearch(reset = true)
+    }
+
     /** Run the search with the currently staged facet filters. */
     fun applyFilters() = runSearch(reset = true)
 
@@ -151,8 +183,13 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
         val s = _state.value
         if (s.loadingMore || s.loading || !s.hasMore) return
         _state.update { it.copy(loadingMore = true) }
+        val generation = searchGeneration
         viewModelScope.launch {
-            when (val res = catalog.search(filters(), cursor = s.nextCursor)) {
+            val res = catalog.search(filters(), cursor = s.nextCursor, sort = s.sort.apiValue)
+            // A sort/filter reset superseded this page mid-flight: drop it so we neither append
+            // stale-sort items nor overwrite the fresh cursor. The reset already cleared loadingMore.
+            if (generation != searchGeneration) return@launch
+            when (res) {
                 is ApiResult.Success -> _state.update {
                     it.copy(
                         items = it.items + res.data.items,
@@ -167,9 +204,25 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
     }
 
     private fun runSearch(reset: Boolean) {
-        _state.update { it.copy(loading = true, error = null, items = if (reset) emptyList() else it.items, nextCursor = null) }
+        if (reset) searchGeneration++
+        val generation = searchGeneration
+        _state.update {
+            it.copy(
+                loading = true,
+                error = null,
+                items = if (reset) emptyList() else it.items,
+                nextCursor = null,
+                // A reset also cancels any in-flight pagination so a stale loadMore can't leave
+                // the spinner stuck (its result is dropped by the generation guard).
+                loadingMore = if (reset) false else it.loadingMore,
+            )
+        }
+        val sort = _state.value.sort.apiValue
         viewModelScope.launch {
-            when (val res = catalog.search(filters())) {
+            val res = catalog.search(filters(), sort = sort)
+            // Discard if a newer reset (query/sort/filter change) has since superseded this run.
+            if (generation != searchGeneration) return@launch
+            when (res) {
                 is ApiResult.Success -> _state.update {
                     it.copy(
                         items = res.data.items,

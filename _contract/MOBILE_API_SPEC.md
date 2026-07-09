@@ -69,7 +69,7 @@ All FKs respect existing `utenti`/`libri` schema. Follow the soft-delete rule on
 - `POST /auth/logout` — revoke current token.
 - `GET /me` — profile. `PATCH /me` — edit profile. `POST /me/password` — change password.
 - `GET /me/devices` — list devices. `DELETE /me/devices/{id}` — revoke a device.
-- `GET /catalog/search` — filters: `q`, `author`, `publisher`, `genre` (cascade id), `language`, `available` (bool); cursor pagination.
+- `GET /catalog/search` — filters: `q`, `author`, `publisher`, `genre` (cascade id), `language`, `available` (bool); `sort`: `newest` (default), `oldest`, `title_asc`, `title_desc`; cursor pagination.
 - `GET /catalog/books/{id}` — full detail + personal history.
 - `GET /catalog/books/{id}/availability` — per-day availability calendar for the loan/reservation date picker.
 - `GET /catalog/books/{id}/reviews` — aggregate rating (`average`, `count`, `distribution`) + the user's own review (`mine`) + `can_review` (has the user borrowed the title) + cursor-paginated `items` (other users' reviews). Same feature as the web review view.

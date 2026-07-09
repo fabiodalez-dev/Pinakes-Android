@@ -15,11 +15,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,10 +33,15 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -95,6 +104,7 @@ fun SearchScreen(onBookClick: (Int) -> Unit) {
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.height(0.dp))
+                SortMenu(current = state.sort, onSelect = vm::setSort)
                 BadgedBox(
                     badge = {
                         if (state.hasActiveFilters) {
@@ -188,9 +198,24 @@ fun SearchScreen(onBookClick: (Int) -> Unit) {
                                         )
                                     }
                                 }
-                                if (header != null) {
+                                // Surface the active sort order alongside the result count so the
+                                // current order is visible without opening the sort menu.
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
                                     Text(
-                                        header,
+                                        text = header.orEmpty(),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.weight(1f, fill = false),
+                                    )
+                                    Text(
+                                        text = stringResource(
+                                            R.string.sort_label,
+                                            stringResource(state.sort.labelRes),
+                                        ),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -225,6 +250,51 @@ fun SearchScreen(onBookClick: (Int) -> Unit) {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Sort-order picker: an icon button that opens a dropdown of the four supported catalog
+ * orders. The active order carries a check. Choosing an order resets pagination and reloads
+ * from the first page (handled in the ViewModel); the choice survives filter changes.
+ */
+@Composable
+private fun SortMenu(current: BookSort, onSelect: (BookSort) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    // Announce the active order to TalkBack as the button's state (e.g. "Sort, Newest").
+    val activeSortLabel = stringResource(current.labelRes)
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.semantics { stateDescription = activeSortLabel },
+        ) {
+            Icon(
+                Icons.AutoMirrored.Outlined.Sort,
+                contentDescription = stringResource(R.string.cd_sort),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            BookSort.entries.forEach { option ->
+                DropdownMenuItem(
+                    modifier = Modifier.semantics { selected = (option == current) },
+                    text = { Text(stringResource(option.labelRes)) },
+                    onClick = {
+                        expanded = false
+                        onSelect(option)
+                    },
+                    trailingIcon = if (option == current) {
+                        {
+                            Icon(
+                                Icons.Outlined.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    } else null,
+                )
             }
         }
     }
