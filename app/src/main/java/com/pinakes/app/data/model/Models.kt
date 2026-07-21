@@ -76,11 +76,55 @@ data class RegisterRequest(
     val nome: String,
     val cognome: String,
     val email: String,
+    // telefono/indirizzo stay non-null but the screen may send "" when the instance
+    // marks them optional (their required-ness is driven by the discovery schema).
     val telefono: String,
     val indirizzo: String,
     val password: String, // min 8, max 72
     @SerialName("password_confirm") val passwordConfirm: String,
     @SerialName("privacy_acceptance") val privacyAcceptance: Boolean,
+    // Instance-defined custom registration fields, keyed by the field id (as a string) →
+    // scalar value. checkbox → "1"/"". Omitted when the instance defines none (explicitNulls
+    // = false drops the null). See [RegistrationFieldsPayload.customFields].
+    @SerialName("custom_fields") val customFields: Map<String, String>? = null,
+)
+
+// ---------- Registration discovery ----------
+// Mirrors GET /auth/registration-fields (public, no token). Tells the client which built-in
+// fields the instance requires and what extra custom fields to render on the sign-up form.
+@Serializable
+data class RegistrationFieldsPayload(
+    @SerialName("registration_enabled") val registrationEnabled: Boolean = false,
+    // Config-driven built-ins only: keys are "cognome" | "telefono" | "indirizzo".
+    @SerialName("builtin_fields") val builtinFields: Map<String, BuiltinFieldRule> = emptyMap(),
+    @SerialName("custom_fields") val customFields: List<CustomFieldDef> = emptyList(),
+)
+
+@Serializable
+data class BuiltinFieldRule(
+    val required: Boolean = false,
+    val configurable: Boolean = false,
+)
+
+// One active custom field definition (matches RegistrationFields::apiDefinitions()). `options`
+// is tolerated for forward-compat only — the current server emits neither it nor a select type.
+@Serializable
+data class CustomFieldDef(
+    val id: Int = 0,
+    val label: String = "",
+    val type: String = "text", // text | textarea | email | url | number | checkbox
+    val required: Boolean = false,
+    val options: List<String> = emptyList(),
+)
+
+// A custom field with the current user's value (matches editableFieldsForUser() in GET /me).
+@Serializable
+data class CustomFieldValue(
+    val id: Int = 0,
+    val label: String = "",
+    val type: String = "text", // text | textarea | email | url | number | checkbox
+    val required: Boolean = false,
+    val value: String = "",
 )
 
 @Serializable
@@ -97,6 +141,19 @@ data class UserProfile(
     @SerialName("email_verificata") val emailVerificata: Boolean = false,
     val stato: String? = null,
     @SerialName("avatar_url") val avatarUrl: String? = null,
+    // Editable profile fields GET /me returns (previously dropped by the model).
+    val telefono: String? = null,
+    val indirizzo: String? = null,
+    @SerialName("data_nascita") val dataNascita: String? = null, // "yyyy-MM-dd"
+    val sesso: String? = null,
+    @SerialName("cod_fiscale") val codFiscale: String? = null,
+    // Read-only membership fields.
+    @SerialName("codice_tessera") val codiceTessera: String? = null,
+    @SerialName("card_expires_at") val cardExpiresAt: String? = null,
+    @SerialName("last_access_at") val lastAccessAt: String? = null,
+    val locale: String? = null,
+    // Instance-defined custom fields with the user's current values.
+    @SerialName("custom_fields") val customFields: List<CustomFieldValue> = emptyList(),
 ) {
     val fullName: String get() = listOf(nome, cognome).filter { it.isNotBlank() }.joinToString(" ")
 }
@@ -105,6 +162,15 @@ data class UserProfile(
 data class UpdateProfileRequest(
     val nome: String? = null,
     val cognome: String? = null,
+    val telefono: String? = null,
+    val indirizzo: String? = null,
+    @SerialName("data_nascita") val dataNascita: String? = null, // "yyyy-MM-dd"
+    @SerialName("cod_fiscale") val codFiscale: String? = null,
+    val sesso: String? = null,
+    val locale: String? = null,
+    // Only sent ids change; "" clears a field. Null → omitted (explicitNulls = false) so PATCH
+    // stays partial.
+    @SerialName("custom_fields") val customFields: Map<String, String>? = null,
 )
 
 @Serializable

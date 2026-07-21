@@ -5,6 +5,7 @@ import com.pinakes.app.data.model.ForgotRequest
 import com.pinakes.app.data.model.HealthPayload
 import com.pinakes.app.data.model.LoginRequest
 import com.pinakes.app.data.model.RegisterRequest
+import com.pinakes.app.data.model.RegistrationFieldsPayload
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.network.NetworkModule
 import com.pinakes.app.data.network.apiCall
@@ -121,6 +122,15 @@ class AuthRepository(
         }
     }
 
+    /**
+     * Public discovery of the sign-up form schema (built-in required flags + custom fields) for
+     * the committed instance. No token required.
+     */
+    suspend fun registrationFields(): ApiResult<RegistrationFieldsPayload> {
+        val api = network.api()
+        return apiCall { api.registrationFields() }
+    }
+
     suspend fun register(
         nome: String,
         cognome: String,
@@ -130,6 +140,7 @@ class AuthRepository(
         password: String,
         passwordConfirm: String,
         privacyAccepted: Boolean,
+        customFields: Map<String, String>? = null,
     ): ApiResult<Unit> {
         val api = network.api()
         return apiCall {
@@ -143,6 +154,7 @@ class AuthRepository(
                     password = password,
                     passwordConfirm = passwordConfirm,
                     privacyAcceptance = privacyAccepted,
+                    customFields = customFields?.takeIf { it.isNotEmpty() },
                 )
             )
         }
