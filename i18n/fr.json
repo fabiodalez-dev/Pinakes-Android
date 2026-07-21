@@ -193,6 +193,12 @@
   "profile_edit_title": "Modifier le profil",
   "profile_first_name": "Prénom",
   "profile_last_name": "Nom",
+  "profile_birth_date": "Date de naissance",
+  "profile_tax_code": "Code fiscal",
+  "profile_gender": "Sexe",
+  "profile_date_none": "Non renseignée",
+  "profile_card_number": "Numéro de carte",
+  "profile_card_expires": "Expiration de la carte",
   "profile_change_password_title": "Changer le mot de passe",
   "profile_current_password": "Mot de passe actuel",
   "profile_new_password": "Nouveau mot de passe",
@@ -414,5 +420,7 @@
   "book_club_privacy_private": "Privé",
   "book_club_privacy_invite": "Sur invitation",
   "book_club_privacy_hidden": "Masqué",
-  "book_club_error_dashboard": "Impossible de charger votre section de lecture. Tirez pour actualiser."
+  "book_club_error_dashboard": "Impossible de charger votre section de lecture. Tirez pour actualiser.",
+  "register_schema_failed": "Impossible de charger les champs d'inscription supplémentaires — vous pouvez quand même vous inscrire, ou réessayer.",
+  "action_clear": "Effacer"
 }

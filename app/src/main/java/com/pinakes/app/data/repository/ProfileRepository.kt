@@ -21,11 +21,15 @@ class ProfileRepository(private val network: NetworkModule) {
         return apiCall { api.me() }
     }
 
-    suspend fun updateProfile(nome: String?, cognome: String?): ApiResult<UserProfile> {
+    /**
+     * PATCH /me with only the changed fields. Null fields are omitted (partial PATCH via
+     * explicitNulls = false); a custom field mapped to "" clears that one field.
+     */
+    suspend fun updateProfile(request: UpdateProfileRequest): ApiResult<UserProfile> {
         val api = network.api()
         // PATCH /me returns null/UserProfile. Model it as Unit so apiCall never tries to cast a
         // null body to UserProfile, then re-fetch the canonical profile on success.
-        return when (val res = apiCall { api.updateMe(UpdateProfileRequest(nome, cognome)).asUnit() }) {
+        return when (val res = apiCall { api.updateMe(request).asUnit() }) {
             is ApiResult.Success -> me()
             is ApiResult.Failure -> res
         }

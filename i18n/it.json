@@ -193,6 +193,12 @@
   "profile_edit_title": "Modifica profilo",
   "profile_first_name": "Nome",
   "profile_last_name": "Cognome",
+  "profile_birth_date": "Data di nascita",
+  "profile_tax_code": "Codice fiscale",
+  "profile_gender": "Sesso",
+  "profile_date_none": "Non impostata",
+  "profile_card_number": "Numero tessera",
+  "profile_card_expires": "Scadenza tessera",
   "profile_change_password_title": "Cambia password",
   "profile_current_password": "Password attuale",
   "profile_new_password": "Nuova password",
@@ -414,5 +420,7 @@
   "book_club_privacy_private": "Privato",
   "book_club_privacy_invite": "Solo su invito",
   "book_club_privacy_hidden": "Nascosto",
-  "book_club_error_dashboard": "Impossibile caricare la sezione delle tue letture. Trascina per aggiornare."
+  "book_club_error_dashboard": "Impossibile caricare la sezione delle tue letture. Trascina per aggiornare.",
+  "register_schema_failed": "Impossibile caricare i campi di registrazione aggiuntivi — puoi comunque registrarti, oppure riprovare.",
+  "action_clear": "Cancella"
 }

@@ -22,6 +22,7 @@ import com.pinakes.app.data.model.ReviewRequest
 import com.pinakes.app.data.model.PushPrefs
 import com.pinakes.app.data.model.PushSubscribeRequest
 import com.pinakes.app.data.model.RegisterRequest
+import com.pinakes.app.data.model.RegistrationFieldsPayload
 import com.pinakes.app.data.model.ReservationItem
 import com.pinakes.app.data.model.ReservationRequest
 import com.pinakes.app.data.model.UpdateProfileRequest
@@ -61,6 +62,11 @@ interface PinakesApi {
     @POST("auth/register")
     @Headers(NO_AUTH)
     suspend fun register(@Body body: RegisterRequest): Envelope<Unit>
+
+    /** Public discovery of the sign-up form: which built-ins are required + custom fields. */
+    @GET("auth/registration-fields")
+    @Headers(NO_AUTH)
+    suspend fun registrationFields(): Envelope<RegistrationFieldsPayload>
 
     @POST("auth/forgot-password")
     @Headers(NO_AUTH)

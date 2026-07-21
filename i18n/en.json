@@ -193,6 +193,12 @@
   "profile_edit_title": "Edit profile",
   "profile_first_name": "First name",
   "profile_last_name": "Last name",
+  "profile_birth_date": "Date of birth",
+  "profile_tax_code": "Tax code",
+  "profile_gender": "Gender",
+  "profile_date_none": "Not set",
+  "profile_card_number": "Card number",
+  "profile_card_expires": "Card expires",
   "profile_change_password_title": "Change password",
   "profile_current_password": "Current password",
   "profile_new_password": "New password",
@@ -414,5 +420,7 @@
   "book_club_privacy_private": "Private",
   "book_club_privacy_invite": "Invite only",
   "book_club_privacy_hidden": "Hidden",
-  "book_club_error_dashboard": "Couldn't load your reading section. Pull to refresh."
+  "book_club_error_dashboard": "Couldn't load your reading section. Pull to refresh.",
+  "register_schema_failed": "Couldn't load the extra registration fields — you can still sign up, or retry.",
+  "action_clear": "Clear"
 }

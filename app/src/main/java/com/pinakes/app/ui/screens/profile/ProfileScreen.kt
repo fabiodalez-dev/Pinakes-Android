@@ -15,10 +15,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.BrightnessMedium
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.DevicesOther
 import androidx.compose.material.icons.outlined.Edit
@@ -30,9 +32,13 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.RateReview
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -49,15 +55,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import androidx.core.os.LocaleListCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pinakes.app.R
+import com.pinakes.app.data.model.CustomFieldDef
+import com.pinakes.app.data.model.CustomFieldValue
 import com.pinakes.app.data.model.DeviceItem
 import com.pinakes.app.data.model.UserProfile
 import com.pinakes.app.ui.common.AppViewModel
+import com.pinakes.app.ui.screens.login.CustomFieldInput
 import com.pinakes.app.ui.common.DateFormat
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
@@ -116,12 +130,29 @@ fun ProfileScreen(
     }
 
     if (state.editing) {
+        val editingProfile = (state.profile as? UiState.Success)?.data
         EditProfileDialog(
             nome = state.editNome,
             cognome = state.editCognome,
+            telefono = state.editTelefono,
+            indirizzo = state.editIndirizzo,
+            dataNascita = state.editDataNascita,
+            codFiscale = state.editCodFiscale,
+            sesso = state.editSesso,
+            telefonoRequired = vm.builtinRequired("telefono"),
+            indirizzoRequired = vm.builtinRequired("indirizzo"),
+            customFields = editingProfile?.customFields.orEmpty(),
+            customValues = state.editCustomValues,
             saving = state.savingProfile,
+            errorRes = state.editErrorRes,
             onNome = vm::onEditNome,
             onCognome = vm::onEditCognome,
+            onTelefono = vm::onEditTelefono,
+            onIndirizzo = vm::onEditIndirizzo,
+            onDataNascita = vm::onEditDataNascita,
+            onCodFiscale = vm::onEditCodFiscale,
+            onSesso = vm::onEditSesso,
+            onCustomField = vm::onEditCustomField,
             onSave = vm::saveEdit,
             onDismiss = vm::cancelEdit,
         )
@@ -200,6 +231,23 @@ private fun ProfileContent(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+
+        // Read-only membership info (only shown when the server provides it).
+        val cardNumber = profile.codiceTessera?.takeIf { it.isNotBlank() }
+        val cardExpiry = profile.cardExpiresAt?.takeIf { it.isNotBlank() }
+        if (cardNumber != null || cardExpiry != null) {
+            Spacer(Modifier.height(Spacing.xl))
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    cardNumber?.let { ReadOnlyRow(stringResource(R.string.profile_card_number), it) }
+                    cardExpiry?.let { ReadOnlyRow(stringResource(R.string.profile_card_expires), DateFormat.date(it)) }
+                }
+            }
         }
 
         Spacer(Modifier.height(Spacing.xl))
@@ -401,6 +449,14 @@ private fun ThemeSection() {
 }
 
 @Composable
+private fun ReadOnlyRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
 private fun ActionRow(icon: ImageVector, label: String, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
@@ -450,9 +506,25 @@ private fun DeviceRow(device: DeviceItem, onRevoke: () -> Unit) {
 private fun EditProfileDialog(
     nome: String,
     cognome: String,
+    telefono: String,
+    indirizzo: String,
+    dataNascita: String,
+    codFiscale: String,
+    sesso: String,
+    telefonoRequired: Boolean,
+    indirizzoRequired: Boolean,
+    customFields: List<CustomFieldValue>,
+    customValues: Map<Int, String>,
     saving: Boolean,
+    errorRes: Int?,
     onNome: (String) -> Unit,
     onCognome: (String) -> Unit,
+    onTelefono: (String) -> Unit,
+    onIndirizzo: (String) -> Unit,
+    onDataNascita: (String) -> Unit,
+    onCodFiscale: (String) -> Unit,
+    onSesso: (String) -> Unit,
+    onCustomField: (Int, String) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -461,14 +533,118 @@ private fun EditProfileDialog(
         shape = MaterialTheme.shapes.large,
         title = { Text(stringResource(R.string.profile_edit_title), style = MaterialTheme.typography.titleMedium) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
                 PinakesTextField(value = nome, onValueChange = onNome, label = stringResource(R.string.profile_first_name), modifier = Modifier.fillMaxWidth())
                 PinakesTextField(value = cognome, onValueChange = onCognome, label = stringResource(R.string.profile_last_name), modifier = Modifier.fillMaxWidth())
+                PinakesTextField(
+                    value = telefono,
+                    onValueChange = onTelefono,
+                    label = requiredLabel(stringResource(R.string.register_phone), telefonoRequired),
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
+                )
+                PinakesTextField(
+                    value = indirizzo,
+                    onValueChange = onIndirizzo,
+                    label = requiredLabel(stringResource(R.string.register_address), indirizzoRequired),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                DateField(
+                    value = dataNascita,
+                    label = stringResource(R.string.profile_birth_date),
+                    onValueChange = onDataNascita,
+                )
+                PinakesTextField(value = codFiscale, onValueChange = onCodFiscale, label = stringResource(R.string.profile_tax_code), modifier = Modifier.fillMaxWidth())
+                PinakesTextField(value = sesso, onValueChange = onSesso, label = stringResource(R.string.profile_gender), modifier = Modifier.fillMaxWidth())
+                // Instance-defined custom fields, pre-filled from the user's current values.
+                customFields.forEach { f ->
+                    CustomFieldInput(
+                        def = CustomFieldDef(id = f.id, label = f.label, type = f.type, required = f.required),
+                        value = customValues[f.id].orEmpty(),
+                        onValueChange = { onCustomField(f.id, it) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                if (errorRes != null) {
+                    Text(
+                        text = stringResource(errorRes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         },
         confirmButton = { PrimaryButton(label = stringResource(R.string.action_save), onClick = onSave, loading = saving) },
         dismissButton = { PinakesTextButton(label = stringResource(R.string.action_cancel), onClick = onDismiss) },
     )
+}
+
+/** Appends a " *" marker to a field label when the instance requires it. */
+private fun requiredLabel(label: String, required: Boolean): String = if (required) "$label *" else label
+
+/**
+ * A read/tap field showing a yyyy-MM-dd date; tapping opens a Material3 date picker (any date,
+ * past-friendly for a birth date). Empty value shows nothing selected.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateField(value: String, label: String, onValueChange: (String) -> Unit) {
+    var pickerOpen by remember { mutableStateOf(false) }
+    Surface(
+        onClick = { pickerOpen = true },
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(Modifier.padding(Spacing.lg), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    value.ifBlank { stringResource(R.string.profile_date_none) },
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Icon(Icons.Outlined.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        }
+    }
+
+    if (pickerOpen) {
+        val initialMillis = value.takeIf { it.isNotBlank() }?.let {
+            runCatching { LocalDate.parse(it).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() }.getOrNull()
+        }
+        val pickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
+        DatePickerDialog(
+            onDismissRequest = { pickerOpen = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    pickerState.selectedDateMillis?.let {
+                        onValueChange(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().toString())
+                    }
+                    pickerOpen = false
+                }) { Text(stringResource(R.string.action_save)) }
+            },
+            dismissButton = {
+                Row {
+                    // Clear an existing birth date (PATCH /me accepts an empty
+                    // value → the field is cleared server-side). Only offered
+                    // when there is a date to remove.
+                    if (value.isNotBlank()) {
+                        TextButton(onClick = { onValueChange(""); pickerOpen = false }) {
+                            Text(stringResource(R.string.action_clear))
+                        }
+                    }
+                    TextButton(onClick = { pickerOpen = false }) { Text(stringResource(R.string.action_cancel)) }
+                }
+            },
+        ) {
+            DatePicker(state = pickerState, showModeToggle = false)
+        }
+    }
 }
 
 @Composable

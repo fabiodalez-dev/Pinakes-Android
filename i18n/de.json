@@ -193,6 +193,12 @@
   "profile_edit_title": "Profil bearbeiten",
   "profile_first_name": "Vorname",
   "profile_last_name": "Nachname",
+  "profile_birth_date": "Geburtsdatum",
+  "profile_tax_code": "Steuernummer",
+  "profile_gender": "Geschlecht",
+  "profile_date_none": "Nicht festgelegt",
+  "profile_card_number": "Ausweisnummer",
+  "profile_card_expires": "Ausweis läuft ab",
   "profile_change_password_title": "Passwort ändern",
   "profile_current_password": "Aktuelles Passwort",
   "profile_new_password": "Neues Passwort",
@@ -414,5 +420,7 @@
   "book_club_privacy_private": "Privat",
   "book_club_privacy_invite": "Nur mit Einladung",
   "book_club_privacy_hidden": "Verborgen",
-  "book_club_error_dashboard": "Dein Lesebereich konnte nicht geladen werden. Zum Aktualisieren ziehen."
+  "book_club_error_dashboard": "Dein Lesebereich konnte nicht geladen werden. Zum Aktualisieren ziehen.",
+  "register_schema_failed": "Zusätzliche Registrierungsfelder konnten nicht geladen werden — du kannst dich trotzdem registrieren oder es erneut versuchen.",
+  "action_clear": "Löschen"
 }
