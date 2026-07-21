@@ -37,6 +37,9 @@ data class ProfileUiState(
     val editCustomValues: Map<Int, String> = emptyMap(),
     // Required-ness for telefono/indirizzo comes from the registration schema.
     val builtinFields: Map<String, BuiltinFieldRule> = emptyMap(),
+    // Inline validation error shown in the edit dialog (e.g. a required field
+    // left blank) — surfaced client-side instead of relying on a server 422.
+    val editErrorRes: Int? = null,
     val savingProfile: Boolean = false,
     // Password dialog
     val changingPassword: Boolean = false,
@@ -102,6 +105,7 @@ class ProfileViewModel @Inject constructor(
         _state.update {
             it.copy(
                 editing = true,
+                editErrorRes = null,
                 editNome = p.nome,
                 editCognome = p.cognome,
                 editTelefono = p.telefono.orEmpty(),
@@ -116,16 +120,34 @@ class ProfileViewModel @Inject constructor(
     fun cancelEdit() = _state.update { it.copy(editing = false) }
     fun onEditNome(v: String) = _state.update { it.copy(editNome = v) }
     fun onEditCognome(v: String) = _state.update { it.copy(editCognome = v) }
-    fun onEditTelefono(v: String) = _state.update { it.copy(editTelefono = v) }
-    fun onEditIndirizzo(v: String) = _state.update { it.copy(editIndirizzo = v) }
+    fun onEditTelefono(v: String) = _state.update { it.copy(editTelefono = v, editErrorRes = null) }
+    fun onEditIndirizzo(v: String) = _state.update { it.copy(editIndirizzo = v, editErrorRes = null) }
     fun onEditDataNascita(v: String) = _state.update { it.copy(editDataNascita = v) }
     fun onEditCodFiscale(v: String) = _state.update { it.copy(editCodFiscale = v) }
     fun onEditSesso(v: String) = _state.update { it.copy(editSesso = v) }
-    fun onEditCustomField(id: Int, v: String) = _state.update { it.copy(editCustomValues = it.editCustomValues + (id to v)) }
+    fun onEditCustomField(id: Int, v: String) = _state.update { it.copy(editCustomValues = it.editCustomValues + (id to v), editErrorRes = null) }
 
     fun saveEdit() {
         val s = _state.value
         val original = (s.profile as? UiState.Success)?.data
+
+        // Client-side required-field validation, mirroring the register flow, so
+        // clearing a required field gives an immediate, clear message instead of
+        // an opaque server 422 round-trip. telefono/indirizzo are required only
+        // when the instance requires them; required custom fields must be filled.
+        val missingBuiltin =
+            (builtinRequired("telefono") && s.editTelefono.isBlank()) ||
+                (builtinRequired("indirizzo") && s.editIndirizzo.isBlank())
+        val missingCustom = original?.customFields?.any { def ->
+            val v = s.editCustomValues[def.id].orEmpty()
+            val normalized = if (def.type == "checkbox") (if (v == "1") "1" else "") else v.trim()
+            def.required && normalized.isEmpty()
+        } ?: false
+        if (missingBuiltin || missingCustom) {
+            _state.update { it.copy(editErrorRes = R.string.register_error_required) }
+            return
+        }
+
         // Build a partial PATCH: only include a built-in when it actually changed (null → omitted).
         fun changed(new: String, old: String?): String? = new.trim().takeIf { it != old.orEmpty() }
         // Custom fields: only the ids whose value differs from the loaded one.
