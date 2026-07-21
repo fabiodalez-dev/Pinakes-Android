@@ -421,5 +421,6 @@
   "book_club_privacy_invite": "Invite only",
   "book_club_privacy_hidden": "Hidden",
   "book_club_error_dashboard": "Couldn't load your reading section. Pull to refresh.",
-  "register_schema_failed": "Couldn't load the extra registration fields — you can still sign up, or retry."
+  "register_schema_failed": "Couldn't load the extra registration fields — you can still sign up, or retry.",
+  "action_clear": "Clear"
 }

@@ -421,5 +421,6 @@
   "book_club_privacy_invite": "Nur mit Einladung",
   "book_club_privacy_hidden": "Verborgen",
   "book_club_error_dashboard": "Dein Lesebereich konnte nicht geladen werden. Zum Aktualisieren ziehen.",
-  "register_schema_failed": "Zusätzliche Registrierungsfelder konnten nicht geladen werden — du kannst dich trotzdem registrieren oder es erneut versuchen."
+  "register_schema_failed": "Zusätzliche Registrierungsfelder konnten nicht geladen werden — du kannst dich trotzdem registrieren oder es erneut versuchen.",
+  "action_clear": "Löschen"
 }

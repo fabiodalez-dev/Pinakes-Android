@@ -421,5 +421,6 @@
   "book_club_privacy_invite": "Solo su invito",
   "book_club_privacy_hidden": "Nascosto",
   "book_club_error_dashboard": "Impossibile caricare la sezione delle tue letture. Trascina per aggiornare.",
-  "register_schema_failed": "Impossibile caricare i campi di registrazione aggiuntivi — puoi comunque registrarti, oppure riprovare."
+  "register_schema_failed": "Impossibile caricare i campi di registrazione aggiuntivi — puoi comunque registrarti, oppure riprovare.",
+  "action_clear": "Cancella"
 }
