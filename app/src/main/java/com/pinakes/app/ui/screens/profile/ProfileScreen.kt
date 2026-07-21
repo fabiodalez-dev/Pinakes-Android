@@ -144,6 +144,7 @@ fun ProfileScreen(
             customFields = editingProfile?.customFields.orEmpty(),
             customValues = state.editCustomValues,
             saving = state.savingProfile,
+            errorRes = state.editErrorRes,
             onNome = vm::onEditNome,
             onCognome = vm::onEditCognome,
             onTelefono = vm::onEditTelefono,
@@ -515,6 +516,7 @@ private fun EditProfileDialog(
     customFields: List<CustomFieldValue>,
     customValues: Map<Int, String>,
     saving: Boolean,
+    errorRes: Int?,
     onNome: (String) -> Unit,
     onCognome: (String) -> Unit,
     onTelefono: (String) -> Unit,
@@ -563,6 +565,14 @@ private fun EditProfileDialog(
                         def = CustomFieldDef(id = f.id, label = f.label, type = f.type, required = f.required),
                         value = customValues[f.id].orEmpty(),
                         onValueChange = { onCustomField(f.id, it) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                if (errorRes != null) {
+                    Text(
+                        text = stringResource(errorRes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }

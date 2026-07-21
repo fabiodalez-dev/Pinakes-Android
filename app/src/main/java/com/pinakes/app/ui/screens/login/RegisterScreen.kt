@@ -69,6 +69,14 @@ data class RegisterUiState(
     val customFields: List<CustomFieldDef> = emptyList(),
     // Custom-field values keyed by CustomFieldDef.id. checkbox → "1"/"".
     val customValues: Map<Int, String> = emptyMap(),
+    // True while the initial schema fetch is in flight. Gates submit so a fast
+    // user can't submit before the custom-field section has appeared (which
+    // would make the required-custom-field check pass vacuously). Starts true.
+    val schemaLoading: Boolean = true,
+    // True when the schema fetch failed. Registration still works with the
+    // built-in defaults (server stays authoritative), but the UI surfaces a
+    // retry so the user knows extra fields may be missing.
+    val schemaFailed: Boolean = false,
 ) {
     /** A config-driven built-in is required unless the instance explicitly opts it out. */
     fun builtinRequired(key: String): Boolean = builtinFields[key]?.required ?: true
@@ -87,12 +95,24 @@ class RegisterViewModel @Inject constructor(private val auth: AuthRepository) : 
      * register — the server remains the authority.
      */
     fun loadSchema() {
+        _state.update { it.copy(schemaLoading = true, schemaFailed = false) }
         viewModelScope.launch {
             when (val res = auth.registrationFields()) {
                 is ApiResult.Success -> _state.update {
-                    it.copy(builtinFields = res.data.builtinFields, customFields = res.data.customFields)
+                    it.copy(
+                        builtinFields = res.data.builtinFields,
+                        customFields = res.data.customFields,
+                        schemaLoading = false,
+                        schemaFailed = false,
+                    )
                 }
-                is ApiResult.Failure -> { /* keep built-in defaults; never block registration */ }
+                // Keep built-in defaults so registration is never blocked, but
+                // flag the failure so the UI can offer a retry — otherwise
+                // required custom fields would silently never appear and the
+                // user would hit an opaque server 422.
+                is ApiResult.Failure -> _state.update {
+                    it.copy(schemaLoading = false, schemaFailed = true)
+                }
             }
         }
     }
@@ -113,8 +133,12 @@ class RegisterViewModel @Inject constructor(private val auth: AuthRepository) : 
 
     fun submit() {
         // Guard against duplicate submits while a request is in flight or already
-        // done — account creation is not idempotent.
-        if (_state.value.loading || _state.value.sent) return
+        // done — account creation is not idempotent. Also block while the schema
+        // is still loading: submitting before the custom-field section appears
+        // would make the required-custom-field check below pass vacuously and
+        // land an opaque server 422. (A failed fetch clears schemaLoading, so a
+        // schema-down instance still lets the user register with the defaults.)
+        if (_state.value.loading || _state.value.sent || _state.value.schemaLoading) return
         val s = _state.value
         // Build the custom_fields payload: text-like → trimmed value, checkbox → "1"/"".
         val customPayload: Map<String, String> = s.customFields.associate { def ->
@@ -277,6 +301,26 @@ fun RegisterScreen(onBackToLogin: () -> Unit) {
                 modifier = form,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             )
+            // Schema fetch failed: registration still works with the built-in
+            // defaults, but tell the user extra fields may be missing and let
+            // them retry rather than silently omitting required custom fields.
+            if (state.schemaFailed) {
+                Spacer(Modifier.height(Spacing.md))
+                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = form) {
+                    Row(
+                        modifier = Modifier.padding(Spacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.register_schema_failed),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        PinakesTextButton(label = stringResource(R.string.action_retry), onClick = vm::loadSchema)
+                    }
+                }
+            }
             // Instance-defined custom fields, rendered by type.
             state.customFields.forEach { def ->
                 Spacer(Modifier.height(Spacing.md))
@@ -330,7 +374,10 @@ fun RegisterScreen(onBackToLogin: () -> Unit) {
                 label = stringResource(R.string.register_action),
                 onClick = vm::submit,
                 modifier = form,
-                loading = state.loading,
+                // Spinner + disabled while the account request is in flight OR
+                // the schema is still loading — the submit() guard also blocks
+                // the latter, this just reflects it visually.
+                loading = state.loading || state.schemaLoading,
             )
             Spacer(Modifier.height(Spacing.sm))
             PinakesTextButton(label = stringResource(R.string.auth_back_to_login), onClick = onBackToLogin)

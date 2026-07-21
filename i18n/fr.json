@@ -420,5 +420,6 @@
   "book_club_privacy_private": "Privé",
   "book_club_privacy_invite": "Sur invitation",
   "book_club_privacy_hidden": "Masqué",
-  "book_club_error_dashboard": "Impossible de charger votre section de lecture. Tirez pour actualiser."
+  "book_club_error_dashboard": "Impossible de charger votre section de lecture. Tirez pour actualiser.",
+  "register_schema_failed": "Impossible de charger les champs d'inscription supplémentaires — vous pouvez quand même vous inscrire, ou réessayer."
 }
