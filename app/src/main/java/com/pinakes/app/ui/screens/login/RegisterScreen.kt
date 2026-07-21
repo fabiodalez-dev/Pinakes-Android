@@ -80,6 +80,31 @@ data class RegisterUiState(
 ) {
     /** A config-driven built-in is required unless the instance explicitly opts it out. */
     fun builtinRequired(key: String): Boolean = builtinFields[key]?.required ?: true
+
+    /**
+     * Submit must not proceed while the account request is in flight, already
+     * sent, or the schema is still loading (submitting before the custom-field
+     * section appears would make [hasBlankRequiredField] pass vacuously).
+     */
+    fun canSubmit(): Boolean = !loading && !sent && !schemaLoading
+
+    /**
+     * True when a required field is blank: nome/email (always required), a
+     * config-required built-in (cognome/telefono/indirizzo), or a required
+     * custom field. Password is validated separately (length/strength), so it
+     * is intentionally not part of this check. Pure — unit-tested.
+     */
+    fun hasBlankRequiredField(): Boolean {
+        if (nome.isBlank() || email.isBlank()) return true
+        if (builtinRequired("cognome") && cognome.isBlank()) return true
+        if (builtinRequired("telefono") && telefono.isBlank()) return true
+        if (builtinRequired("indirizzo") && indirizzo.isBlank()) return true
+        return customFields.any { def ->
+            val raw = customValues[def.id].orEmpty()
+            val value = if (def.type == "checkbox") (if (raw == "1") "1" else "") else raw.trim()
+            def.required && value.isEmpty()
+        }
+    }
 }
 
 @HiltViewModel
@@ -138,7 +163,7 @@ class RegisterViewModel @Inject constructor(private val auth: AuthRepository) : 
         // would make the required-custom-field check below pass vacuously and
         // land an opaque server 422. (A failed fetch clears schemaLoading, so a
         // schema-down instance still lets the user register with the defaults.)
-        if (_state.value.loading || _state.value.sent || _state.value.schemaLoading) return
+        if (!_state.value.canSubmit()) return
         val s = _state.value
         // Build the custom_fields payload: text-like → trimmed value, checkbox → "1"/"".
         val customPayload: Map<String, String> = s.customFields.associate { def ->
@@ -146,18 +171,10 @@ class RegisterViewModel @Inject constructor(private val auth: AuthRepository) : 
             val value = if (def.type == "checkbox") (if (raw == "1") "1" else "") else raw.trim()
             def.id.toString() to value
         }
-        // A required custom field must be filled (checkbox required → must be checked).
-        val missingCustom = s.customFields.any { def ->
-            def.required && (customPayload[def.id.toString()].orEmpty().isEmpty())
-        }
         val validation = when {
-            // nome/email/password are always required; cognome/telefono/indirizzo only when the
-            // instance requires them.
-            s.nome.isBlank() || s.email.isBlank() ||
-                (s.builtinRequired("cognome") && s.cognome.isBlank()) ||
-                (s.builtinRequired("telefono") && s.telefono.isBlank()) ||
-                (s.builtinRequired("indirizzo") && s.indirizzo.isBlank()) ||
-                missingCustom -> R.string.register_error_required
+            // Required-field check (core + config-required built-ins + required
+            // custom fields) lives on the state so it's unit-testable.
+            s.hasBlankRequiredField() -> R.string.register_error_required
             // Mirror the backend (AuthController) rules so the user gets a clear
             // client-side error instead of a server 422: 8-72 chars, plus at least
             // one uppercase, one lowercase and one digit.

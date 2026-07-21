@@ -75,7 +75,15 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun builtinRequired(key: String): Boolean = _state.value.builtinFields[key]?.required ?: true
+    /**
+     * Profile-side required-ness. Unlike registration (which defaults to
+     * required-when-absent, the conservative signup choice), profile editing
+     * defaults to NOT required when the registration schema hasn't loaded (or
+     * failed): the user already has an account, so an unloaded schema must not
+     * make an optional telefono/indirizzo suddenly block saving — the server
+     * stays authoritative. Once the schema loads, the real flags apply.
+     */
+    fun builtinRequired(key: String): Boolean = _state.value.builtinFields[key]?.required ?: false
 
     fun load() {
         _state.update { it.copy(profile = UiState.Loading) }
@@ -118,8 +126,8 @@ class ProfileViewModel @Inject constructor(
         }
     }
     fun cancelEdit() = _state.update { it.copy(editing = false) }
-    fun onEditNome(v: String) = _state.update { it.copy(editNome = v) }
-    fun onEditCognome(v: String) = _state.update { it.copy(editCognome = v) }
+    fun onEditNome(v: String) = _state.update { it.copy(editNome = v, editErrorRes = null) }
+    fun onEditCognome(v: String) = _state.update { it.copy(editCognome = v, editErrorRes = null) }
     fun onEditTelefono(v: String) = _state.update { it.copy(editTelefono = v, editErrorRes = null) }
     fun onEditIndirizzo(v: String) = _state.update { it.copy(editIndirizzo = v, editErrorRes = null) }
     fun onEditDataNascita(v: String) = _state.update { it.copy(editDataNascita = v) }
@@ -136,7 +144,9 @@ class ProfileViewModel @Inject constructor(
         // an opaque server 422 round-trip. telefono/indirizzo are required only
         // when the instance requires them; required custom fields must be filled.
         val missingBuiltin =
-            (builtinRequired("telefono") && s.editTelefono.isBlank()) ||
+            s.editNome.isBlank() ||
+                (builtinRequired("cognome") && s.editCognome.isBlank()) ||
+                (builtinRequired("telefono") && s.editTelefono.isBlank()) ||
                 (builtinRequired("indirizzo") && s.editIndirizzo.isBlank())
         val missingCustom = original?.customFields?.any { def ->
             val v = s.editCustomValues[def.id].orEmpty()

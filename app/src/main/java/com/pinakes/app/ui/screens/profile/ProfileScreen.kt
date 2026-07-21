@@ -628,7 +628,19 @@ private fun DateField(value: String, label: String, onValueChange: (String) -> U
                     pickerOpen = false
                 }) { Text(stringResource(R.string.action_save)) }
             },
-            dismissButton = { TextButton(onClick = { pickerOpen = false }) { Text(stringResource(R.string.action_cancel)) } },
+            dismissButton = {
+                Row {
+                    // Clear an existing birth date (PATCH /me accepts an empty
+                    // value → the field is cleared server-side). Only offered
+                    // when there is a date to remove.
+                    if (value.isNotBlank()) {
+                        TextButton(onClick = { onValueChange(""); pickerOpen = false }) {
+                            Text(stringResource(R.string.action_clear))
+                        }
+                    }
+                    TextButton(onClick = { pickerOpen = false }) { Text(stringResource(R.string.action_cancel)) }
+                }
+            },
         ) {
             DatePicker(state = pickerState, showModeToggle = false)
         }
