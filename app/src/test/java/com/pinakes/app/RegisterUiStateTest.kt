@@ -15,9 +15,14 @@ import org.junit.Test
  */
 class RegisterUiStateTest {
 
+    // A form ready to submit: every field the default (empty) schema treats as
+    // required is filled, so each test can blank exactly the one field it probes.
+    // (With an empty builtinFields map, cognome/telefono/indirizzo default to
+    // required, so they must be non-blank here.)
     private fun ready() = RegisterUiState(
-        nome = "Mario", email = "m@x.it", password = "Abcdef12",
-        passwordConfirm = "Abcdef12", privacyAccepted = true,
+        nome = "Mario", email = "m@x.it",
+        cognome = "Rossi", telefono = "3331234567", indirizzo = "Via Roma 1",
+        password = "Abcdef12", passwordConfirm = "Abcdef12", privacyAccepted = true,
         schemaLoading = false,
     )
 
