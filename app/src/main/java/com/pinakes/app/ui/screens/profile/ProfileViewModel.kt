@@ -2,7 +2,9 @@ package com.pinakes.app.ui.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pinakes.app.data.model.BuiltinFieldRule
 import com.pinakes.app.data.model.DeviceItem
+import com.pinakes.app.data.model.UpdateProfileRequest
 import com.pinakes.app.data.model.UserProfile
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.network.ErrorCodes
@@ -26,6 +28,15 @@ data class ProfileUiState(
     val editing: Boolean = false,
     val editNome: String = "",
     val editCognome: String = "",
+    val editTelefono: String = "",
+    val editIndirizzo: String = "",
+    val editDataNascita: String = "",
+    val editCodFiscale: String = "",
+    val editSesso: String = "",
+    // Custom-field edit values keyed by field id (checkbox → "1"/"").
+    val editCustomValues: Map<Int, String> = emptyMap(),
+    // Required-ness for telefono/indirizzo comes from the registration schema.
+    val builtinFields: Map<String, BuiltinFieldRule> = emptyMap(),
     val savingProfile: Boolean = false,
     // Password dialog
     val changingPassword: Boolean = false,
@@ -49,7 +60,19 @@ class ProfileViewModel @Inject constructor(
     private val _state = MutableStateFlow(ProfileUiState())
     val state: StateFlow<ProfileUiState> = _state.asStateFlow()
 
-    init { load(); loadDevices() }
+    init { load(); loadDevices(); loadSchema() }
+
+    /** Fetch the registration schema so telefono/indirizzo required-ness matches the instance. */
+    fun loadSchema() {
+        viewModelScope.launch {
+            when (val res = auth.registrationFields()) {
+                is ApiResult.Success -> _state.update { it.copy(builtinFields = res.data.builtinFields) }
+                is ApiResult.Failure -> { /* keep defaults */ }
+            }
+        }
+    }
+
+    fun builtinRequired(key: String): Boolean = _state.value.builtinFields[key]?.required ?: true
 
     fun load() {
         _state.update { it.copy(profile = UiState.Loading) }
@@ -76,17 +99,59 @@ class ProfileViewModel @Inject constructor(
     // ---- Edit profile ----
     fun startEdit() {
         val p = (_state.value.profile as? UiState.Success)?.data ?: return
-        _state.update { it.copy(editing = true, editNome = p.nome, editCognome = p.cognome) }
+        _state.update {
+            it.copy(
+                editing = true,
+                editNome = p.nome,
+                editCognome = p.cognome,
+                editTelefono = p.telefono.orEmpty(),
+                editIndirizzo = p.indirizzo.orEmpty(),
+                editDataNascita = p.dataNascita.orEmpty(),
+                editCodFiscale = p.codFiscale.orEmpty(),
+                editSesso = p.sesso.orEmpty(),
+                editCustomValues = p.customFields.associate { f -> f.id to f.value },
+            )
+        }
     }
     fun cancelEdit() = _state.update { it.copy(editing = false) }
     fun onEditNome(v: String) = _state.update { it.copy(editNome = v) }
     fun onEditCognome(v: String) = _state.update { it.copy(editCognome = v) }
+    fun onEditTelefono(v: String) = _state.update { it.copy(editTelefono = v) }
+    fun onEditIndirizzo(v: String) = _state.update { it.copy(editIndirizzo = v) }
+    fun onEditDataNascita(v: String) = _state.update { it.copy(editDataNascita = v) }
+    fun onEditCodFiscale(v: String) = _state.update { it.copy(editCodFiscale = v) }
+    fun onEditSesso(v: String) = _state.update { it.copy(editSesso = v) }
+    fun onEditCustomField(id: Int, v: String) = _state.update { it.copy(editCustomValues = it.editCustomValues + (id to v)) }
 
     fun saveEdit() {
         val s = _state.value
+        val original = (s.profile as? UiState.Success)?.data
+        // Build a partial PATCH: only include a built-in when it actually changed (null → omitted).
+        fun changed(new: String, old: String?): String? = new.trim().takeIf { it != old.orEmpty() }
+        // Custom fields: only the ids whose value differs from the loaded one.
+        val customPatch: Map<String, String> = original?.customFields
+            ?.mapNotNull { def ->
+                val edited = s.editCustomValues[def.id].orEmpty()
+                val normalized = if (def.type == "checkbox") (if (edited == "1") "1" else "") else edited.trim()
+                if (normalized != def.value) def.id.toString() to normalized else null
+            }
+            ?.toMap()
+            .orEmpty()
+
+        val request = UpdateProfileRequest(
+            nome = changed(s.editNome, original?.nome),
+            cognome = changed(s.editCognome, original?.cognome),
+            telefono = changed(s.editTelefono, original?.telefono),
+            indirizzo = changed(s.editIndirizzo, original?.indirizzo),
+            dataNascita = changed(s.editDataNascita, original?.dataNascita),
+            codFiscale = changed(s.editCodFiscale, original?.codFiscale),
+            sesso = changed(s.editSesso, original?.sesso),
+            customFields = customPatch.takeIf { it.isNotEmpty() },
+        )
+
         _state.update { it.copy(savingProfile = true) }
         viewModelScope.launch {
-            when (val res = profile.updateProfile(s.editNome.trim(), s.editCognome.trim())) {
+            when (val res = profile.updateProfile(request)) {
                 is ApiResult.Success -> _state.update {
                     it.copy(profile = UiState.Success(res.data), savingProfile = false, editing = false, snackbar = null, snackbarRes = R.string.profile_updated)
                 }
