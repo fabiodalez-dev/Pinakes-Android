@@ -10,6 +10,7 @@ import com.pinakes.app.data.model.Envelope
 import com.pinakes.app.data.model.ForgotRequest
 import com.pinakes.app.data.model.GenreNode
 import com.pinakes.app.data.model.HealthPayload
+import com.pinakes.app.data.model.LanguageValue
 import com.pinakes.app.data.model.LoanItem
 import com.pinakes.app.data.model.LoansData
 import com.pinakes.app.data.model.LoginRequest
@@ -112,6 +113,10 @@ interface PinakesApi {
 
     @GET("catalog/genres")
     suspend fun genres(): Envelope<List<GenreNode>>
+
+    // #282: real catalogue language values for the language filter.
+    @GET("catalog/languages")
+    suspend fun languages(): Envelope<List<LanguageValue>>
 
     // ---- Reviews ----
     /** Aggregate rating + the user's own review + a page of other users' reviews for a book. */
