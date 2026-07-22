@@ -248,6 +248,17 @@ data class GenreNode(
     val children: List<GenreNode> = emptyList(),
 )
 
+/**
+ * A distinct language value present in the catalogue, from GET /catalog/languages
+ * (#282). `libri.lingua` is free text, so the app must offer these real values —
+ * not a hardcoded ISO-code list that never matched the stored strings.
+ */
+@Serializable
+data class LanguageValue(
+    val language: String = "",
+    val count: Int = 0,
+)
+
 // ---------- Loans / reservations ----------
 @Serializable
 data class LoansData(

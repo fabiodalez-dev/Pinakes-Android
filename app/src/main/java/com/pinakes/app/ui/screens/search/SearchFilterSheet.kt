@@ -195,12 +195,14 @@ fun SearchFilterSheet(
                     label = { Text(stringResource(R.string.filters_all_languages)) },
                     colors = chipColors,
                 )
-                SearchLanguageOptions.forEach { opt ->
-                    val selected = state.language == opt.code
+                // #282: real catalogue language values (free text), loaded from
+                // GET /catalog/languages, instead of a hardcoded ISO-code list.
+                state.languages.forEach { lang ->
+                    val selected = state.language == lang.language
                     FilterChip(
                         selected = selected,
-                        onClick = { onLanguageChange(if (selected) null else opt.code) },
-                        label = { Text(stringResource(opt.labelRes)) },
+                        onClick = { onLanguageChange(if (selected) null else lang.language) },
+                        label = { Text(lang.language) },
                         leadingIcon = if (selected) {
                             { Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.height(18.dp)) }
                         } else null,
