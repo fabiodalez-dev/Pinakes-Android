@@ -248,6 +248,16 @@ data class GenreNode(
     val children: List<GenreNode> = emptyList(),
 )
 
+// A distinct language value actually present in the catalogue, with its book
+// count — from GET /catalog/languages. `libri.lingua` is unnormalized free text,
+// so the filter must send the REAL value (e.g. "Deutsch") rather than a
+// hardcoded ISO code, otherwise language filtering returns nothing (issue #282).
+@Serializable
+data class CatalogLanguage(
+    val language: String = "",
+    val count: Int = 0,
+)
+
 // ---------- Loans / reservations ----------
 @Serializable
 data class LoansData(

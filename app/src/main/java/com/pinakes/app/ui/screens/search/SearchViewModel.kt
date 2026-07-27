@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.R
 import com.pinakes.app.data.model.BookSummary
+import com.pinakes.app.data.model.CatalogLanguage
 import com.pinakes.app.data.model.GenreNode
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.CatalogRepository
@@ -40,6 +41,7 @@ data class SearchUiState(
     val language: String? = null,
     val sort: BookSort = BookSort.NEWEST,
     val genres: List<GenreNode> = emptyList(),
+    val languages: List<CatalogLanguage> = emptyList(),
     val items: List<BookSummary> = emptyList(),
     val nextCursor: String? = null,
     val totalCount: Int? = null,
@@ -66,18 +68,6 @@ data class SearchUiState(
         get() = query.isBlank() && !hasActiveFilters && items.isEmpty() && !loading && error == null
 }
 
-/** Languages offered in the filter sheet. `code` is sent to the API; `labelRes` is shown. */
-data class LanguageOption(val code: String, @StringRes val labelRes: Int)
-
-val SearchLanguageOptions: List<LanguageOption> = listOf(
-    LanguageOption("ita", R.string.lang_italian),
-    LanguageOption("eng", R.string.lang_english),
-    LanguageOption("fra", R.string.lang_french),
-    LanguageOption("deu", R.string.lang_german),
-    LanguageOption("spa", R.string.lang_spanish),
-    LanguageOption("lat", R.string.lang_latin),
-)
-
 @HiltViewModel
 class SearchViewModel @Inject constructor(private val catalog: CatalogRepository) : ViewModel() {
 
@@ -97,6 +87,7 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
 
     init {
         loadGenres()
+        loadLanguages()
         // Catalog lands on the full listing — browse-all (empty query, no filters).
         runSearch(reset = true)
     }
@@ -106,6 +97,21 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
             when (val res = catalog.genres()) {
                 is ApiResult.Success -> _state.update { it.copy(genres = res.data) }
                 is ApiResult.Failure -> { /* non-fatal: filters still usable without genre tree */ }
+            }
+        }
+    }
+
+    /**
+     * Populate the language filter from the catalogue's real values
+     * (GET /catalog/languages) instead of a hardcoded ISO list. `libri.lingua`
+     * is free text, so the previous "ita"/"deu" codes never matched a row like
+     * "Deutsch" and language filtering returned nothing (issue #282).
+     */
+    private fun loadLanguages() {
+        viewModelScope.launch {
+            when (val res = catalog.languages()) {
+                is ApiResult.Success -> _state.update { it.copy(languages = res.data) }
+                is ApiResult.Failure -> { /* non-fatal: filters still usable without the language list */ }
             }
         }
     }

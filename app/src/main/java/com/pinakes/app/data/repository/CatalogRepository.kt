@@ -6,6 +6,7 @@ import com.pinakes.app.data.local.toSummary
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.BookSummary
+import com.pinakes.app.data.model.CatalogLanguage
 import com.pinakes.app.data.model.GenreNode
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.network.ErrorCodes
@@ -145,6 +146,16 @@ class CatalogRepository(
     suspend fun genres(): ApiResult<List<GenreNode>> {
         val api = network.api()
         return apiCall { api.genres() }
+    }
+
+    /**
+     * Distinct language values present in the catalogue (with counts) from
+     * GET /catalog/languages, used to populate the search language filter with
+     * the collection's REAL values instead of a hardcoded ISO list (issue #282).
+     */
+    suspend fun languages(): ApiResult<List<CatalogLanguage>> {
+        val api = network.api()
+        return apiCall { api.languages() }
     }
 
     /**

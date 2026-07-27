@@ -147,6 +147,7 @@ const ENDPOINTS = [
     { name: 'DELETE /catalog/books/{bookId}/reviews', method: 'DELETE', path: '/catalog/books/{bookId}/reviews', auth: true, kind: 'gone2' },
     { name: 'GET /me/reviews',                   method: 'GET',    path: '/me/reviews',                   auth: true,  kind: 'safeGet' },
     { name: 'GET /catalog/genres',               method: 'GET',    path: '/catalog/genres',               auth: true,  kind: 'etag' },
+    { name: 'GET /catalog/languages',            method: 'GET',    path: '/catalog/languages',            auth: true,  kind: 'etag' },
     { name: 'GET /me/loans',                     method: 'GET',    path: '/me/loans',                     auth: true,  kind: 'safeGet' },
     { name: 'GET /me/reservations',              method: 'GET',    path: '/me/reservations',              auth: true,  kind: 'safeGet' },
     { name: 'POST /reservations',                method: 'POST',   path: '/reservations',                 auth: true,  kind: 'conflict2',
