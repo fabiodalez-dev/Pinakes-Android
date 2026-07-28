@@ -195,12 +195,16 @@ fun SearchFilterSheet(
                     label = { Text(stringResource(R.string.filters_all_languages)) },
                     colors = chipColors,
                 )
-                SearchLanguageOptions.forEach { opt ->
-                    val selected = state.language == opt.code
+                // Real catalogue language values from GET /catalog/languages
+                // (issue #282). The chip label and the value sent to the API are
+                // the collection's actual string (e.g. "Deutsch"), so filtering
+                // matches; the hardcoded ISO list never did.
+                state.languages.forEach { lang ->
+                    val selected = state.language == lang.language
                     FilterChip(
                         selected = selected,
-                        onClick = { onLanguageChange(if (selected) null else opt.code) },
-                        label = { Text(stringResource(opt.labelRes)) },
+                        onClick = { onLanguageChange(if (selected) null else lang.language) },
+                        label = { Text(lang.language) },
                         leadingIcon = if (selected) {
                             { Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.height(18.dp)) }
                         } else null,

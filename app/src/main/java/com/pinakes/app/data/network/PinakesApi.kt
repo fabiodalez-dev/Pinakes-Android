@@ -4,6 +4,7 @@ import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.BookReviews
 import com.pinakes.app.data.model.BookSummary
+import com.pinakes.app.data.model.CatalogLanguage
 import com.pinakes.app.data.model.ChangePasswordRequest
 import com.pinakes.app.data.model.DeviceItem
 import com.pinakes.app.data.model.Envelope
@@ -112,6 +113,9 @@ interface PinakesApi {
 
     @GET("catalog/genres")
     suspend fun genres(): Envelope<List<GenreNode>>
+
+    @GET("catalog/languages")
+    suspend fun languages(): Envelope<List<CatalogLanguage>>
 
     // ---- Reviews ----
     /** Aggregate rating + the user's own review + a page of other users' reviews for a book. */
