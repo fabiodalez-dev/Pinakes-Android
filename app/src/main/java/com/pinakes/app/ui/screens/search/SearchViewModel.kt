@@ -22,10 +22,10 @@ import kotlinx.coroutines.launch
 
 /**
  * Catalog sort order. `apiValue` is the exact `sort` query param the backend accepts on
- * `/catalog/search`; `labelRes` is the localized label shown in the sort picker. Author
- * sorts are intentionally absent — the backend does not support them.
+ * `/catalog/search`; `labelRes` is the localized label shown in the sort picker.
  */
 enum class BookSort(val apiValue: String, @StringRes val labelRes: Int) {
+    RELEVANCE("relevance", R.string.sort_relevance),
     NEWEST("newest", R.string.sort_newest),
     OLDEST("oldest", R.string.sort_oldest),
     TITLE_ASC("title_asc", R.string.sort_title_asc),
@@ -117,7 +117,16 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
     }
 
     fun onQueryChange(value: String) {
-        _state.update { it.copy(query = value) }
+        _state.update { current ->
+            val nextSort = when {
+                current.query.isBlank() && value.isNotBlank() && current.sort == BookSort.NEWEST ->
+                    BookSort.RELEVANCE
+                current.query.isNotBlank() && value.isBlank() && current.sort == BookSort.RELEVANCE ->
+                    BookSort.NEWEST
+                else -> current.sort
+            }
+            current.copy(query = value, sort = nextSort)
+        }
         // Debounced auto-search as the user types.
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
@@ -150,6 +159,7 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
      * pagination and reloads from the first page. No-op if the order is unchanged.
      */
     fun setSort(sort: BookSort) {
+        if (sort == BookSort.RELEVANCE && _state.value.query.isBlank()) return
         if (_state.value.sort == sort) return
         _state.update { it.copy(sort = sort) }
         runSearch(reset = true)

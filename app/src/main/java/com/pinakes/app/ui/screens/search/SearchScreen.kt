@@ -104,7 +104,11 @@ fun SearchScreen(onBookClick: (Int) -> Unit) {
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.height(0.dp))
-                SortMenu(current = state.sort, onSelect = vm::setSort)
+                SortMenu(
+                    current = state.sort,
+                    hasTextQuery = state.query.isNotBlank(),
+                    onSelect = vm::setSort,
+                )
                 BadgedBox(
                     badge = {
                         if (state.hasActiveFilters) {
@@ -256,12 +260,16 @@ fun SearchScreen(onBookClick: (Int) -> Unit) {
 }
 
 /**
- * Sort-order picker: an icon button that opens a dropdown of the four supported catalog
+ * Sort-order picker: an icon button that opens a dropdown of the supported catalog
  * orders. The active order carries a check. Choosing an order resets pagination and reloads
  * from the first page (handled in the ViewModel); the choice survives filter changes.
  */
 @Composable
-private fun SortMenu(current: BookSort, onSelect: (BookSort) -> Unit) {
+private fun SortMenu(
+    current: BookSort,
+    hasTextQuery: Boolean,
+    onSelect: (BookSort) -> Unit,
+) {
     var expanded by remember { mutableStateOf(false) }
     // Announce the active order to TalkBack as the button's state (e.g. "Sort, Newest").
     val activeSortLabel = stringResource(current.labelRes)
@@ -277,7 +285,7 @@ private fun SortMenu(current: BookSort, onSelect: (BookSort) -> Unit) {
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            BookSort.entries.forEach { option ->
+            BookSort.entries.filter { it != BookSort.RELEVANCE || hasTextQuery }.forEach { option ->
                 DropdownMenuItem(
                     modifier = Modifier.semantics { selected = (option == current) },
                     text = { Text(stringResource(option.labelRes)) },

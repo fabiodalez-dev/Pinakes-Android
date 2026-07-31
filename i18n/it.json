@@ -121,6 +121,7 @@
   "filters_all_languages": "Tutte",
   "filters_apply": "Applica",
   "filters_apply_count": "Applica filtri (%1$d)",
+  "sort_relevance": "Rilevanza",
   "sort_newest": "Più recenti",
   "sort_oldest": "Meno recenti",
   "sort_title_asc": "Titolo (A–Z)",

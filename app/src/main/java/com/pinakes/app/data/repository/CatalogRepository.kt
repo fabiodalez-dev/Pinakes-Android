@@ -86,7 +86,8 @@ class CatalogRepository(
         filters: SearchFilters,
         cursor: String? = null,
         limit: Int = 20,
-        // newest (default) | oldest | title_asc | title_desc; null → server default (newest).
+        // relevance | newest | oldest | title_asc | title_desc; null → server default
+        // (relevance for text queries, newest for facet-only browsing).
         sort: String? = null,
     ): ApiResult<SearchPage> {
         val api = network.api()
