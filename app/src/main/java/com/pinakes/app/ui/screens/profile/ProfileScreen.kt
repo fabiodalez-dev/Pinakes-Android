@@ -558,7 +558,7 @@ private fun EditProfileDialog(
                     onValueChange = onDataNascita,
                 )
                 PinakesTextField(value = codFiscale, onValueChange = onCodFiscale, label = stringResource(R.string.profile_tax_code), modifier = Modifier.fillMaxWidth())
-                PinakesTextField(value = sesso, onValueChange = onSesso, label = stringResource(R.string.profile_gender), modifier = Modifier.fillMaxWidth())
+                GenderField(value = sesso, onValueChange = onSesso)
                 // Instance-defined custom fields, pre-filled from the user's current values.
                 customFields.forEach { f ->
                     CustomFieldInput(
@@ -585,6 +585,79 @@ private fun EditProfileDialog(
 
 /** Appends a " *" marker to a field label when the instance requires it. */
 private fun requiredLabel(label: String, required: Boolean): String = if (required) "$label *" else label
+
+/**
+ * The server stores gender as an enum and accepts only "M", "F", "Altro" or
+ * an empty value. Show localized labels while always emitting those canonical
+ * values so an arbitrary string can never be silently normalized to null.
+ */
+@Composable
+private fun GenderField(value: String, onValueChange: (String) -> Unit) {
+    var dialogOpen by remember { mutableStateOf(false) }
+    val options = listOf(
+        "" to stringResource(R.string.profile_gender_unspecified),
+        "M" to stringResource(R.string.profile_gender_male),
+        "F" to stringResource(R.string.profile_gender_female),
+        "Altro" to stringResource(R.string.profile_gender_other),
+    )
+    val selectedLabel = options.firstOrNull { it.first == value }?.second
+        ?: stringResource(R.string.profile_gender_unspecified)
+
+    Surface(
+        onClick = { dialogOpen = true },
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(Modifier.padding(Spacing.lg), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.profile_gender),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(selectedLabel, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            }
+            Icon(
+                Icons.Outlined.ExpandMore,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+
+    if (dialogOpen) {
+        AlertDialog(
+            onDismissRequest = { dialogOpen = false },
+            shape = MaterialTheme.shapes.large,
+            title = { Text(stringResource(R.string.profile_gender), style = MaterialTheme.typography.titleMedium) },
+            text = {
+                Column {
+                    options.forEach { (canonicalValue, label) ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onValueChange(canonicalValue)
+                                    dialogOpen = false
+                                }
+                                .padding(vertical = Spacing.sm),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = canonicalValue == value, onClick = null)
+                            Spacer(Modifier.width(Spacing.md))
+                            Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                PinakesTextButton(label = stringResource(R.string.action_cancel), onClick = { dialogOpen = false })
+            },
+        )
+    }
+}
 
 /**
  * A read/tap field showing a yyyy-MM-dd date; tapping opens a Material3 date picker (any date,

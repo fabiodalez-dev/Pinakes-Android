@@ -52,7 +52,26 @@ data class ProfileUiState(
     val loggingOut: Boolean = false,
     val snackbar: String? = null,
     val snackbarRes: Int? = null,
-)
+) {
+    /** Profile-side required-ness defaults to false until discovery succeeds. */
+    fun builtinRequired(key: String): Boolean = builtinFields[key]?.required ?: false
+
+    /**
+     * Only built-in fields are required during profile editing. The server
+     * deliberately does not enforce custom-field required flags on PATCH /me:
+     * a field made mandatory after signup must not block an existing member
+     * from editing unrelated profile data.
+     */
+    fun hasBlankRequiredProfileField(): Boolean =
+        editNome.isBlank() ||
+            (builtinRequired("cognome") && editCognome.isBlank()) ||
+            (builtinRequired("telefono") && editTelefono.isBlank()) ||
+            (builtinRequired("indirizzo") && editIndirizzo.isBlank())
+}
+
+internal val PROFILE_GENDER_VALUES = setOf("", "M", "F", "Altro")
+
+internal fun isCanonicalProfileGender(value: String): Boolean = value in PROFILE_GENDER_VALUES
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
@@ -83,7 +102,7 @@ class ProfileViewModel @Inject constructor(
      * make an optional telefono/indirizzo suddenly block saving — the server
      * stays authoritative. Once the schema loads, the real flags apply.
      */
-    fun builtinRequired(key: String): Boolean = _state.value.builtinFields[key]?.required ?: false
+    fun builtinRequired(key: String): Boolean = _state.value.builtinRequired(key)
 
     fun load() {
         _state.update { it.copy(profile = UiState.Loading) }
@@ -132,28 +151,20 @@ class ProfileViewModel @Inject constructor(
     fun onEditIndirizzo(v: String) = _state.update { it.copy(editIndirizzo = v, editErrorRes = null) }
     fun onEditDataNascita(v: String) = _state.update { it.copy(editDataNascita = v) }
     fun onEditCodFiscale(v: String) = _state.update { it.copy(editCodFiscale = v) }
-    fun onEditSesso(v: String) = _state.update { it.copy(editSesso = v) }
+    fun onEditSesso(v: String) {
+        if (!isCanonicalProfileGender(v)) return
+        _state.update { it.copy(editSesso = v) }
+    }
     fun onEditCustomField(id: Int, v: String) = _state.update { it.copy(editCustomValues = it.editCustomValues + (id to v), editErrorRes = null) }
 
     fun saveEdit() {
         val s = _state.value
         val original = (s.profile as? UiState.Success)?.data
 
-        // Client-side required-field validation, mirroring the register flow, so
-        // clearing a required field gives an immediate, clear message instead of
-        // an opaque server 422 round-trip. telefono/indirizzo are required only
-        // when the instance requires them; required custom fields must be filled.
-        val missingBuiltin =
-            s.editNome.isBlank() ||
-                (builtinRequired("cognome") && s.editCognome.isBlank()) ||
-                (builtinRequired("telefono") && s.editTelefono.isBlank()) ||
-                (builtinRequired("indirizzo") && s.editIndirizzo.isBlank())
-        val missingCustom = original?.customFields?.any { def ->
-            val v = s.editCustomValues[def.id].orEmpty()
-            val normalized = if (def.type == "checkbox") (if (v == "1") "1" else "") else v.trim()
-            def.required && normalized.isEmpty()
-        } ?: false
-        if (missingBuiltin || missingCustom) {
+        // Built-in fields follow the instance schema. Custom-field required
+        // flags apply at signup only: the server intentionally permits blank
+        // values on PATCH /me for existing users.
+        if (s.hasBlankRequiredProfileField()) {
             _state.update { it.copy(editErrorRes = R.string.register_error_required) }
             return
         }
