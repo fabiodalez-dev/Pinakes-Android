@@ -560,9 +560,14 @@ private fun EditProfileDialog(
                 PinakesTextField(value = codFiscale, onValueChange = onCodFiscale, label = stringResource(R.string.profile_tax_code), modifier = Modifier.fillMaxWidth())
                 GenderField(value = sesso, onValueChange = onSesso)
                 // Instance-defined custom fields, pre-filled from the user's current values.
+                // Rendered with required=false on purpose: the server accepts blank custom
+                // values on PATCH /me for existing members (see ProfileUiState
+                // .hasBlankRequiredProfileField), so the requirement is NOT enforced when
+                // editing an existing profile. Showing a " *" here would falsely imply the
+                // field is mandatory and contradict that server-authoritative behaviour.
                 customFields.forEach { f ->
                     CustomFieldInput(
-                        def = CustomFieldDef(id = f.id, label = f.label, type = f.type, required = f.required),
+                        def = CustomFieldDef(id = f.id, label = f.label, type = f.type, required = false),
                         value = customValues[f.id].orEmpty(),
                         onValueChange = { onCustomField(f.id, it) },
                         modifier = Modifier.fillMaxWidth(),
