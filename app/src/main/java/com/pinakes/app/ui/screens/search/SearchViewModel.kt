@@ -32,6 +32,10 @@ enum class BookSort(val apiValue: String, @StringRes val labelRes: Int) {
     TITLE_DESC("title_desc", R.string.sort_title_desc),
 }
 
+/** Relevance has no meaningful score without a text query. */
+internal fun BookSort.isAvailableFor(query: String): Boolean =
+    this != BookSort.RELEVANCE || query.isNotBlank()
+
 data class SearchUiState(
     val query: String = "",
     val availableOnly: Boolean = false,
@@ -66,6 +70,20 @@ data class SearchUiState(
 
     val isInitial: Boolean
         get() = query.isBlank() && !hasActiveFilters && items.isEmpty() && !loading && error == null
+}
+
+/**
+ * Apply a query edit and keep the contextual default sort in sync. Explicit
+ * non-default sorts survive edits; relevance falls back to newest when the
+ * query is cleared because it is unavailable for a catalogue-only browse.
+ */
+internal fun SearchUiState.withQuery(value: String): SearchUiState {
+    val nextSort = when {
+        query.isBlank() && value.isNotBlank() && sort == BookSort.NEWEST -> BookSort.RELEVANCE
+        query.isNotBlank() && value.isBlank() && sort == BookSort.RELEVANCE -> BookSort.NEWEST
+        else -> sort
+    }
+    return copy(query = value, sort = nextSort)
 }
 
 @HiltViewModel
@@ -117,16 +135,7 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
     }
 
     fun onQueryChange(value: String) {
-        _state.update { current ->
-            val nextSort = when {
-                current.query.isBlank() && value.isNotBlank() && current.sort == BookSort.NEWEST ->
-                    BookSort.RELEVANCE
-                current.query.isNotBlank() && value.isBlank() && current.sort == BookSort.RELEVANCE ->
-                    BookSort.NEWEST
-                else -> current.sort
-            }
-            current.copy(query = value, sort = nextSort)
-        }
+        _state.update { it.withQuery(value) }
         // Debounced auto-search as the user types.
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
@@ -159,7 +168,7 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
      * pagination and reloads from the first page. No-op if the order is unchanged.
      */
     fun setSort(sort: BookSort) {
-        if (sort == BookSort.RELEVANCE && _state.value.query.isBlank()) return
+        if (!sort.isAvailableFor(_state.value.query)) return
         if (_state.value.sort == sort) return
         _state.update { it.copy(sort = sort) }
         runSearch(reset = true)

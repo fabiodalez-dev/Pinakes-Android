@@ -106,7 +106,7 @@ fun SearchScreen(onBookClick: (Int) -> Unit) {
                 Spacer(Modifier.height(0.dp))
                 SortMenu(
                     current = state.sort,
-                    hasTextQuery = state.query.isNotBlank(),
+                    query = state.query,
                     onSelect = vm::setSort,
                 )
                 BadgedBox(
@@ -267,7 +267,7 @@ fun SearchScreen(onBookClick: (Int) -> Unit) {
 @Composable
 private fun SortMenu(
     current: BookSort,
-    hasTextQuery: Boolean,
+    query: String,
     onSelect: (BookSort) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -285,7 +285,7 @@ private fun SortMenu(
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            BookSort.entries.filter { it != BookSort.RELEVANCE || hasTextQuery }.forEach { option ->
+            BookSort.entries.filter { it.isAvailableFor(query) }.forEach { option ->
                 DropdownMenuItem(
                     modifier = Modifier.semantics { selected = (option == current) },
                     text = { Text(stringResource(option.labelRes)) },
