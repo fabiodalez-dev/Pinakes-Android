@@ -36,12 +36,20 @@ import javax.net.ssl.X509TrustManager
  * domain-specific network-security-config makes Android's platform trust manager reject the
  * hostname-unaware two-arg `checkServerTrusted`, demanding the socket/engine-aware overloads.
  *
+ * It also tolerates a server that appends an unrelated certificate to the chain — notably a QNAP
+ * box whose reinstalled Let's Encrypt cert ships [leaf, intermediate, retired DST Root CA X3]. The
+ * completion re-links the chain from the leaf first (see [orderedChainFromLeaf]), drops the stray
+ * root, and then walks up via AIA to the intermediate's real issuer; desktop browsers paper over
+ * this because they already trust the new ISRG root, but Android must be handed the path down to a
+ * root it ships.
+ *
  * Security: this NEVER weakens validation. The final decision is always made by the platform
  * default trust manager (with the real peer hostname, via the socket/engine overloads) against the
- * system trust store. We only ADD intermediate certificates fetched via AIA and re-validate; a
- * fetched certificate that does not cryptographically chain to a trusted root is rejected exactly
- * as before, and on any failure we re-throw the ORIGINAL exception so genuinely untrusted certs
- * fail identically. No new trust anchors are introduced.
+ * system trust store. We only re-link the presented certificates and ADD intermediates fetched via
+ * AIA, then re-validate; dropping a stray certificate is purely structural and can only remove a
+ * dead end, never introduce a trust anchor. A fetched certificate that does not cryptographically
+ * chain to a trusted root is rejected exactly as before, and on any failure we re-throw the
+ * ORIGINAL exception so genuinely untrusted certs fail identically.
  */
 class AiaCompletingTrustManager(
     private val delegate: X509ExtendedTrustManager,
@@ -90,8 +98,13 @@ class AiaCompletingTrustManager(
             validate(chain as Array<X509Certificate>)
             return
         } catch (original: CertificateException) {
-            val completed = runCatching { completeChain(chain.toList()) }.getOrNull()
-            if (completed == null || completed.size == chain.size) throw original
+            val presented = chain.toList()
+            val completed = runCatching { completeChain(presented) }.getOrNull()
+            // Re-validate only when completion actually changed the chain. A size check is not
+            // enough: dropping an unrelated appended root and fetching the genuine issuer can
+            // leave the count identical while the contents differ (X509Certificate.equals compares
+            // the encoded form, so a plain list comparison catches this).
+            if (completed == null || completed == presented) throw original
             try {
                 validate(completed.toTypedArray())
                 if (BuildConfig.DEBUG) {
@@ -104,9 +117,19 @@ class AiaCompletingTrustManager(
     }
 
     /** Walk up from the server-supplied chain, fetching each missing issuer via AIA, until a
-     *  self-issued cert is reached, the issuer is already present, or the depth cap is hit. */
+     *  self-issued cert is reached, the issuer is already present, or the depth cap is hit.
+     *
+     *  The walk starts from the issuer-linked chain rooted at the leaf (see [orderedChainFromLeaf]),
+     *  NOT from the raw presented list: a misconfigured server can append a certificate that is not
+     *  part of the leaf's path — typically an unrelated, expired, self-signed root such as the
+     *  retired DST Root CA X3 — and walking up from that junk cert would stop immediately (it is
+     *  self-issued) instead of fetching the real intermediate's issuer. Reproduced against a QNAP
+     *  instance whose reinstalled Let's Encrypt cert served [leaf, intermediate, DST Root CA X3];
+     *  desktop browsers already trust the new ISRG root and ignore the junk, but Android needs the
+     *  chain completed down to a root it ships. */
     private fun completeChain(initial: List<X509Certificate>): List<X509Certificate> {
-        val chain = ArrayList(initial)
+        val chain = ArrayList(orderedChainFromLeaf(initial))
+        if (chain.isEmpty()) return chain
         var depth = 0
         while (depth++ < MAX_FETCH) {
             val top = chain.last()
@@ -163,6 +186,35 @@ class AiaCompletingTrustManager(
         private const val MAX_FETCH = 4
         private const val FETCH_TIMEOUT_MS = 5_000
         private val URL_REGEX = Regex("""https?://[A-Za-z0-9._~:/?#\[\]@!${'$'}&'()*+,;=%-]+""")
+
+        /**
+         * Reorder the presented certificates into the single issuer-linked chain that starts at
+         * the leaf (`initial[0]`, always the end-entity certificate in a TLS handshake), following
+         * subject→issuer links and drawing the rest from the remaining certificates as a pool.
+         * Anything not reachable from the leaf is discarded — an out-of-order intermediate is still
+         * picked up, but an unrelated appended root (e.g. an expired self-signed DST Root CA X3) is
+         * dropped so the AIA walk resumes from the genuine top of the chain.
+         *
+         * Purely structural: it inspects only subject/issuer distinguished names, never signatures
+         * or validity. It can therefore never turn an untrusted certificate into a trusted one —
+         * the final decision still belongs to the platform trust manager against the system store,
+         * and dropping a stray certificate can only remove a dead end, not add a trust anchor.
+         */
+        @JvmStatic
+        internal fun orderedChainFromLeaf(initial: List<X509Certificate>): List<X509Certificate> {
+            if (initial.isEmpty()) return initial
+            val pool = ArrayList(initial.drop(1))
+            val ordered = ArrayList<X509Certificate>()
+            ordered.add(initial[0])
+            while (true) {
+                val top = ordered.last()
+                if (top.subjectX500Principal == top.issuerX500Principal) break // reached a self-issued root
+                val issuer = pool.firstOrNull { it.subjectX500Principal == top.issuerX500Principal } ?: break
+                pool.remove(issuer)
+                ordered.add(issuer)
+            }
+            return ordered
+        }
 
         /**
          * Platform default trust manager wrapped so incomplete chains are completed via AIA. Returns
