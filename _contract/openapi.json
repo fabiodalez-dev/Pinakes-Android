@@ -730,6 +730,21 @@
                         "type": "string",
                         "description": "Raw prestiti.stato value."
                     },
+                    "status_label": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Server-localized label for status (since API 1.4.3, absent/null on older servers). Fallback for states this client has no local mapping for; known states keep device-localized resources."
+                    },
+                    "requested_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date",
+                        "description": "Date the loan request was created (since API 1.4.3). The honest date for cancelled/expired loans, which never went out."
+                    },
                     "loaned_at": {
                         "type": "string",
                         "format": "date",

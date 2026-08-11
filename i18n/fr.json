@@ -146,6 +146,7 @@
   "library_returned_on": "Rendu le %1$s",
   "library_due_on": "Échéance %1$s",
   "library_borrowed_on": "Emprunté le %1$s",
+  "library_requested_on": "Demandé le %1$s",
   "library_queue_position": "File d'attente #%1$d",
   "library_cancel": "Annuler",
   "library_confirm_cancel_title": "Annuler la réservation ?",

@@ -338,7 +338,13 @@ data class LoanItem(
     @SerialName("book_id") val bookId: Int = 0,
     val title: String = "",
     @SerialName("cover_url") val coverUrl: String? = null,
-    val status: String = "", // in_corso | concluso | in_scadenza | scaduto | prenotato | in_attesa
+    val status: String = "", // raw prestiti.stato value (see StatusMapping.loan)
+    // Server-localized label for `status` (API >= 1.4.3, null on older servers).
+    // Used as the chip fallback for states this app version doesn't know yet.
+    @SerialName("status_label") val statusLabel: String? = null,
+    // Date the loan request was created (API >= 1.4.3, null on older servers).
+    // The honest date for cancelled/expired loans, which never went out.
+    @SerialName("requested_at") val requestedAt: String? = null,
     @SerialName("loaned_at") val loanedAt: String? = null,
     @SerialName("due_at") val dueAt: String? = null,
     @SerialName("returned_at") val returnedAt: String? = null,

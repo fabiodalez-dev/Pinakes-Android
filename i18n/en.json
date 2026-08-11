@@ -146,6 +146,7 @@
   "library_returned_on": "Returned %1$s",
   "library_due_on": "Due %1$s",
   "library_borrowed_on": "Borrowed %1$s",
+  "library_requested_on": "Requested %1$s",
   "library_queue_position": "Queue #%1$d",
   "library_cancel": "Cancel",
   "library_confirm_cancel_title": "Cancel reservation?",
