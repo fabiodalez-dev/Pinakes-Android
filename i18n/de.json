@@ -146,6 +146,7 @@
   "library_returned_on": "Zurückgegeben am %1$s",
   "library_due_on": "Fällig %1$s",
   "library_borrowed_on": "Ausgeliehen am %1$s",
+  "library_requested_on": "Angefragt am %1$s",
   "library_queue_position": "Warteschlange #%1$d",
   "library_cancel": "Abbrechen",
   "library_confirm_cancel_title": "Reservierung stornieren?",

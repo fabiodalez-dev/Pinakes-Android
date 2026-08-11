@@ -146,6 +146,7 @@
   "library_returned_on": "Restituito il %1$s",
   "library_due_on": "Scadenza %1$s",
   "library_borrowed_on": "Preso in prestito il %1$s",
+  "library_requested_on": "Richiesto il %1$s",
   "library_queue_position": "In coda #%1$d",
   "library_cancel": "Annulla",
   "library_confirm_cancel_title": "Annullare la prenotazione?",

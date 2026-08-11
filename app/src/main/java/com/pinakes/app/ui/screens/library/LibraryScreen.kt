@@ -211,15 +211,19 @@ private fun androidx.compose.foundation.lazy.LazyItemScope.LoanRow(
     val (status, statusLabel) = StatusMapping.loan(loan.status, loan.statusLabel)
     val label = statusLabel.resId?.let { stringResource(it) } ?: statusLabel.fallback
     val overdue = StatusMapping.loanGroup(loan.status) == StatusMapping.LoanGroup.Overdue
-    // Cancelled/expired loans never went out: a "Due <date>" line would be misleading,
-    // so fall through to the request date instead.
+    // Cancelled/expired loans never went out: "Due <date>" or "Borrowed <date>"
+    // lines would be misleading, so show the request date (API >= 1.4.3) —
+    // loanedAt is the *requested start*, not a borrow date, for these states.
     val neverWentOut = loan.status in setOf("annullato", "scaduto")
     val dateLine = when {
+        neverWentOut -> loan.requestedAt?.let {
+            stringResource(R.string.library_requested_on, DateFormat.date(it))
+        }
         overdue && loan.dueAt != null ->
             stringResource(R.string.library_overdue_since, DateFormat.date(loan.dueAt))
         overdue -> stringResource(R.string.library_overdue_label)
         loan.returnedAt != null -> stringResource(R.string.library_returned_on, DateFormat.date(loan.returnedAt))
-        !neverWentOut && loan.dueAt != null -> stringResource(R.string.library_due_label, DateFormat.date(loan.dueAt))
+        loan.dueAt != null -> stringResource(R.string.library_due_label, DateFormat.date(loan.dueAt))
         loan.loanedAt != null -> stringResource(R.string.library_borrowed_on, DateFormat.date(loan.loanedAt))
         else -> null
     }
