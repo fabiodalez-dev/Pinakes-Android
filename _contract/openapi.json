@@ -730,6 +730,10 @@
                         "type": "string",
                         "description": "Raw prestiti.stato value."
                     },
+                    "status_label": {
+                        "type": "string",
+                        "description": "Server-localized label for status (since 1.4.3). Prefer this over client-side status maps."
+                    },
                     "loaned_at": {
                         "type": "string",
                         "format": "date",

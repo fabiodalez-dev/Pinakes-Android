@@ -20,7 +20,12 @@ data class StatusLabel(@param:StringRes val resId: Int?, val fallback: String? =
  */
 object StatusMapping {
 
-    fun loan(stato: String): Pair<AvailabilityStatus, StatusLabel> = when (stato) {
+    /**
+     * @param serverLabel the server-localized `status_label` (API >= 1.4.3), used as the
+     * fallback text for states this app version doesn't know yet — the server's own
+     * wording beats a humanized snake_case guess. Null/blank on older servers.
+     */
+    fun loan(stato: String, serverLabel: String? = null): Pair<AvailabilityStatus, StatusLabel> = when (stato) {
         // Active, on time — available-green (this is the good state).
         "in_corso" -> AvailabilityStatus.Available to StatusLabel(R.string.loan_status_on_loan)
         // Overdue — RED, the most important alert state.
@@ -42,8 +47,11 @@ object StatusMapping {
         "in_scadenza" -> AvailabilityStatus.DueSoon to StatusLabel(R.string.loan_status_due_soon)
         "concluso" -> AvailabilityStatus.Returned to StatusLabel(R.string.loan_status_returned)
         "in_attesa" -> AvailabilityStatus.DueSoon to StatusLabel(R.string.loan_status_pending_approval)
-        else -> AvailabilityStatus.LoanActive to
-            StatusLabel(null, stato.replace('_', ' ').replaceFirstChar { it.uppercase() })
+        else -> AvailabilityStatus.LoanActive to StatusLabel(
+            null,
+            serverLabel?.takeIf { it.isNotBlank() }
+                ?: stato.replace('_', ' ').replaceFirstChar { it.uppercase() },
+        )
     }
 
     fun reservation(stato: String): Pair<AvailabilityStatus, StatusLabel> = when (stato) {

@@ -208,15 +208,18 @@ private fun androidx.compose.foundation.lazy.LazyItemScope.LoanRow(
     loan: LoanItem,
     onBookClick: (Int) -> Unit,
 ) {
-    val (status, statusLabel) = StatusMapping.loan(loan.status)
+    val (status, statusLabel) = StatusMapping.loan(loan.status, loan.statusLabel)
     val label = statusLabel.resId?.let { stringResource(it) } ?: statusLabel.fallback
     val overdue = StatusMapping.loanGroup(loan.status) == StatusMapping.LoanGroup.Overdue
+    // Cancelled/expired loans never went out: a "Due <date>" line would be misleading,
+    // so fall through to the request date instead.
+    val neverWentOut = loan.status in setOf("annullato", "scaduto")
     val dateLine = when {
         overdue && loan.dueAt != null ->
             stringResource(R.string.library_overdue_since, DateFormat.date(loan.dueAt))
         overdue -> stringResource(R.string.library_overdue_label)
         loan.returnedAt != null -> stringResource(R.string.library_returned_on, DateFormat.date(loan.returnedAt))
-        loan.dueAt != null -> stringResource(R.string.library_due_label, DateFormat.date(loan.dueAt))
+        !neverWentOut && loan.dueAt != null -> stringResource(R.string.library_due_label, DateFormat.date(loan.dueAt))
         loan.loanedAt != null -> stringResource(R.string.library_borrowed_on, DateFormat.date(loan.loanedAt))
         else -> null
     }
