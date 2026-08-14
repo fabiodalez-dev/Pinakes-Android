@@ -13,9 +13,13 @@ import com.pinakes.app.data.network.NetworkEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import okhttp3.OkHttpClient
 import dagger.hilt.android.HiltAndroidApp
+import io.sentry.Hint
 import io.sentry.SentryEvent
 import io.sentry.SentryOptions
+import io.sentry.TypeCheckHint
 import io.sentry.android.core.SentryAndroid
+import okhttp3.Request
+import okhttp3.Response
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -53,8 +57,8 @@ class PinakesApplication : Application(), ImageLoaderFactory {
             // the health probe (whose whole job is to detect a down server) and transient
             // upstream 5xx (502 bad gateway / 503 unavailable / 504 timeout). A real 500
             // or a 4xx (which can point at an app-side request bug) still comes through.
-            options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
-                if (isExpectedBackendHttpFailure(event)) null else event
+            options.beforeSend = SentryOptions.BeforeSendCallback { event, hint ->
+                if (isExpectedBackendHttpFailure(event, hint)) null else event
             }
         }
 
@@ -81,23 +85,21 @@ class PinakesApplication : Application(), ImageLoaderFactory {
      * server being unavailable rather than a bug in this app: a failed `/health` probe,
      * or a transient upstream 5xx (502/503/504). Such events are pure noise for an app
      * that points at self-hosted instances, so [onCreate]'s `beforeSend` drops them.
+     *
+     * Classification is driven by Sentry's OkHttp integration data (the request/response
+     * carried on the [Hint], and the structured `contexts.response.statusCode`), never by
+     * matching exception text — so a non-HTTP crash whose message happens to mention an
+     * HTTP status is never discarded.
      */
-    private fun isExpectedBackendHttpFailure(event: SentryEvent): Boolean {
-        val detail = buildString {
-            event.throwable?.let { append(it.toString()) }
-            event.exceptions?.forEach { append(' ').append(it.type).append(' ').append(it.value) }
-        }
-        val isHttpClientError = detail.contains("SentryHttpClientException") ||
-            detail.contains("HTTP Client Error with status code:")
-        if (!isHttpClientError) return false
-
-        // The health probe's job is to detect a down server — a failure there is expected.
-        val path = event.request?.url?.substringBefore('?')?.trimEnd('/').orEmpty()
-        if (path.endsWith("/health")) return true
-
-        // Transient upstream unavailability, not an app bug.
-        val status = Regex("""status code:\s*(\d{3})""").find(detail)?.groupValues?.get(1)?.toIntOrNull()
-        return status == 502 || status == 503 || status == 504
+    private fun isExpectedBackendHttpFailure(event: SentryEvent, hint: Hint): Boolean {
+        val response = hint.getAs(TypeCheckHint.OKHTTP_RESPONSE, Response::class.java)
+        val request = hint.getAs(TypeCheckHint.OKHTTP_REQUEST, Request::class.java)
+        // Only OkHttp-instrumented HTTP failures carry these signals.
+        val isHttpResponseFailure =
+            response != null || request != null || event.contexts.response?.statusCode != null
+        val statusCode = response?.code ?: event.contexts.response?.statusCode
+        val url = request?.url?.toString() ?: event.request?.url
+        return isExpectedBackendFailure(isHttpResponseFailure, statusCode, url)
     }
 
     /**
@@ -127,4 +129,26 @@ class PinakesApplication : Application(), ImageLoaderFactory {
             }
             .build()
     }
+}
+
+/**
+ * Pure classification for the Sentry `beforeSend` filter, extracted so it can be unit
+ * tested without constructing SDK/OkHttp objects.
+ *
+ * @param isHttpResponseFailure whether the event is an OkHttp-instrumented HTTP-response
+ *   failure at all (false for any non-HTTP crash → never dropped, whatever its message).
+ * @param statusCode the structured HTTP status, or null when unknown.
+ * @param url the request URL, or null when unknown.
+ * @return true only for a failure that reflects the user's server state rather than an
+ *   app bug: a `/health` probe (any status), or a transient upstream 5xx (502/503/504).
+ */
+internal fun isExpectedBackendFailure(
+    isHttpResponseFailure: Boolean,
+    statusCode: Int?,
+    url: String?,
+): Boolean {
+    if (!isHttpResponseFailure) return false
+    val path = (url ?: "").substringBefore('?').trimEnd('/')
+    if (path.endsWith("/health")) return true
+    return statusCode == 502 || statusCode == 503 || statusCode == 504
 }
