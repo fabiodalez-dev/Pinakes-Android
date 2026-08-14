@@ -13,6 +13,8 @@ import com.pinakes.app.data.network.NetworkEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import okhttp3.OkHttpClient
 import dagger.hilt.android.HiltAndroidApp
+import io.sentry.SentryEvent
+import io.sentry.SentryOptions
 import io.sentry.android.core.SentryAndroid
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +45,17 @@ class PinakesApplication : Application(), ImageLoaderFactory {
             options.isDebug = false
             options.isSendDefaultPii = false   // no IP / user data attached by default
             options.tracesSampleRate = 0.0     // crash reporting only — no performance tracing
+
+            // Sentry's OkHttp auto-instrumentation reports every backend HTTP error as an
+            // error-level SentryHttpClientException. This app talks to the user's OWN
+            // self-hosted server, so a backend outage is the server's state, not an app
+            // bug. Drop the two clearly-not-our-fault cases so they don't create noise:
+            // the health probe (whose whole job is to detect a down server) and transient
+            // upstream 5xx (502 bad gateway / 503 unavailable / 504 timeout). A real 500
+            // or a 4xx (which can point at an app-side request bug) still comes through.
+            options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
+                if (isExpectedBackendHttpFailure(event)) null else event
+            }
         }
 
         // Refresh the cached catalog every time the app comes to the foreground, so the
@@ -61,6 +74,30 @@ class PinakesApplication : Application(), ImageLoaderFactory {
         // Keep the offline snapshot fresh even when the app isn't opened (every 6h, on a
         // connected network). Idempotent (KEEP) — safe to call on every process start.
         CatalogSyncWorker.schedule(this)
+    }
+
+    /**
+     * True when a Sentry event is a backend HTTP failure that reflects the user's own
+     * server being unavailable rather than a bug in this app: a failed `/health` probe,
+     * or a transient upstream 5xx (502/503/504). Such events are pure noise for an app
+     * that points at self-hosted instances, so [onCreate]'s `beforeSend` drops them.
+     */
+    private fun isExpectedBackendHttpFailure(event: SentryEvent): Boolean {
+        val detail = buildString {
+            event.throwable?.let { append(it.toString()) }
+            event.exceptions?.forEach { append(' ').append(it.type).append(' ').append(it.value) }
+        }
+        val isHttpClientError = detail.contains("SentryHttpClientException") ||
+            detail.contains("HTTP Client Error with status code:")
+        if (!isHttpClientError) return false
+
+        // The health probe's job is to detect a down server — a failure there is expected.
+        val path = event.request?.url?.substringBefore('?')?.trimEnd('/').orEmpty()
+        if (path.endsWith("/health")) return true
+
+        // Transient upstream unavailability, not an app bug.
+        val status = Regex("""status code:\s*(\d{3})""").find(detail)?.groupValues?.get(1)?.toIntOrNull()
+        return status == 502 || status == 503 || status == 504
     }
 
     /**
