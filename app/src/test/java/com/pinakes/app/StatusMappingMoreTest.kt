@@ -23,6 +23,24 @@ class StatusMappingMoreTest {
         assertEquals("Qualche stato strano", label.fallback)
     }
 
+    @Test fun loanUnknownStatePrefersServerLabelOverHumanizedRaw() {
+        val label = StatusMapping.loan("stato_futuro", serverLabel = "Etichetta dal server").second
+        assertNull(label.resId)
+        assertEquals("Etichetta dal server", label.fallback)
+    }
+
+    @Test fun loanUnknownStateIgnoresBlankServerLabel() {
+        val label = StatusMapping.loan("stato_futuro", serverLabel = " ").second
+        assertEquals("Stato futuro", label.fallback)
+    }
+
+    @Test fun loanKnownStateKeepsLocalizedResourceEvenWithServerLabel() {
+        val (status, label) = StatusMapping.loan("annullato", serverLabel = "Cancelled")
+        assertEquals(AvailabilityStatus.Returned, status)
+        assertNull(label.fallback)
+        assertTrue(label.resId != null)
+    }
+
     @Test fun reservationMapsEnglishAndItalianSpellings() {
         assertEquals(AvailabilityStatus.Available, StatusMapping.reservation("attiva").first)
         assertEquals(AvailabilityStatus.Available, StatusMapping.reservation("active").first)

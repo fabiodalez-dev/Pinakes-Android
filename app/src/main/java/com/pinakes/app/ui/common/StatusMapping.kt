@@ -2,6 +2,7 @@ package com.pinakes.app.ui.common
 
 import androidx.annotation.StringRes
 import com.pinakes.app.R
+import com.pinakes.app.data.model.LoanItem
 import com.pinakes.app.ui.components.AvailabilityStatus
 
 /**
@@ -20,7 +21,7 @@ data class StatusLabel(@param:StringRes val resId: Int?, val fallback: String? =
  */
 object StatusMapping {
 
-    fun loan(stato: String): Pair<AvailabilityStatus, StatusLabel> = when (stato) {
+    fun loan(stato: String, serverLabel: String? = null): Pair<AvailabilityStatus, StatusLabel> = when (stato) {
         // Active, on time — available-green (this is the good state).
         "in_corso" -> AvailabilityStatus.Available to StatusLabel(R.string.loan_status_on_loan)
         // Overdue — RED, the most important alert state.
@@ -43,7 +44,11 @@ object StatusMapping {
         "concluso" -> AvailabilityStatus.Returned to StatusLabel(R.string.loan_status_returned)
         "in_attesa" -> AvailabilityStatus.DueSoon to StatusLabel(R.string.loan_status_pending_approval)
         else -> AvailabilityStatus.LoanActive to
-            StatusLabel(null, stato.replace('_', ' ').replaceFirstChar { it.uppercase() })
+            StatusLabel(
+                null,
+                serverLabel?.takeIf { it.isNotBlank() }
+                    ?: stato.replace('_', ' ').replaceFirstChar { it.uppercase() },
+            )
     }
 
     fun reservation(stato: String): Pair<AvailabilityStatus, StatusLabel> = when (stato) {
@@ -78,5 +83,30 @@ object StatusMapping {
         "da_ritirare", "prenotato" -> LoanGroup.ReadyScheduled
         "pendente", "in_attesa" -> LoanGroup.Pending
         else -> LoanGroup.Pending
+    }
+
+    /** Server computes this in the library timezone; stale `in_corso` rows may need attention too. */
+    fun loanNeedsAttention(loan: LoanItem): Boolean =
+        loan.dueAttention || loanGroup(loan.status) == LoanGroup.Overdue
+
+    enum class LoanDateKind { Overdue, Returned, Requested, Due, Borrowed }
+
+    data class LoanDate(val kind: LoanDateKind, val value: String? = null)
+
+    /**
+     * Choose an honest timeline label for recent Mobile API payloads. In
+     * particular, pending/cancelled/expired rows were never borrowed, so their
+     * requested_at must win over the requested loan interval's due date.
+     */
+    fun loanDate(loan: LoanItem): LoanDate? {
+        val overdue = loanGroup(loan.status) == LoanGroup.Overdue
+        if (overdue) return LoanDate(LoanDateKind.Overdue, loan.dueAt)
+        if (loan.status in setOf("pendente", "in_attesa", "annullato", "scaduto")) {
+            return loan.requestedAt?.let { LoanDate(LoanDateKind.Requested, it) }
+        }
+        if (loan.returnedAt != null) return LoanDate(LoanDateKind.Returned, loan.returnedAt)
+        if (loan.dueAt != null) return LoanDate(LoanDateKind.Due, loan.dueAt)
+        if (loan.loanedAt != null) return LoanDate(LoanDateKind.Borrowed, loan.loanedAt)
+        return null
     }
 }

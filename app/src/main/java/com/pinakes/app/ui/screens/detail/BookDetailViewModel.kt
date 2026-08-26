@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
+import com.pinakes.app.data.model.CirculationRequestKind
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.repository.CatalogRepository
@@ -28,8 +29,9 @@ data class BookDetailUiState(
     val reserveBusy: Boolean = false,
     val snackbar: String? = null,
     val snackbarRes: Int? = null,
-    // Set after a successful loan request so the UI can confirm "Loan requested for <date>".
-    val requestedDate: String? = null,
+    // Authoritative POST /reservations outcome: #384 may turn an apparent loan
+    // request into a FIFO reservation, while auto-approval can make it ready.
+    val requestConfirmation: RequestConfirmation? = null,
     // Loan-request calendar: availability fetch lifecycle for the date-picker sheet.
     val availabilityLoading: Boolean = false,
     val availability: AvailabilityCalendar? = null,
@@ -37,6 +39,11 @@ data class BookDetailUiState(
     val availabilityFallback: Boolean = false,
     // When true the loan-request sheet is open.
     val showLoanSheet: Boolean = false,
+)
+
+data class RequestConfirmation(
+    val desiredDate: String,
+    val kind: CirculationRequestKind,
 )
 
 @HiltViewModel
@@ -134,7 +141,7 @@ class BookDetailViewModel @Inject constructor(
                             reserveBusy = false,
                             snackbar = null,
                             snackbarRes = null,
-                            requestedDate = desiredDate,
+                            requestConfirmation = RequestConfirmation(desiredDate, res.data.kind),
                             showLoanSheet = false,
                             availability = null,
                             availabilityFallback = false,
@@ -160,5 +167,5 @@ class BookDetailViewModel @Inject constructor(
 
     fun consumeSnackbar() = _state.update { it.copy(snackbar = null, snackbarRes = null) }
 
-    fun consumeRequestedDate() = _state.update { it.copy(requestedDate = null) }
+    fun consumeRequestConfirmation() = _state.update { it.copy(requestConfirmation = null) }
 }

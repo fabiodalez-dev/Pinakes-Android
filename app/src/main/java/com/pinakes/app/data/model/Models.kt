@@ -36,6 +36,8 @@ data class HealthPayload(
     // When true the instance is a read-only browsable catalog: loans, reservations and
     // wishlist are disabled (and the matching booleans in [features] are false).
     @SerialName("catalogue_mode") val catalogueMode: Boolean = false,
+    // Server-authoritative approval mode (Mobile API since Pinakes 0.7.46).
+    @SerialName("loan_approval_required") val loanApprovalRequired: Boolean = true,
     @SerialName("app_access_enabled") val appAccessEnabled: Boolean = false,
     @SerialName("registration_enabled") val registrationEnabled: Boolean = false,
     @SerialName("private_mode") val privateMode: Boolean = false,
@@ -339,10 +341,19 @@ data class LoanItem(
     val title: String = "",
     @SerialName("cover_url") val coverUrl: String? = null,
     val status: String = "", // in_corso | concluso | in_scadenza | scaduto | prenotato | in_attesa
+    // Additive Mobile API 1.4.3 fallback for states unknown to this app version.
+    @SerialName("status_label") val statusLabel: String? = null,
+    // Date the request was created. This is the honest timeline date for
+    // cancelled/expired requests that never became a physical loan.
+    @SerialName("requested_at") val requestedAt: String? = null,
     @SerialName("loaned_at") val loanedAt: String? = null,
     @SerialName("due_at") val dueAt: String? = null,
+    // Computed in the library timezone; do not re-derive from device LocalDate.
+    @SerialName("due_attention") val dueAttention: Boolean = false,
     @SerialName("returned_at") val returnedAt: String? = null,
     val renewals: Int? = null,
+    // Mobile API 1.4.4 presentation hint; DELETE /loans/{id} revalidates it.
+    val cancellable: Boolean = false,
 )
 
 @Serializable
@@ -388,6 +399,33 @@ data class ReservationRequest(
     @SerialName("start_date") val startDate: String? = null, // legacy/compat, yyyy-MM-dd
     @SerialName("end_date") val endDate: String? = null,     // legacy/compat, yyyy-MM-dd
 )
+
+/** Authoritative result of POST /reservations (loan request or FIFO reservation). */
+@Serializable
+data class CirculationRequestResult(
+    val type: String = "", // loan | reservation
+    @SerialName("book_id") val bookId: Int = 0,
+    @SerialName("loan_id") val loanId: Int? = null,
+    @SerialName("auto_approved") val autoApproved: Boolean? = null,
+    val status: String? = null, // pendente | da_ritirare
+) {
+    val kind: CirculationRequestKind
+        get() = when {
+            type == "reservation" -> CirculationRequestKind.Reservation
+            type == "loan" && (autoApproved == true || status == "da_ritirare") ->
+                CirculationRequestKind.LoanReadyForPickup
+            type == "loan" && (autoApproved == false || status in setOf("pendente", "in_attesa")) ->
+                CirculationRequestKind.LoanPending
+            else -> CirculationRequestKind.Unknown
+        }
+}
+
+enum class CirculationRequestKind {
+    Reservation,
+    LoanPending,
+    LoanReadyForPickup,
+    Unknown,
+}
 
 // ---------- Wishlist ----------
 @Serializable

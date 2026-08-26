@@ -50,7 +50,7 @@ fun LibraryScreen(onBookClick: (Int) -> Unit) {
     val vm: LibraryViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    var confirmCancelId by remember { mutableStateOf<Int?>(null) }
+    var confirmCancel by remember { mutableStateOf<CancelTarget?>(null) }
 
     val snackbarHost = remember { androidx.compose.material3.SnackbarHostState() }
     val snackbarMessage = state.snackbar ?: state.snackbarRes?.let { stringResource(it) }
@@ -92,7 +92,9 @@ fun LibraryScreen(onBookClick: (Int) -> Unit) {
                                 loans = data.loans.active + data.loans.pending,
                                 emptyTitle = stringResource(R.string.library_empty_active_title),
                                 emptySubtitle = stringResource(R.string.library_empty_active_subtitle),
+                                cancelingId = state.cancelingId,
                                 onBookClick = onBookClick,
+                                onCancel = { confirmCancel = CancelTarget(it, isLoan = true) },
                             )
                             1 -> LoanList(
                                 loans = data.loans.history,
@@ -104,7 +106,7 @@ fun LibraryScreen(onBookClick: (Int) -> Unit) {
                                 reservations = data.reservations,
                                 cancelingId = state.cancelingId,
                                 onBookClick = onBookClick,
-                                onCancel = { confirmCancelId = it },
+                                onCancel = { confirmCancel = CancelTarget(it, isLoan = false) },
                             )
                         }
                     }
@@ -113,17 +115,22 @@ fun LibraryScreen(onBookClick: (Int) -> Unit) {
         }
     }
 
-    confirmCancelId?.let { id ->
+    confirmCancel?.let { target ->
         ConfirmDialog(
-            title = stringResource(R.string.library_confirm_cancel_title),
-            body = stringResource(R.string.library_confirm_cancel_body),
+            title = stringResource(if (target.isLoan) R.string.library_confirm_cancel_loan_title else R.string.library_confirm_cancel_title),
+            body = stringResource(if (target.isLoan) R.string.library_confirm_cancel_loan_body else R.string.library_confirm_cancel_body),
             confirmLabel = stringResource(R.string.library_confirm_cancel_confirm),
             dismissLabel = stringResource(R.string.library_confirm_cancel_keep),
-            onConfirm = { vm.cancelReservation(id); confirmCancelId = null },
-            onDismiss = { confirmCancelId = null },
+            onConfirm = {
+                if (target.isLoan) vm.cancelLoan(target.id) else vm.cancelReservation(target.id)
+                confirmCancel = null
+            },
+            onDismiss = { confirmCancel = null },
         )
     }
 }
+
+private data class CancelTarget(val id: Int, val isLoan: Boolean)
 
 /**
  * "Active" tab: shows the user's current loan situation in urgency order with small section
@@ -135,7 +142,9 @@ private fun ActiveLoanList(
     loans: List<LoanItem>,
     emptyTitle: String,
     emptySubtitle: String,
+    cancelingId: Int?,
     onBookClick: (Int) -> Unit,
+    onCancel: (Int) -> Unit,
 ) {
     if (loans.isEmpty()) {
         EmptyState(title = emptyTitle, subtitle = emptySubtitle, icon = Icons.AutoMirrored.Outlined.LibraryBooks)
@@ -169,7 +178,12 @@ private fun ActiveLoanList(
                 )
             }
             items(groupLoans, key = { it.id }) { loan ->
-                LoanRow(loan = loan, onBookClick = onBookClick)
+                LoanRow(
+                    loan = loan,
+                    cancelingId = cancelingId,
+                    onBookClick = onBookClick,
+                    onCancel = onCancel,
+                )
             }
         }
     }
@@ -206,29 +220,46 @@ private fun LoanList(
 @Composable
 private fun androidx.compose.foundation.lazy.LazyItemScope.LoanRow(
     loan: LoanItem,
+    cancelingId: Int? = null,
     onBookClick: (Int) -> Unit,
+    onCancel: ((Int) -> Unit)? = null,
 ) {
-    val (status, statusLabel) = StatusMapping.loan(loan.status)
+    val (status, statusLabel) = StatusMapping.loan(loan.status, loan.statusLabel)
     val label = statusLabel.resId?.let { stringResource(it) } ?: statusLabel.fallback
-    val overdue = StatusMapping.loanGroup(loan.status) == StatusMapping.LoanGroup.Overdue
-    val dateLine = when {
-        overdue && loan.dueAt != null ->
-            stringResource(R.string.library_overdue_since, DateFormat.date(loan.dueAt))
-        overdue -> stringResource(R.string.library_overdue_label)
-        loan.returnedAt != null -> stringResource(R.string.library_returned_on, DateFormat.date(loan.returnedAt))
-        loan.dueAt != null -> stringResource(R.string.library_due_label, DateFormat.date(loan.dueAt))
-        loan.loanedAt != null -> stringResource(R.string.library_borrowed_on, DateFormat.date(loan.loanedAt))
-        else -> null
+    val attention = StatusMapping.loanNeedsAttention(loan)
+    val dateLine = when (val date = StatusMapping.loanDate(loan)) {
+        null -> null
+        else -> when (date.kind) {
+            StatusMapping.LoanDateKind.Overdue -> date.value?.let {
+                stringResource(R.string.library_overdue_since, DateFormat.date(it))
+            } ?: stringResource(R.string.library_overdue_label)
+            StatusMapping.LoanDateKind.Returned ->
+                stringResource(R.string.library_returned_on, DateFormat.date(requireNotNull(date.value)))
+            StatusMapping.LoanDateKind.Requested ->
+                stringResource(R.string.library_requested_on, DateFormat.date(requireNotNull(date.value)))
+            StatusMapping.LoanDateKind.Due ->
+                stringResource(R.string.library_due_label, DateFormat.date(requireNotNull(date.value)))
+            StatusMapping.LoanDateKind.Borrowed ->
+                stringResource(R.string.library_borrowed_on, DateFormat.date(requireNotNull(date.value)))
+        }
     }
     MediaRow(
         modifier = Modifier.animateItem(),
         title = loan.title,
         coverUrl = loan.coverUrl,
         line1 = dateLine,
-        line1Color = if (overdue) MaterialTheme.colorScheme.error else null,
+        line1Color = if (attention) MaterialTheme.colorScheme.error else null,
         status = status,
         statusLabel = label,
         onClick = { onBookClick(loan.bookId) },
+        trailing = if (loan.cancellable && onCancel != null) {
+            {
+                TextButton(
+                    onClick = { onCancel(loan.id) },
+                    enabled = cancelingId != loan.id,
+                ) { Text(stringResource(R.string.library_cancel)) }
+            }
+        } else null,
     )
 }
 

@@ -63,6 +63,7 @@ import coil.compose.SubcomposeAsyncImage
 import com.pinakes.app.R
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
+import com.pinakes.app.data.model.CirculationRequestKind
 import com.pinakes.app.data.model.PersonalHistory
 import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.common.UiState
@@ -107,14 +108,28 @@ fun BookDetailScreen(
         }
     }
 
-    // Success confirmation that includes the chosen date ("Loan requested for <date>").
-    val requestedConfirmation = state.requestedDate?.let {
-        stringResource(R.string.snackbar_request_for_date, formatDisplayDate(it))
+    // Use the authoritative server outcome. With #384 an apparent immediate
+    // loan may correctly become a FIFO reservation; never tell the user it was
+    // a loan merely because that was the button label before submission.
+    val requestedConfirmation = state.requestConfirmation?.let { confirmation ->
+        when (confirmation.kind) {
+            CirculationRequestKind.Reservation -> stringResource(
+                R.string.snackbar_reservation_for_date,
+                formatDisplayDate(confirmation.desiredDate),
+            )
+            CirculationRequestKind.LoanReadyForPickup ->
+                stringResource(R.string.snackbar_loan_ready_for_pickup)
+            CirculationRequestKind.LoanPending -> stringResource(
+                R.string.snackbar_request_for_date,
+                formatDisplayDate(confirmation.desiredDate),
+            )
+            CirculationRequestKind.Unknown -> stringResource(R.string.snackbar_request_submitted)
+        }
     }
     LaunchedEffect(requestedConfirmation) {
         requestedConfirmation?.let {
             snackbarHost.showSnackbar(it)
-            vm.consumeRequestedDate()
+            vm.consumeRequestConfirmation()
         }
     }
 
