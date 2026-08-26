@@ -1,5 +1,6 @@
 package com.pinakes.app.data.repository
 
+import com.pinakes.app.data.model.CirculationRequestResult
 import com.pinakes.app.data.model.LoansData
 import com.pinakes.app.data.model.ReservationItem
 import com.pinakes.app.data.model.ReservationRequest
@@ -30,7 +31,7 @@ class LibraryRepository(private val network: NetworkModule) {
     suspend fun reserve(
         bookId: Int,
         desiredDate: String? = null,
-    ): ApiResult<Unit> {
+    ): ApiResult<CirculationRequestResult> {
         val api = network.api()
         return apiCall { api.createReservation(ReservationRequest(bookId = bookId, desiredDate = desiredDate)) }
     }
@@ -38,5 +39,10 @@ class LibraryRepository(private val network: NetworkModule) {
     suspend fun cancelReservation(reservationId: Int): ApiResult<Unit> {
         val api = network.api()
         return apiCall { api.cancelReservation(reservationId) }
+    }
+
+    suspend fun cancelLoan(loanId: Int): ApiResult<Unit> {
+        val api = network.api()
+        return apiCall { api.cancelLoan(loanId) }
     }
 }

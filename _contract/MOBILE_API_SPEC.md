@@ -58,7 +58,7 @@ All FKs respect existing `utenti`/`libri` schema. Follow the soft-delete rule on
 ## Endpoint manifest (`/api/v1`)
 
 **Public (no token):**
-- `GET /health` — discovery: `{ name, logo, version, api_version, features{...}, app_access_enabled, registration_enabled, private_mode }`.
+- `GET /health` — discovery: `{ name, logo, version, api_version, features{...}, loan_approval_required, app_access_enabled, registration_enabled, private_mode }`.
 - `GET /openapi.json` — OpenAPI 3.1 document.
 - `GET /docs` — Swagger UI page.
 - `POST /auth/login` — `{ email, password, device_name, device_id, platform }` → `{ token, user{...} }`. Throttled.
@@ -77,8 +77,8 @@ All FKs respect existing `utenti`/`libri` schema. Follow the soft-delete rule on
 - `DELETE /catalog/books/{id}/reviews` — delete the current user's review (idempotent).
 - `GET /me/reviews` — the user's own reviews across all titles (`book_id`, `book_title`, `book_author`, `cover_url`, `rating`, `text`, timestamps); cursor pagination.
 - `GET /catalog/genres` — genre cascade tree (for filter UI).
-- `GET /me/loans` — own loans (active + history). `GET /me/reservations`.
-- `POST /reservations` — request a loan/reservation (honor existing overlap/availability rules). `DELETE /reservations/{id}` — cancel own pending reservation.
+- `GET /me/loans` — own loans (active + history), including `status_label`, `requested_at`, `due_attention`, and the server-authoritative `cancellable` hint. `GET /me/reservations`.
+- `POST /reservations` — request a loan/reservation (honor existing overlap/availability rules); the 201 payload declares `type=loan|reservation`, `status`, and `auto_approved` so the client reflects the actual routing outcome. `DELETE /reservations/{id}` cancels an own pending reservation; `DELETE /loans/{id}` unambiguously cancels an own pending, scheduled, or `da_ritirare` loan.
 - `GET /me/wishlist`. `POST /me/wishlist` `{book_id}`. `DELETE /me/wishlist/{book_id}`.
 - `POST /messages` — send a contact message (same as web contact form).
 - `GET /me/notifications` — in-app notification feed (fallback when push off). 

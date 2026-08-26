@@ -88,12 +88,35 @@ class LibraryViewModel @Inject constructor(private val library: LibraryRepositor
                 }
                 is ApiResult.Failure -> {
                     when {
-                        res.code == ErrorCodes.CONFLICT ->
+                        res.code == ErrorCodes.CONFLICT || res.httpStatus == 409 ->
                             _state.update { it.copy(cancelingId = null, snackbar = null, snackbarRes = R.string.snackbar_reservation_cancel_conflict) }
                         res.message.isNotBlank() ->
                             _state.update { it.copy(cancelingId = null, snackbar = res.message, snackbarRes = null) }
                         else ->
                             _state.update { it.copy(cancelingId = null, snackbar = null, snackbarRes = R.string.snackbar_reservation_cancel_error) }
+                    }
+                }
+            }
+        }
+    }
+
+    fun cancelLoan(id: Int) {
+        if (_state.value.cancelingId != null) return
+        _state.update { it.copy(cancelingId = id) }
+        viewModelScope.launch {
+            when (val res = library.cancelLoan(id)) {
+                is ApiResult.Success -> {
+                    _state.update { it.copy(cancelingId = null, snackbar = null, snackbarRes = R.string.snackbar_loan_cancelled) }
+                    load(initial = false)
+                }
+                is ApiResult.Failure -> {
+                    when {
+                        res.code == ErrorCodes.CONFLICT || res.httpStatus == 409 ->
+                            _state.update { it.copy(cancelingId = null, snackbar = null, snackbarRes = R.string.snackbar_loan_cancel_conflict) }
+                        res.message.isNotBlank() ->
+                            _state.update { it.copy(cancelingId = null, snackbar = res.message, snackbarRes = null) }
+                        else ->
+                            _state.update { it.copy(cancelingId = null, snackbar = null, snackbarRes = R.string.snackbar_loan_cancel_error) }
                     }
                 }
             }

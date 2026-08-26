@@ -730,6 +730,15 @@
                         "type": "string",
                         "description": "Raw prestiti.stato value."
                     },
+                    "status_label": {
+                        "type": "string",
+                        "description": "Server-localized fallback label for the raw status."
+                    },
+                    "requested_at": {
+                        "type": ["string", "null"],
+                        "format": "date",
+                        "description": "Date the loan request was created."
+                    },
                     "loaned_at": {
                         "type": "string",
                         "format": "date",
@@ -740,6 +749,10 @@
                         "format": "date",
                         "nullable": true
                     },
+                    "due_attention": {
+                        "type": "boolean",
+                        "description": "Library-timezone cue that the active loan is due today or earlier."
+                    },
                     "returned_at": {
                         "type": "string",
                         "format": "date",
@@ -748,6 +761,10 @@
                     "renewals": {
                         "type": "integer",
                         "nullable": true
+                    },
+                    "cancellable": {
+                        "type": "boolean",
+                        "description": "True when DELETE /loans/{id} currently accepts this owned row."
                     }
                 }
             },
@@ -1116,6 +1133,10 @@
                     "catalogue_mode": {
                         "type": "boolean",
                         "description": "True when the instance is in catalogue-only mode (loans, reservations and wishlist disabled)."
+                    },
+                    "loan_approval_required": {
+                        "type": "boolean",
+                        "description": "False when immediate requests are automatically approved."
                     },
                     "app_access_enabled": {
                         "type": "boolean"
@@ -2402,7 +2423,7 @@
                     "loans"
                 ],
                 "summary": "Request a reservation / loan",
-                "description": "Honors existing overlap, availability, and max-active-loans rules (same as the web form). Returns error codes for overlap, unavailable, or queue position.",
+                "description": "Honors existing overlap, availability, max-active-loans, and automatic-approval settings. The 201 payload declares the actual loan or FIFO-reservation outcome.",
                 "operationId": "postReservation",
                 "security": [
                     {
@@ -2421,11 +2442,25 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Reservation created.",
+                        "description": "Reservation or loan request created.",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Envelope"
+                                    "allOf": [
+                                        {"$ref": "#/components/schemas/Envelope"}
+                                    ],
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "type": {"type": "string", "enum": ["loan", "reservation"]},
+                                                "book_id": {"type": "integer"},
+                                                "loan_id": {"type": "integer", "nullable": true},
+                                                "auto_approved": {"type": "boolean", "nullable": true},
+                                                "status": {"type": "string", "nullable": true, "enum": ["pendente", "da_ritirare"]}
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -2509,6 +2544,28 @@
                     "500": {
                         "$ref": "#/components/responses/InternalError"
                     }
+                }
+            }
+        },
+        "/loans/{id}": {
+            "delete": {
+                "tags": ["loans"],
+                "summary": "Cancel own cancellable loan request",
+                "description": "Cancels an owned pending, scheduled, or ready-for-pickup loan through an id-space-safe route.",
+                "operationId": "deleteLoan",
+                "security": [{"bearerAuth": []}],
+                "parameters": [{
+                    "name": "id",
+                    "in": "path",
+                    "required": true,
+                    "schema": {"type": "integer"}
+                }],
+                "responses": {
+                    "200": {"description": "Loan cancelled."},
+                    "401": {"$ref": "#/components/responses/Unauthorized"},
+                    "404": {"$ref": "#/components/responses/NotFound"},
+                    "409": {"description": "Loan can no longer be cancelled."},
+                    "500": {"$ref": "#/components/responses/InternalError"}
                 }
             }
         },

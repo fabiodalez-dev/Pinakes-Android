@@ -6,6 +6,7 @@ import com.pinakes.app.data.model.BookReviews
 import com.pinakes.app.data.model.BookSummary
 import com.pinakes.app.data.model.CatalogLanguage
 import com.pinakes.app.data.model.ChangePasswordRequest
+import com.pinakes.app.data.model.CirculationRequestResult
 import com.pinakes.app.data.model.DeviceItem
 import com.pinakes.app.data.model.Envelope
 import com.pinakes.app.data.model.ForgotRequest
@@ -158,10 +159,14 @@ interface PinakesApi {
     suspend fun reservations(): Envelope<List<ReservationItem>>
 
     @POST("reservations")
-    suspend fun createReservation(@Body body: ReservationRequest): Envelope<Unit>
+    suspend fun createReservation(@Body body: ReservationRequest): Envelope<CirculationRequestResult>
 
     @DELETE("reservations/{id}")
     suspend fun cancelReservation(@Path("id") id: Int): Envelope<Unit>
+
+    /** Explicit, id-space-safe cancellation for pending/scheduled/ready loans (#381). */
+    @DELETE("loans/{id}")
+    suspend fun cancelLoan(@Path("id") id: Int): Envelope<Unit>
 
     // ---- Wishlist ----
     @GET("me/wishlist")
