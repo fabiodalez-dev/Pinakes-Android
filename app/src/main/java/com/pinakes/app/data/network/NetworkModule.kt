@@ -66,6 +66,9 @@ class NetworkModule(private val session: SessionStore) {
     @Volatile
     private var cachedBookClubApi: BookClubApi? = null
 
+    @Volatile
+    private var cachedPeriodicalsApi: PeriodicalsApi? = null
+
     /** Shared Retrofit for a given base URL, rebuilt only when the instance URL changes. */
     @Synchronized
     private fun retrofit(baseUrl: String?): Retrofit {
@@ -85,6 +88,7 @@ class NetworkModule(private val session: SessionStore) {
         cachedRetrofit = retrofit
         cachedApi = null
         cachedBookClubApi = null
+        cachedPeriodicalsApi = null
         return retrofit
     }
 
@@ -109,6 +113,16 @@ class NetworkModule(private val session: SessionStore) {
         return cachedBookClubApi ?: retrofit.create(BookClubApi::class.java).also { cachedBookClubApi = it }
     }
 
+    /**
+     * Returns the [PeriodicalsApi] bound to the same instance base URL as [api]. The
+     * Periodicals plugin lives under `/api/v1/periodicals/…` and reuses the same bearer token.
+     */
+    @Synchronized
+    fun periodicalsApi(baseUrl: String? = null): PeriodicalsApi {
+        val retrofit = retrofit(baseUrl)
+        return cachedPeriodicalsApi ?: retrofit.create(PeriodicalsApi::class.java).also { cachedPeriodicalsApi = it }
+    }
+
     /** Drop the cached Retrofit so the next [api] call rebuilds against a new instance URL. */
     @Synchronized
     fun invalidate() {
@@ -116,6 +130,7 @@ class NetworkModule(private val session: SessionStore) {
         cachedRetrofit = null
         cachedApi = null
         cachedBookClubApi = null
+        cachedPeriodicalsApi = null
     }
 
     companion object {

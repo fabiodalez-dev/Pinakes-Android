@@ -27,6 +27,10 @@ import com.pinakes.app.ui.screens.login.LoginScreen
 import com.pinakes.app.ui.screens.login.RegisterScreen
 import com.pinakes.app.ui.screens.notifications.NotificationsScreen
 import com.pinakes.app.ui.screens.onboarding.OnboardingScreen
+import com.pinakes.app.ui.screens.periodicals.IssueDetailScreen
+import com.pinakes.app.ui.screens.periodicals.IssueListScreen
+import com.pinakes.app.ui.screens.periodicals.PeriodicalDetailScreen
+import com.pinakes.app.ui.screens.periodicals.PeriodicalsScreen
 import com.pinakes.app.ui.screens.reviews.MyReviewsScreen
 
 /**
@@ -98,6 +102,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onOpenContact = { navController.navigate(Routes.CONTACT) },
                 onOpenMyReviews = { navController.navigate(Routes.MY_REVIEWS) },
                 onOpenBookClub = { navController.navigate(Routes.BOOK_CLUB) },
+                onOpenPeriodicals = { navController.navigate(Routes.PERIODICALS) },
             )
         }
 
@@ -162,6 +167,56 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
             popExitTransition = slideOut,
         ) {
             ClubDetailScreen(onNavigateUp = { navController.popBackStack() })
+        }
+
+        // ---- Periodicals / Emeroteca (optional plugin) ----
+        composable(
+            Routes.PERIODICALS,
+            enterTransition = slideIn,
+            popExitTransition = slideOut,
+        ) {
+            PeriodicalsScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpenPeriodical = { id -> navController.navigate(Routes.periodicalDetail(id)) },
+            )
+        }
+
+        composable(
+            route = Routes.PERIODICAL_DETAIL,
+            arguments = listOf(navArgument(Routes.ARG_PERIODICAL_ID) { type = NavType.IntType }),
+            enterTransition = slideIn,
+            popExitTransition = slideOut,
+        ) {
+            PeriodicalDetailScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpenYear = { yearId, year ->
+                    navController.navigate(Routes.periodicalYearIssues(yearId, year))
+                },
+            )
+        }
+
+        composable(
+            route = Routes.PERIODICAL_YEAR_ISSUES,
+            arguments = listOf(
+                navArgument(Routes.ARG_PERIODICAL_YEAR_ID) { type = NavType.IntType },
+                navArgument(Routes.ARG_PERIODICAL_YEAR) { type = NavType.IntType },
+            ),
+            enterTransition = slideIn,
+            popExitTransition = slideOut,
+        ) {
+            IssueListScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpenIssue = { id -> navController.navigate(Routes.periodicalIssue(id)) },
+            )
+        }
+
+        composable(
+            route = Routes.PERIODICAL_ISSUE,
+            arguments = listOf(navArgument(Routes.ARG_PERIODICAL_ISSUE_ID) { type = NavType.IntType }),
+            enterTransition = slideIn,
+            popExitTransition = slideOut,
+        ) {
+            IssueDetailScreen(onNavigateUp = { navController.popBackStack() })
         }
     }
 }

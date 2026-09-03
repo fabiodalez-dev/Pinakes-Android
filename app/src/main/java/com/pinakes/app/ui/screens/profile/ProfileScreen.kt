@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.RateReview
@@ -91,6 +92,7 @@ fun ProfileScreen(
     onOpenContact: () -> Unit,
     onOpenMyReviews: () -> Unit,
     onOpenBookClub: () -> Unit,
+    onOpenPeriodicals: () -> Unit,
 ) {
     val app: AppViewModel = hiltViewModel()
     val vm: ProfileViewModel = hiltViewModel()
@@ -120,10 +122,12 @@ fun ProfileScreen(
                     onOpenContact = onOpenContact,
                     onOpenMyReviews = onOpenMyReviews,
                     onOpenBookClub = onOpenBookClub,
+                    onOpenPeriodicals = onOpenPeriodicals,
                     showNotifications = features.notifications,
                     showContact = features.messages,
                     showReviews = features.showReviews,
                     showBookClub = features.bookClubAvailable,
+                    showPeriodicals = features.periodicalsAvailable,
                 )
             }
         }
@@ -187,10 +191,12 @@ private fun ProfileContent(
     onOpenContact: () -> Unit,
     onOpenMyReviews: () -> Unit,
     onOpenBookClub: () -> Unit,
+    onOpenPeriodicals: () -> Unit,
     showNotifications: Boolean,
     showContact: Boolean,
     showReviews: Boolean,
     showBookClub: Boolean,
+    showPeriodicals: Boolean,
 ) {
     Column(
         Modifier
@@ -260,6 +266,9 @@ private fun ProfileContent(
         }
         if (showBookClub) {
             ActionRow(Icons.Outlined.Groups, stringResource(R.string.profile_action_book_club), onClick = onOpenBookClub)
+        }
+        if (showPeriodicals) {
+            ActionRow(Icons.Outlined.Newspaper, stringResource(R.string.profile_action_periodicals), onClick = onOpenPeriodicals)
         }
         if (showNotifications) {
             ActionRow(Icons.Outlined.Notifications, stringResource(R.string.profile_action_notifications), onClick = onOpenNotifications)

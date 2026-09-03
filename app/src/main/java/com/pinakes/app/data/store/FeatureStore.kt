@@ -40,6 +40,12 @@ data class InstanceFeatures(
      * [registrationEnabled] it stays hidden until discovery confirms it.
      */
     val bookClubAvailable: Boolean = false,
+    /**
+     * Whether the instance exposes the optional Periodicals ("Emeroteca") plugin's mobile
+     * surface. Same lifecycle as [bookClubAvailable]: sourced from a separate
+     * `GET /api/v1/periodicals/health` probe (2xx → on, 404 → off), hidden until confirmed.
+     */
+    val periodicalsAvailable: Boolean = false,
 ) {
     /** Library tab (loans + reservations) is shown only when at least one of them is enabled. */
     val showLibrary: Boolean get() = loans || reservations
@@ -77,8 +83,9 @@ class FeatureStore(context: Context) {
     val features: StateFlow<InstanceFeatures> = _features.asStateFlow()
 
     /**
-     * Persist + publish the flags from a fresh `/health` payload. The Book Club flag has
-     * its own probe lifecycle ([setBookClubAvailable]) and is preserved, not clobbered.
+     * Persist + publish the flags from a fresh `/health` payload. The Book Club and
+     * Periodicals flags have their own probe lifecycle ([setBookClubAvailable],
+     * [setPeriodicalsAvailable]) and are preserved, not clobbered.
      */
     fun update(health: HealthPayload) {
         val f = health.features
@@ -94,6 +101,7 @@ class FeatureStore(context: Context) {
             reviews = f.reviews,
             registrationEnabled = health.registrationEnabled,
             bookClubAvailable = prefs.getBoolean(KEY_BOOK_CLUB, false),
+            periodicalsAvailable = prefs.getBoolean(KEY_PERIODICALS, false),
         )
         prefs.edit()
             .putBoolean(KEY_KNOWN, true)
@@ -115,6 +123,12 @@ class FeatureStore(context: Context) {
     fun setBookClubAvailable(available: Boolean) {
         prefs.edit().putBoolean(KEY_BOOK_CLUB, available).apply()
         _features.update { it.copy(bookClubAvailable = available) }
+    }
+
+    /** Persist + publish the Periodicals plugin availability (from its own health probe). */
+    fun setPeriodicalsAvailable(available: Boolean) {
+        prefs.edit().putBoolean(KEY_PERIODICALS, available).apply()
+        _features.update { it.copy(periodicalsAvailable = available) }
     }
 
     /** Reset to all-enabled (e.g. when forgetting the instance). */
@@ -140,6 +154,7 @@ class FeatureStore(context: Context) {
             reviews = prefs.getBoolean(KEY_REVIEWS, true),
             registrationEnabled = prefs.getBoolean(KEY_REGISTRATION_ENABLED, false),
             bookClubAvailable = prefs.getBoolean(KEY_BOOK_CLUB, false),
+            periodicalsAvailable = prefs.getBoolean(KEY_PERIODICALS, false),
         )
     }
 
@@ -157,5 +172,6 @@ class FeatureStore(context: Context) {
         private const val KEY_REVIEWS = "f_reviews"
         private const val KEY_REGISTRATION_ENABLED = "registration_enabled"
         private const val KEY_BOOK_CLUB = "f_book_club"
+        private const val KEY_PERIODICALS = "f_periodicals"
     }
 }

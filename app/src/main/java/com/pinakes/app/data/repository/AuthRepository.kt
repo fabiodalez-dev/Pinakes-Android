@@ -23,6 +23,7 @@ class AuthRepository(
     private val session: SessionStore,
     private val features: FeatureStore,
     private val bookClub: BookClubRepository,
+    private val periodicals: PeriodicalsRepository,
     private val catalog: CatalogRepository,
 ) {
 
@@ -83,10 +84,11 @@ class AuthRepository(
     suspend fun refreshHealth() {
         val instance = session.instanceUrl ?: return
         coroutineScope {
-            // The core /health and the Book Club plugin probe are independent requests to
-            // the same instance — run them concurrently so the refresh costs max(RTT), not
-            // the sum (this path gates the post-login spinner).
-            val probe = async { bookClub.probeAvailability() }
+            // The core /health and the plugin probes are independent requests to the same
+            // instance — run them concurrently so the refresh costs max(RTT), not the sum
+            // (this path gates the post-login spinner).
+            val bookClubProbe = async { bookClub.probeAvailability() }
+            val periodicalsProbe = async { periodicals.probeAvailability() }
             var appAccessEnabled: Boolean? = null
             when (val res = apiCall { network.api().health() }) {
                 is ApiResult.Success -> {
@@ -95,12 +97,13 @@ class AuthRepository(
                 }
                 is ApiResult.Failure -> { /* keep last-known flags; never lock the user out */ }
             }
-            // The plugin's health endpoint is public and answers 2xx even when the instance
-            // has mobile app access switched off — gate the section on the core flag so it
-            // hides instead of rendering entries whose calls can only 403.
-            val probed = probe.await()
-            val available = if (appAccessEnabled == false) false else probed
-            bookClub.applyAvailability(available, probedInstanceUrl = instance)
+            // A plugin's health endpoint may answer 2xx even when the instance has mobile
+            // app access switched off — gate each section on the core flag so it hides
+            // instead of rendering entries whose calls can only 403.
+            val bookClubAvailable = bookClubProbe.await().let { if (appAccessEnabled == false) false else it }
+            bookClub.applyAvailability(bookClubAvailable, probedInstanceUrl = instance)
+            val periodicalsAvailable = periodicalsProbe.await().let { if (appAccessEnabled == false) false else it }
+            periodicals.applyAvailability(periodicalsAvailable, probedInstanceUrl = instance)
         }
     }
 
@@ -176,7 +179,7 @@ class AuthRepository(
     /** Forget the instance entirely (back to onboarding). */
     suspend fun forgetInstance() {
         session.clearAll()
-        features.clear() // resets the Book Club availability flag too
+        features.clear() // resets the Book Club + Periodicals availability flags too
         // Purge the offline catalog cache (Room + in-memory ETags): it belongs to the old
         // instance and must never surface under the next library's name.
         catalog.clearCache()
