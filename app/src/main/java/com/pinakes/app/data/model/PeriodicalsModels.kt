@@ -91,7 +91,7 @@ data class PeriodicalYear(
 data class PeriodicalIssue(
     val id: Int = 0,
     val number: String? = null,
-    val sequence: Int? = null,
+    val sequence: String? = null,
     val title: String? = null,
     @SerialName("cover_date") val coverDate: String? = null,
     @SerialName("publication_date") val publicationDate: String? = null,
@@ -108,7 +108,7 @@ data class PeriodicalIssue(
 data class PeriodicalIssueDetail(
     val id: Int = 0,
     val number: String? = null,
-    val sequence: Int? = null,
+    val sequence: String? = null,
     val title: String? = null,
     @SerialName("cover_date") val coverDate: String? = null,
     @SerialName("publication_date") val publicationDate: String? = null,
