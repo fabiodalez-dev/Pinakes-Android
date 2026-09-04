@@ -40,6 +40,7 @@ fun MainScaffold(
     onOpenContact: () -> Unit,
     onOpenMyReviews: () -> Unit,
     onOpenBookClub: () -> Unit,
+    onOpenPeriodicals: () -> Unit,
 ) {
     val app: AppViewModel = hiltViewModel()
     val features by app.features.collectAsStateWithLifecycle()
@@ -97,6 +98,7 @@ fun MainScaffold(
                     onOpenContact = onOpenContact,
                     onOpenMyReviews = onOpenMyReviews,
                     onOpenBookClub = onOpenBookClub,
+                    onOpenPeriodicals = onOpenPeriodicals,
                 )
             }
         }
