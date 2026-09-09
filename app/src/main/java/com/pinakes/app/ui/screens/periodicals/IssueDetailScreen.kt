@@ -163,6 +163,12 @@ private fun IssueHeader(issue: PeriodicalIssueDetail) {
                 status = issueStatusBadge(issue.status),
                 label = stringResource(issueStatusLabelRes(issue.status)),
             )
+            // Free text and often absent — shown only when the server actually has something
+            // to say, using the same label/value row as the masthead detail.
+            issue.supplements?.takeIf { it.isNotBlank() }?.let {
+                Spacer(Modifier.height(Spacing.md))
+                InfoRow(stringResource(R.string.periodicals_label_supplements), it)
+            }
         }
     }
 }

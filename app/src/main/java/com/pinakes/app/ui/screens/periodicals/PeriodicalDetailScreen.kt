@@ -174,8 +174,9 @@ private fun coverageLabel(start: Int?, end: Int?): String? = when {
     else -> null
 }
 
+/** Label/value detail row, shared with the issue detail header so both read identically. */
 @Composable
-private fun InfoRow(label: String, value: String) {
+internal fun InfoRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = Spacing.xxs)) {
         Text(
             label,

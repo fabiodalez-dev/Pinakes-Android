@@ -453,6 +453,7 @@
   "periodicals_label_place": "Erscheinen",
   "periodicals_label_years": "Zeitraum",
   "periodicals_label_holdings": "Bestand",
+  "periodicals_label_supplements": "Beilagen",
   "periodicals_year_since": "Seit %1$d",
   "periodicals_years_section": "Jahrgänge",
   "periodicals_year_volume": "Bd. %1$s",
