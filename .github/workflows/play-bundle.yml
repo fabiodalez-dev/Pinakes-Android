@@ -1,0 +1,71 @@
+name: Play release bundle
+on:
+  push:
+    branches: [main]
+    paths: ['app/**', 'i18n/**', 'gradle/**', '*.gradle.kts', 'gradle.properties', '.github/workflows/play-bundle.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: play-bundle
+  cancel-in-progress: false
+jobs:
+  bundle:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: play-internal
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Release tests and lint
+        run: ./gradlew testReleaseUnitTest lintRelease --no-daemon --no-configuration-cache
+      - name: Sign release bundle
+        env:
+          KEY_BASE64: ${{ secrets.PINAKES_KEYSTORE_BASE64 }}
+          PINAKES_KEYSTORE_PASSWORD: ${{ secrets.PINAKES_KEYSTORE_PASSWORD }}
+          PINAKES_KEY_ALIAS: ${{ secrets.PINAKES_KEY_ALIAS }}
+          PINAKES_KEY_PASSWORD: ${{ secrets.PINAKES_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$KEY_BASE64"
+          test -n "$PINAKES_KEYSTORE_PASSWORD"
+          test -n "$PINAKES_KEY_ALIAS"
+          test -n "$PINAKES_KEY_PASSWORD"
+          export PINAKES_KEYSTORE="$RUNNER_TEMP/pinakes-upload.jks"
+          trap 'rm -f "$PINAKES_KEYSTORE"' EXIT
+          printf '%s' "$KEY_BASE64" | base64 --decode > "$PINAKES_KEYSTORE"
+          ./gradlew bundleRelease --no-daemon --no-configuration-cache
+          # `jarsigner -verify` exits 0 on an UNSIGNED artifact — it just prints
+          # "jar is unsigned". Since the build deliberately falls back to an
+          # unsigned bundle when the credentials do not reach Gradle, an exit
+          # code alone would let an unsigned bundle pass as verified. Require
+          # the positive statement instead.
+          verify_out="$(jarsigner -verify app/build/outputs/bundle/release/app-release.aab)"
+          printf '%s\n' "$verify_out"
+          case "$verify_out" in
+            *"jar verified"*) ;;
+            *) echo "::error::release bundle is not signed"; exit 1 ;;
+          esac
+          sha256sum app/build/outputs/bundle/release/app-release.aab > app/build/outputs/bundle/release/SHA256SUMS.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pinakes-play-${{ github.sha }}
+          path: |
+            app/build/outputs/bundle/release/*.aab
+            app/build/outputs/bundle/release/SHA256SUMS.txt
+            app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: play-reports-${{ github.sha }}
+          path: app/build/reports/
+          retention-days: 14

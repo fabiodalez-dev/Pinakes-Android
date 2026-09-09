@@ -1,10 +1,13 @@
 # Privacy Policy — Pinakes Android
 
-_Last updated: 2026-06-19_
+_Technical privacy description updated: 2026-09-09. The publisher has confirmed
+the controller and contact below. Retention details and the remaining release
+gates still need verification before this becomes the final Play privacy policy._
 
 Pinakes Android is an open-source client app that connects to a **Pinakes
-library instance chosen by you**. The app itself has no backend of its own: all
-your data lives on the library server you point it at, operated by that library.
+library instance chosen by you**. Library services use that instance's server.
+The app also integrates Sentry for crash diagnostics and loads media from URLs
+supplied by the library; not all requests are limited to the library's domain.
 
 ## What the app stores on your device
 
@@ -22,15 +25,22 @@ when you log out or disconnect from the instance.
 
 ## What the app sends, and to whom
 
-The app communicates **only** with the Pinakes instance URL you configure. It
+For library services, the app communicates with the Pinakes instance you configure. It
 sends your email and password (over HTTPS) at login, and your bearer token on
 subsequent requests, to authenticate and to perform the actions you initiate
 (search, loans/reservations, wishlist, profile edits, contact messages). It also
 fetches book cover images from URLs returned by that instance.
 
-The app does **not** include third-party analytics, advertising, or tracking
-SDKs, and does not transmit your data to the app's authors or any party other
-than your chosen library instance.
+The app includes **Sentry crash reporting**, configured during app startup.
+Default PII attachment is disabled and performance trace sampling is zero.
+These settings do not mean no data is transmitted: error events, technical
+device/app information and diagnostic context can reach Sentry. Retention and
+the precise diagnostic fields must be verified against the publisher's Sentry
+configuration before completing the Play Data Safety declaration.
+
+Catalog and HTTP caches are also stored locally. Signing out or switching
+instances clears the relevant caches. Signing out revokes the session; it does
+**not** delete the account, loans or other records held by the library.
 
 ## Network security
 
@@ -40,17 +50,30 @@ required to be HTTPS.
 
 ## Push notifications (optional)
 
-When enabled by your library and by you, push delivery uses **UnifiedPush**
-through a distributor of your choosing. Registration data (a push endpoint and
-WebPush keys) is sent to your library instance only.
+The app has a notification feed and UnifiedPush-related API support. A complete
+distributor integration has not been verified for this release; do not describe
+background push delivery as universally available. Any enabled distributor and
+its data handling must be included in the deployment's privacy review.
 
 ## Data controller
 
-Your data is controlled by the **library operating the Pinakes instance** you
-connect to. For requests about access, correction, or deletion of your account
-data, contact that library directly. For questions about the app itself, open an
-issue on the project repository.
+The publisher and controller for this Pinakes Android distribution and its app
+diagnostics is **D'Alessandro Fabio Gaetano**, reachable at
+**[info@fabiodalez.it](mailto:info@fabiodalez.it)**. This is also the contact for
+the reference library at **https://biblioteca.fabiodalez.it**.
 
-> Libraries publishing their own build: replace this section with your
-> organisation's contact details and host this policy at a public URL, then link
-> that URL in the Google Play Console (App content → Privacy policy).
+When you connect to another independently operated library, that library
+operates its own account and circulation services. Consult its privacy policy
+and contact it for access, correction or deletion requests relating to those
+records. Do not post credentials, loan history or other private data in public
+GitHub issues. Never send your password in a privacy request.
+
+The app supports account registration. A compliant in-app account-deletion
+request path and an external request URL remain release gates; logout must not
+be presented as account deletion. A library may need to retain specific records
+under its obligations, which its policy must explain accurately.
+
+For the reference library, account and privacy requests may be sent to
+info@fabiodalez.it, identifying the library URL and account email. Identity
+verification may be necessary before processing a request. This contact does
+not yet replace the in-app and public-web deletion paths listed above.
