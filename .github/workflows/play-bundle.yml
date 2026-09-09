@@ -42,7 +42,17 @@ jobs:
           trap 'rm -f "$PINAKES_KEYSTORE"' EXIT
           printf '%s' "$KEY_BASE64" | base64 --decode > "$PINAKES_KEYSTORE"
           ./gradlew bundleRelease --no-daemon --no-configuration-cache
-          jarsigner -verify app/build/outputs/bundle/release/app-release.aab
+          # `jarsigner -verify` exits 0 on an UNSIGNED artifact — it just prints
+          # "jar is unsigned". Since the build deliberately falls back to an
+          # unsigned bundle when the credentials do not reach Gradle, an exit
+          # code alone would let an unsigned bundle pass as verified. Require
+          # the positive statement instead.
+          verify_out="$(jarsigner -verify app/build/outputs/bundle/release/app-release.aab)"
+          printf '%s\n' "$verify_out"
+          case "$verify_out" in
+            *"jar verified"*) ;;
+            *) echo "::error::release bundle is not signed"; exit 1 ;;
+          esac
           sha256sum app/build/outputs/bundle/release/app-release.aab > app/build/outputs/bundle/release/SHA256SUMS.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
