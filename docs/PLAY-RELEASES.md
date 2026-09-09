@@ -8,6 +8,8 @@ This workflow builds bundles; it does NOT upload to Play or publish to productio
 
 Review library: https://biblioteca.fabiodalez.it. Mobile API was enabled on 2026-09-09. A dedicated standard reader was created; credentials are private outside Git, not in this document or release artifacts.
 
+Publisher/controller confirmed by the owner on 2026-09-09: **D'Alessandro Fabio Gaetano**. Public support/privacy email: **info@fabiodalez.it**. Use these for this distribution, not as the controller of independently operated third-party library instances.
+
 Remaining release gates: accurate privacy policy including Sentry, account-deletion path and public request URL, reviewer access test, minified-device smoke test, native 16 KB compatibility and Play questionnaires. The personal developer account requires the closed-test period before production access. Do not interpret a green bundle build as policy approval.
 
 The older PLAY_STORE_COMPLIANCE.md audit is historical: its no-third-party-SDK and disabled-R8 statements no longer describe the app. Sentry is present, R8 is enabled, and logout does not delete the user's server account.

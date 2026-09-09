@@ -1,8 +1,8 @@
 # Privacy Policy — Pinakes Android
 
-_Technical privacy description updated: 2026-09-09. This document still requires
-the publisher's controller/contact and retention details before use as the final
-Google Play privacy policy._
+_Technical privacy description updated: 2026-09-09. The publisher has confirmed
+the controller and contact below. Retention details and the remaining release
+gates still need verification before this becomes the final Play privacy policy._
 
 Pinakes Android is an open-source client app that connects to a **Pinakes
 library instance chosen by you**. Library services use that instance's server.
@@ -57,16 +57,23 @@ its data handling must be included in the deployment's privacy review.
 
 ## Data controller
 
-The library operates the account and circulation services. Contact that library
-for access, correction or deletion requests; do not post credentials, loan
-history or other private data in public GitHub issues. The app publisher must
-also identify its role and private contact channel for app diagnostics.
+The publisher and controller for this Pinakes Android distribution and its app
+diagnostics is **D'Alessandro Fabio Gaetano**, reachable at
+**[info@fabiodalez.it](mailto:info@fabiodalez.it)**. This is also the contact for
+the reference library at **https://biblioteca.fabiodalez.it**.
+
+When you connect to another independently operated library, that library
+operates its own account and circulation services. Consult its privacy policy
+and contact it for access, correction or deletion requests relating to those
+records. Do not post credentials, loan history or other private data in public
+GitHub issues. Never send your password in a privacy request.
 
 The app supports account registration. A compliant in-app account-deletion
 request path and an external request URL remain release gates; logout must not
 be presented as account deletion. A library may need to retain specific records
 under its obligations, which its policy must explain accurately.
 
-> Libraries publishing their own build: replace this section with your
-> organisation's contact details and host this policy at a public URL, then link
-> that URL in the Google Play Console (App content → Privacy policy).
+For the reference library, account and privacy requests may be sent to
+info@fabiodalez.it, identifying the library URL and account email. Identity
+verification may be necessary before processing a request. This contact does
+not yet replace the in-app and public-web deletion paths listed above.
