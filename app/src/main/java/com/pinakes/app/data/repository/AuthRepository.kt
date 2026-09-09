@@ -173,6 +173,9 @@ class AuthRepository(
         val api = network.api()
         val result = apiCall { api.logout() }
         session.clearToken()
+        // Drop the cached HTTP responses of the session that just ended: they were fetched
+        // with a bearer token that no longer exists, and the cache is keyed by URL only.
+        network.clearHttpCache()
         return result
     }
 
@@ -184,6 +187,9 @@ class AuthRepository(
         // instance and must never surface under the next library's name.
         catalog.clearCache()
         network.invalidate()
+        // Same reasoning as the Room purge: a URL-keyed HTTP cache entry from the old
+        // instance could otherwise be revalidated against the next library's server.
+        network.clearHttpCache()
     }
 
     private fun deviceName(): String {

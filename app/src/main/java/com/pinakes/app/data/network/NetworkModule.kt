@@ -3,11 +3,15 @@ package com.pinakes.app.data.network
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.pinakes.app.BuildConfig
 import com.pinakes.app.data.store.SessionStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import okhttp3.Cache
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 /**
@@ -16,8 +20,21 @@ import java.util.concurrent.TimeUnit
  * The base URL is per-instance and only known after onboarding, so the Retrofit instance is
  * (re)created whenever the instance URL changes. The bearer token is read live from
  * [SessionStore] by the [AuthInterceptor], so the same client survives login/logout.
+ *
+ * [cacheDir] (the app's cache directory) enables a disk HTTP cache. The server tags its
+ * cacheable GETs — the whole periodicals surface, for one — with an ETag and
+ * `Cache-Control: private, max-age=0, must-revalidate`, but without a cache OkHttp has no
+ * stored validator to send, so `If-None-Match` never goes out and every request pays for a
+ * full body. With the cache wired in, revalidation becomes transparent: OkHttp attaches the
+ * stored ETag and a 304 replays the cached body instead of downloading it again.
+ * `max-age=0` means nothing is ever served without asking the server first, so this saves
+ * bandwidth without ever serving stale data.
+ *
+ * The cache is keyed by URL only. Two accounts, or two instances that share a path, would
+ * otherwise collide — so it is purged on logout and on instance switch (see
+ * [clearHttpCache]) and no response body outlives the session that fetched it.
  */
-class NetworkModule(private val session: SessionStore) {
+class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
 
     val json: Json = Json {
         ignoreUnknownKeys = true
@@ -25,6 +42,15 @@ class NetworkModule(private val session: SessionStore) {
         isLenient = true
         coerceInputValues = true
     }
+
+    /**
+     * Disk cache for conditional GETs, or null when no cache directory was supplied (unit
+     * tests build the module without an Android context). Constructing a [Cache] only records
+     * the directory and the size budget — the on-disk journal is opened lazily on first use —
+     * so this is safe to do off the IO dispatcher.
+     */
+    private val httpCache: Cache? =
+        cacheDir?.let { Cache(File(it, HTTP_CACHE_DIR), HTTP_CACHE_MAX_BYTES) }
 
     private val okHttpClient: OkHttpClient by lazy {
         val builder = OkHttpClient.Builder()
@@ -36,6 +62,7 @@ class NetworkModule(private val session: SessionStore) {
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+        httpCache?.let { builder.cache(it) }
         // Complete incomplete server certificate chains via AIA, like a browser does. Self-hosted
         // instances behind QNAP/Synology proxies often serve a chain missing its intermediate, which
         // the default Android TLS stack rejects ("Trust anchor for certification path not found")
@@ -133,7 +160,29 @@ class NetworkModule(private val session: SessionStore) {
         cachedPeriodicalsApi = null
     }
 
+    /**
+     * Evict every stored response. Called on logout and on instance switch: cache entries are
+     * keyed by URL alone, so a body fetched for one account or one library must never be
+     * revalidated — let alone replayed — under the next one.
+     *
+     * Runs on the IO dispatcher (evicting walks the on-disk journal) and swallows failures:
+     * a cache that cannot be purged is a bandwidth problem, and must not be allowed to turn
+     * signing out into an error the user has to fight.
+     */
+    suspend fun clearHttpCache() {
+        val cache = httpCache ?: return
+        withContext(Dispatchers.IO) {
+            runCatching { cache.evictAll() }
+        }
+    }
+
     companion object {
+        /** Subdirectory of the app cache dir holding the OkHttp response cache. */
+        private const val HTTP_CACHE_DIR = "http"
+
+        /** ~10 MB: the cached surface is JSON, and OkHttp prunes the directory to fit. */
+        private const val HTTP_CACHE_MAX_BYTES = 10L * 1024 * 1024
+
         /**
          * Derive the API base URL from a user-entered instance URL.
          * - when no scheme is given, prepends `https://` — or `http://` when the user has
