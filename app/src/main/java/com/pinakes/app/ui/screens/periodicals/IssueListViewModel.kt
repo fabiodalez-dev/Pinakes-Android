@@ -20,6 +20,10 @@ import kotlinx.coroutines.launch
 data class IssueListUiState(
     val content: UiState<List<PeriodicalIssue>> = UiState.Loading,
     val refreshing: Boolean = false,
+    /** The plugin was deactivated server-side (confirmed via health re-probe). */
+    val pluginGone: Boolean = false,
+    /** The server capped this year's issues and said so via `meta.truncated`. */
+    val truncated: Boolean = false,
 )
 
 @HiltViewModel
@@ -46,14 +50,32 @@ class IssueListViewModel @Inject constructor(
         viewModelScope.launch {
             when (val res = repo.yearIssues(yearId)) {
                 is ApiResult.Success -> _state.update {
-                    it.copy(content = UiState.Success(res.data), refreshing = false)
-                }
-                is ApiResult.Failure -> _state.update {
                     it.copy(
-                        content = if (it.content is UiState.Success) it.content
-                        else UiState.Error(res.message, res.code, R.string.periodicals_issues_error),
+                        content = UiState.Success(res.data),
                         refreshing = false,
+                        truncated = isTruncatedList(res.meta),
                     )
+                }
+                is ApiResult.Failure -> {
+                    // A 404 is either a year that no longer exists or a deactivated plugin:
+                    // health decides which (see periodicalsFailureKind).
+                    val kind = periodicalsFailureKind(
+                        res,
+                        goneConfirmed = isNotFoundFailure(res) && repo.confirmGone(),
+                    )
+                    _state.update {
+                        it.copy(
+                            content = if (it.content is UiState.Success) it.content
+                            else periodicalsErrorState(
+                                failure = res,
+                                kind = kind,
+                                genericRes = R.string.periodicals_issues_error,
+                                notFoundRes = R.string.periodicals_issues_not_found,
+                            ),
+                            refreshing = false,
+                            pluginGone = kind == PeriodicalsFailure.Gone,
+                        )
+                    }
                 }
             }
         }

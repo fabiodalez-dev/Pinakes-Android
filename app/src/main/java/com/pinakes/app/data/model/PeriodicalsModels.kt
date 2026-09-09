@@ -115,6 +115,8 @@ data class PeriodicalIssueDetail(
     val pages: Int? = null,
     val status: String = "",
     @SerialName("cover_url") val coverUrl: String? = null,
+    /** Free-text note on inserts bound with this issue ("Supplemento letterario", …). */
+    val supplements: String? = null,
     /** Only present when the digitised PDF is public; null → hide the "Open PDF" action. */
     @SerialName("pdf_url") val pdfUrl: String? = null,
     val masthead: IssueMasthead? = null,

@@ -37,6 +37,7 @@ import com.pinakes.app.ui.common.DateFormat
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.AvailabilityChip
+import com.pinakes.app.ui.components.EmptyState
 import com.pinakes.app.ui.components.ErrorState
 import com.pinakes.app.ui.components.LoadingState
 import com.pinakes.app.ui.components.PinakesTopBar
@@ -69,7 +70,13 @@ fun IssueDetailScreen(onNavigateUp: () -> Unit) {
         ) {
             when (val content = state.content) {
                 is UiState.Loading -> LoadingState(label = stringResource(R.string.periodicals_issue_loading))
-                is UiState.Error -> ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
+                is UiState.Error ->
+                    // Plugin deactivated server-side: a terminal state, not a retryable
+                    // error — retrying can only 404 again (see periodicalsFailureKind).
+                    if (state.pluginGone) EmptyState(
+                        title = stringResource(R.string.periodicals_gone_title),
+                        subtitle = stringResource(R.string.periodicals_gone_subtitle),
+                    ) else ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
                 is UiState.Success -> {
                     val issue = content.data
                     LazyColumn(
@@ -163,6 +170,12 @@ private fun IssueHeader(issue: PeriodicalIssueDetail) {
                 status = issueStatusBadge(issue.status),
                 label = stringResource(issueStatusLabelRes(issue.status)),
             )
+            // Free text and often absent — shown only when the server actually has something
+            // to say, using the same label/value row as the masthead detail.
+            issue.supplements?.takeIf { it.isNotBlank() }?.let {
+                Spacer(Modifier.height(Spacing.md))
+                InfoRow(stringResource(R.string.periodicals_label_supplements), it)
+            }
         }
     }
 }

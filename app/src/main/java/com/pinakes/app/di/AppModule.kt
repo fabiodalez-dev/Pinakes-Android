@@ -41,8 +41,12 @@ object AppModule {
     @Provides @Singleton
     fun features(@ApplicationContext context: Context): FeatureStore = FeatureStore(context)
 
+    // The app cache dir backs the OkHttp response cache, so the server's ETags actually turn
+    // into conditional requests instead of full re-downloads. Android reclaims this directory
+    // under storage pressure, which is exactly the right lifetime for it.
     @Provides @Singleton
-    fun network(session: SessionStore): NetworkModule = NetworkModule(session)
+    fun network(@ApplicationContext context: Context, session: SessionStore): NetworkModule =
+        NetworkModule(session, context.cacheDir)
 
     @Provides @Singleton
     fun database(@ApplicationContext context: Context): AppDatabase = AppDatabase.get(context)

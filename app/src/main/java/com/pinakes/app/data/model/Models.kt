@@ -17,6 +17,10 @@ data class Meta(
     @SerialName("total_count") val totalCount: Int? = null,
     val https: Boolean? = null,
     val warning: String? = null, // "insecure_transport" on /health
+    // Set by endpoints that cap their result set (periodicals year issues: 400 max) to say
+    // the list was cut short. Nullable with a null default on purpose: servers older than
+    // the field simply omit it, and absent must read as "not truncated", never as "true".
+    val truncated: Boolean? = null,
 )
 
 @Serializable

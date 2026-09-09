@@ -20,6 +20,8 @@ import kotlinx.coroutines.launch
 data class PeriodicalDetailUiState(
     val content: UiState<PeriodicalDetail> = UiState.Loading,
     val refreshing: Boolean = false,
+    /** The plugin was deactivated server-side (confirmed via health re-probe). */
+    val pluginGone: Boolean = false,
 )
 
 @HiltViewModel
@@ -46,12 +48,27 @@ class PeriodicalDetailViewModel @Inject constructor(
                 is ApiResult.Success -> _state.update {
                     it.copy(content = UiState.Success(res.data), refreshing = false)
                 }
-                is ApiResult.Failure -> _state.update {
-                    it.copy(
-                        content = if (it.content is UiState.Success) it.content
-                        else UiState.Error(res.message, res.code, R.string.periodicals_detail_error),
-                        refreshing = false,
+                is ApiResult.Failure -> {
+                    // Spend a health probe only on a 404, and only to tell "this masthead is
+                    // gone" apart from "the whole section is gone" (which also flips the
+                    // feature flag, hiding every entry point).
+                    val kind = periodicalsFailureKind(
+                        res,
+                        goneConfirmed = isNotFoundFailure(res) && repo.confirmGone(),
                     )
+                    _state.update {
+                        it.copy(
+                            content = if (it.content is UiState.Success) it.content
+                            else periodicalsErrorState(
+                                failure = res,
+                                kind = kind,
+                                genericRes = R.string.periodicals_detail_error,
+                                notFoundRes = R.string.periodicals_detail_not_found,
+                            ),
+                            refreshing = false,
+                            pluginGone = kind == PeriodicalsFailure.Gone,
+                        )
+                    }
                 }
             }
         }
