@@ -37,6 +37,7 @@ import com.pinakes.app.data.model.PeriodicalDetail
 import com.pinakes.app.data.model.PeriodicalYear
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
+import com.pinakes.app.ui.components.EmptyState
 import com.pinakes.app.ui.components.ErrorState
 import com.pinakes.app.ui.components.LoadingState
 import com.pinakes.app.ui.components.PinakesTopBar
@@ -65,7 +66,13 @@ fun PeriodicalDetailScreen(
         ) {
             when (val content = state.content) {
                 is UiState.Loading -> LoadingState(label = stringResource(R.string.periodicals_detail_loading))
-                is UiState.Error -> ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
+                is UiState.Error ->
+                    // Plugin deactivated server-side: a terminal state, not a retryable
+                    // error — retrying can only 404 again (see periodicalsFailureKind).
+                    if (state.pluginGone) EmptyState(
+                        title = stringResource(R.string.periodicals_gone_title),
+                        subtitle = stringResource(R.string.periodicals_gone_subtitle),
+                    ) else ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
                 is UiState.Success -> {
                     val detail = content.data
                     LazyColumn(

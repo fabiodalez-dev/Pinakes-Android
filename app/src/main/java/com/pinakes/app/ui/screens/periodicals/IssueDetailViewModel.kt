@@ -20,6 +20,8 @@ import kotlinx.coroutines.launch
 data class IssueDetailUiState(
     val content: UiState<PeriodicalIssueDetail> = UiState.Loading,
     val refreshing: Boolean = false,
+    /** The plugin was deactivated server-side (confirmed via health re-probe). */
+    val pluginGone: Boolean = false,
 )
 
 @HiltViewModel
@@ -45,12 +47,26 @@ class IssueDetailViewModel @Inject constructor(
                 is ApiResult.Success -> _state.update {
                     it.copy(content = UiState.Success(res.data), refreshing = false)
                 }
-                is ApiResult.Failure -> _state.update {
-                    it.copy(
-                        content = if (it.content is UiState.Success) it.content
-                        else UiState.Error(res.message, res.code, R.string.periodicals_issue_error),
-                        refreshing = false,
+                is ApiResult.Failure -> {
+                    // A 404 here is either a deleted fascicolo or a deactivated plugin:
+                    // health decides which (see periodicalsFailureKind).
+                    val kind = periodicalsFailureKind(
+                        res,
+                        goneConfirmed = isNotFoundFailure(res) && repo.confirmGone(),
                     )
+                    _state.update {
+                        it.copy(
+                            content = if (it.content is UiState.Success) it.content
+                            else periodicalsErrorState(
+                                failure = res,
+                                kind = kind,
+                                genericRes = R.string.periodicals_issue_error,
+                                notFoundRes = R.string.periodicals_issue_not_found,
+                            ),
+                            refreshing = false,
+                            pluginGone = kind == PeriodicalsFailure.Gone,
+                        )
+                    }
                 }
             }
         }

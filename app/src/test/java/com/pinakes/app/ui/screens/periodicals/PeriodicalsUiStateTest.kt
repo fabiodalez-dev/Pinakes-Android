@@ -1,8 +1,12 @@
 package com.pinakes.app.ui.screens.periodicals
 
+import com.pinakes.app.R
 import com.pinakes.app.data.model.Meta
 import com.pinakes.app.data.model.PeriodicalIssueDetail
 import com.pinakes.app.data.model.PeriodicalSummary
+import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.network.ErrorCodes
+import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.components.AvailabilityStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -130,5 +134,95 @@ class PeriodicalsUiStateTest {
         assertFalse(isTruncatedList(Meta(truncated = null)))
         assertFalse(isTruncatedList(Meta(nextCursor = "c1")))
         assertFalse(isTruncatedList(null))
+    }
+
+    // ---- 404 classification: missing resource vs deactivated plugin ----
+
+    private fun failure(status: Int, code: String = ErrorCodes.NOT_FOUND, message: String = "Not found.") =
+        ApiResult.Failure(code = code, message = message, httpStatus = status)
+
+    @Test fun a404IsRecognisedByStatusOrByCode() {
+        assertTrue(isNotFoundFailure(failure(404)))
+        // The envelope can carry the code with no HTTP status attached (apiCall maps a
+        // body-level error with httpStatus = 0).
+        assertTrue(isNotFoundFailure(failure(0, code = ErrorCodes.NOT_FOUND)))
+    }
+
+    @Test fun otherFailuresAreNotWorthAHealthProbe() {
+        assertFalse(isNotFoundFailure(failure(500, code = ErrorCodes.SERVER_ERROR)))
+        assertFalse(isNotFoundFailure(failure(0, code = ErrorCodes.NETWORK)))
+        assertFalse(isNotFoundFailure(failure(403, code = ErrorCodes.FORBIDDEN)))
+    }
+
+    @Test fun a404WithHealthAlsoGoneMeansThePluginIsOff() {
+        assertEquals(
+            PeriodicalsFailure.Gone,
+            periodicalsFailureKind(failure(404), goneConfirmed = true),
+        )
+    }
+
+    @Test fun a404WithHealthStillUpMeansOnlyThisResourceIsMissing() {
+        assertEquals(
+            PeriodicalsFailure.NotFound,
+            periodicalsFailureKind(failure(404), goneConfirmed = false),
+        )
+    }
+
+    @Test fun aNon404NeverDegradesToGoneEvenIfTheProbeSaysSo() {
+        // Guards the call site's short-circuit: confirmGone() must not be consulted for a
+        // network blip, and even a stale true must not hide a retryable error.
+        assertEquals(
+            PeriodicalsFailure.Error,
+            periodicalsFailureKind(failure(0, code = ErrorCodes.NETWORK), goneConfirmed = true),
+        )
+        assertEquals(
+            PeriodicalsFailure.Error,
+            periodicalsFailureKind(failure(500, code = ErrorCodes.SERVER_ERROR), goneConfirmed = false),
+        )
+    }
+
+    // ---- Error state built from the classification ----
+
+    private fun errorState(kind: PeriodicalsFailure) = periodicalsErrorState(
+        failure = failure(404),
+        kind = kind,
+        genericRes = R.string.periodicals_issue_error,
+        notFoundRes = R.string.periodicals_issue_not_found,
+    )
+
+    @Test fun notFoundDropsTheServerMessageSoTheLocalizedWordingWins() {
+        val state = errorState(PeriodicalsFailure.NotFound)
+
+        // resolvedMessage() prefers a non-blank message: leaving the server's bare
+        // "Not found." would show that instead of "This issue no longer exists."
+        assertEquals("", state.message)
+        assertEquals(R.string.periodicals_issue_not_found, state.messageRes)
+    }
+
+    @Test fun goneUsesTheSectionWideWording() {
+        val state = errorState(PeriodicalsFailure.Gone)
+
+        assertEquals("", state.message)
+        assertEquals(R.string.periodicals_gone_subtitle, state.messageRes)
+    }
+
+    @Test fun aGenericFailureKeepsTheServerMessageAndTheScreenFallback() {
+        val state = periodicalsErrorState(
+            failure = ApiResult.Failure(ErrorCodes.SERVER_ERROR, "Upstream exploded", 500),
+            kind = PeriodicalsFailure.Error,
+            genericRes = R.string.periodicals_issue_error,
+            notFoundRes = R.string.periodicals_issue_not_found,
+        )
+
+        assertEquals("Upstream exploded", state.message)
+        assertEquals(R.string.periodicals_issue_error, state.messageRes)
+    }
+
+    @Test fun everyClassifiedFailureCodeSurvivesIntoTheState() {
+        // The code is what auth-expiry checks and telemetry key off: it must never be lost.
+        PeriodicalsFailure.entries.forEach { kind ->
+            val state: UiState.Error = errorState(kind)
+            assertEquals(ErrorCodes.NOT_FOUND, state.code)
+        }
     }
 }

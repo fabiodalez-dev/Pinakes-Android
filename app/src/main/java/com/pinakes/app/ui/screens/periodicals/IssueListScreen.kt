@@ -70,7 +70,13 @@ fun IssueListScreen(
         ) {
             when (val content = state.content) {
                 is UiState.Loading -> LoadingState(label = stringResource(R.string.periodicals_issues_loading))
-                is UiState.Error -> ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
+                is UiState.Error ->
+                    // Plugin deactivated server-side: a terminal state, not a retryable
+                    // error — retrying can only 404 again (see periodicalsFailureKind).
+                    if (state.pluginGone) EmptyState(
+                        title = stringResource(R.string.periodicals_gone_title),
+                        subtitle = stringResource(R.string.periodicals_gone_subtitle),
+                    ) else ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
                 is UiState.Success ->
                     if (content.data.isEmpty()) {
                         EmptyState(
