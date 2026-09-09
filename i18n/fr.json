@@ -464,6 +464,8 @@
   "periodicals_issues_error": "Impossible de charger les fascicules.",
   "periodicals_issues_empty_title": "Aucun fascicule",
   "periodicals_issues_empty_subtitle": "Cette année n'a pas encore de fascicules catalogués.",
+  "periodicals_issues_truncated_title": "Liste partielle",
+  "periodicals_issues_truncated_subtitle": "Affichage des %1$d premiers fascicules de cette année.",
   "periodicals_issue_fallback": "Fascicule",
   "periodicals_issue_number": "N° %1$s",
   "periodicals_issue_pages": "%1$d pages",

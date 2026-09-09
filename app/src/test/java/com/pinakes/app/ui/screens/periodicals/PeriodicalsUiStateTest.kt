@@ -1,5 +1,6 @@
 package com.pinakes.app.ui.screens.periodicals
 
+import com.pinakes.app.data.model.Meta
 import com.pinakes.app.data.model.PeriodicalIssueDetail
 import com.pinakes.app.data.model.PeriodicalSummary
 import com.pinakes.app.ui.components.AvailabilityStatus
@@ -111,5 +112,23 @@ class PeriodicalsUiStateTest {
         assertFalse(PeriodicalIssueDetail(id = 1, pdfUrl = null).canOpenPdf)
         assertFalse(PeriodicalIssueDetail(id = 1, pdfUrl = "").canOpenPdf)
         assertFalse(PeriodicalIssueDetail(id = 1, pdfUrl = "   ").canOpenPdf)
+    }
+
+    // ---- Truncated issue list ----
+
+    @Test fun truncatedMetaRaisesTheBanner() {
+        assertTrue(isTruncatedList(Meta(truncated = true)))
+    }
+
+    @Test fun explicitlyUntruncatedMetaDoesNotRaiseTheBanner() {
+        assertFalse(isTruncatedList(Meta(truncated = false)))
+    }
+
+    @Test fun aServerThatOmitsTheFieldIsTreatedAsComplete() {
+        // Older servers have no `truncated` key at all: absent must never read as true,
+        // or every year would claim to be partial against an un-upgraded instance.
+        assertFalse(isTruncatedList(Meta(truncated = null)))
+        assertFalse(isTruncatedList(Meta(nextCursor = "c1")))
+        assertFalse(isTruncatedList(null))
     }
 }

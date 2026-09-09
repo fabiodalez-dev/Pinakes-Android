@@ -464,6 +464,8 @@
   "periodicals_issues_error": "Die Hefte konnten nicht geladen werden.",
   "periodicals_issues_empty_title": "Keine Hefte",
   "periodicals_issues_empty_subtitle": "Für diesen Jahrgang sind noch keine Hefte erfasst.",
+  "periodicals_issues_truncated_title": "Unvollständige Liste",
+  "periodicals_issues_truncated_subtitle": "Es werden die ersten %1$d Hefte dieses Jahrgangs angezeigt.",
   "periodicals_issue_fallback": "Heft",
   "periodicals_issue_number": "Nr. %1$s",
   "periodicals_issue_pages": "%1$d Seiten",

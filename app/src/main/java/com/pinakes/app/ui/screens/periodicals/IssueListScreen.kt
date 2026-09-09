@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -82,11 +84,57 @@ fun IssueListScreen(
                             contentPadding = PaddingValues(Spacing.lg),
                             verticalArrangement = Arrangement.spacedBy(Spacing.md),
                         ) {
+                            // Informational, never blocking: the issues below are real and
+                            // browsable, there are simply more of them on the server.
+                            if (state.truncated) {
+                                item { TruncatedNotice(shown = content.data.size) }
+                            }
                             items(content.data, key = { it.id }) { issue ->
                                 IssueRow(issue = issue, onClick = { onOpenIssue(issue.id) })
                             }
                         }
                     }
+            }
+        }
+    }
+}
+
+/**
+ * Partial-list notice for a year the server capped. Styled as an informational banner
+ * (secondary container, like the book detail's status banners) rather than an error: nothing
+ * failed and there is nothing to retry.
+ */
+@Composable
+private fun TruncatedNotice(shown: Int) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Outlined.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(Modifier.width(Spacing.md))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.periodicals_issues_truncated_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    stringResource(R.string.periodicals_issues_truncated_subtitle, shown),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
             }
         }
     }

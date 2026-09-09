@@ -2,12 +2,13 @@ package com.pinakes.app.ui.screens.periodicals
 
 import androidx.annotation.StringRes
 import com.pinakes.app.R
+import com.pinakes.app.data.model.Meta
 import com.pinakes.app.ui.components.AvailabilityStatus
 
 /**
- * Pure helpers for the Periodicals screens: enum → localized label lookups and the
- * issue-status → badge mapping. Kept free of Compose so they are unit-testable
- * (see PeriodicalsUiStateTest).
+ * Pure helpers for the Periodicals screens: enum → localized label lookups, the
+ * issue-status → badge mapping and the truncated-list decision. Kept free of Compose so
+ * they are unit-testable (see PeriodicalsUiStateTest).
  */
 
 /** The masthead types the server may emit, in filter-chip order. */
@@ -61,3 +62,13 @@ fun issueStatusBadge(status: String): AvailabilityStatus = when (status) {
     "danneggiato", "in_restauro" -> AvailabilityStatus.DueSoon
     else -> AvailabilityStatus.Returned
 }
+
+/**
+ * True when the server says it cut the list short (`meta.truncated`), which is the only
+ * signal for the 400-issue cap on a year's fascicoli.
+ *
+ * Servers that predate the field omit it, so `null` MUST read as "complete": inferring
+ * truncation from the item count instead would cry wolf on any year that happens to sit
+ * exactly on the cap, and would be flatly wrong the day the cap changes.
+ */
+internal fun isTruncatedList(meta: Meta?): Boolean = meta?.truncated == true

@@ -20,6 +20,8 @@ import kotlinx.coroutines.launch
 data class IssueListUiState(
     val content: UiState<List<PeriodicalIssue>> = UiState.Loading,
     val refreshing: Boolean = false,
+    /** The server capped this year's issues and said so via `meta.truncated`. */
+    val truncated: Boolean = false,
 )
 
 @HiltViewModel
@@ -46,7 +48,11 @@ class IssueListViewModel @Inject constructor(
         viewModelScope.launch {
             when (val res = repo.yearIssues(yearId)) {
                 is ApiResult.Success -> _state.update {
-                    it.copy(content = UiState.Success(res.data), refreshing = false)
+                    it.copy(
+                        content = UiState.Success(res.data),
+                        refreshing = false,
+                        truncated = isTruncatedList(res.meta),
+                    )
                 }
                 is ApiResult.Failure -> _state.update {
                     it.copy(

@@ -464,6 +464,8 @@
   "periodicals_issues_error": "Couldn't load the issues.",
   "periodicals_issues_empty_title": "No issues",
   "periodicals_issues_empty_subtitle": "This year has no catalogued issues yet.",
+  "periodicals_issues_truncated_title": "Partial list",
+  "periodicals_issues_truncated_subtitle": "Showing the first %1$d issues of this year.",
   "periodicals_issue_fallback": "Issue",
   "periodicals_issue_number": "No. %1$s",
   "periodicals_issue_pages": "%1$d pages",
