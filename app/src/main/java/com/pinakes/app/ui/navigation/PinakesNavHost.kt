@@ -30,6 +30,8 @@ import com.pinakes.app.ui.screens.onboarding.OnboardingScreen
 import com.pinakes.app.ui.screens.periodicals.IssueDetailScreen
 import com.pinakes.app.ui.screens.periodicals.IssueListScreen
 import com.pinakes.app.ui.screens.periodicals.PeriodicalDetailScreen
+import com.pinakes.app.ui.screens.periodicals.StandaloneArticlesScreen
+import com.pinakes.app.ui.screens.periodicals.StandaloneArticleScreen
 import com.pinakes.app.ui.screens.periodicals.PeriodicalsScreen
 import com.pinakes.app.ui.screens.reviews.MyReviewsScreen
 
@@ -169,6 +171,28 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
             ClubDetailScreen(onNavigateUp = { navController.popBackStack() })
         }
 
+        composable(
+            Routes.STANDALONE_ARTICLES,
+            arguments = listOf(navArgument(Routes.ARG_PERIODICAL_ID) { type = NavType.IntType; defaultValue = 0 }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StandaloneArticlesScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpenArticle = { id -> navController.navigate(Routes.standaloneArticle(id)) },
+            )
+        }
+        composable(
+            Routes.STANDALONE_ARTICLE,
+            arguments = listOf(navArgument(Routes.ARG_ARTICLE_ID) { type = NavType.IntType }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StandaloneArticleScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpenPeriodical = { id -> navController.navigate(Routes.periodicalDetail(id)) },
+                onOpenIssue = { id -> navController.navigate(Routes.periodicalIssue(id)) },
+            )
+        }
+
         // ---- Periodicals / Emeroteca (optional plugin) ----
         composable(
             Routes.PERIODICALS,
@@ -178,6 +202,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
             PeriodicalsScreen(
                 onNavigateUp = { navController.popBackStack() },
                 onOpenPeriodical = { id -> navController.navigate(Routes.periodicalDetail(id)) },
+                onOpenArticles = { navController.navigate(Routes.standaloneArticles()) },
             )
         }
 
@@ -188,6 +213,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
             popExitTransition = slideOut,
         ) {
             PeriodicalDetailScreen(
+                onOpenArticles = { id -> navController.navigate(Routes.standaloneArticles(id)) },
                 onNavigateUp = { navController.popBackStack() },
                 onOpenYear = { yearId, year ->
                     navController.navigate(Routes.periodicalYearIssues(yearId, year))

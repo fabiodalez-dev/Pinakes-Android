@@ -6,6 +6,7 @@ import com.pinakes.app.data.model.PeriodicalIssue
 import com.pinakes.app.data.model.PeriodicalIssueDetail
 import com.pinakes.app.data.model.PeriodicalSummary
 import com.pinakes.app.data.model.PeriodicalsHealth
+import com.pinakes.app.data.model.StandaloneArticle
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -45,4 +46,14 @@ interface PeriodicalsApi {
     /** Issue detail + spoglio articles + public PDF url when available. */
     @GET("periodicals/issues/{id}")
     suspend fun issue(@Path("id") id: Int): Envelope<PeriodicalIssueDetail>
+
+    @GET("periodicals/articles")
+    suspend fun articles(
+        @Query("q") query: String? = null,
+        @Query("testata_id") mastheadId: Int? = null,
+        @Query("cursor") cursor: String? = null,
+    ): Envelope<List<StandaloneArticle>>
+
+    @GET("periodicals/articles/{id}")
+    suspend fun article(@Path("id") id: Int): Envelope<StandaloneArticle>
 }

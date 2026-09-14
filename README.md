@@ -183,3 +183,11 @@ distributor receiver is a follow-up. See `STATUS.md` for the full breakdown.
 ## License
 
 Released under the same license as Pinakes: **AGPL-3.0**.
+
+### Standalone articles in Emeroteca
+
+On compatible servers, **Emeroteca → Articles** searches and displays standalone
+newspaper and magazine articles, without requiring ownership of their issues.
+Publication screens also link to their associated articles. Public PDFs use the
+URL supplied by the server. Older servers retain the existing periodicals browser.
+See [the article integration notes](docs/emeroteca-standalone-articles.md).

@@ -19,6 +19,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PeriodicalsHealth(
     val status: String = "",
+    val capabilities: PeriodicalsCapabilities = PeriodicalsCapabilities(),
 )
 
 // ---------- Mastheads list ----------
@@ -148,3 +149,43 @@ data class IssueArticle(
     @SerialName("page_end") val pageEnd: Int? = null,
     val type: String? = null,
 )
+
+/** Missing capability means an older server, whose existing periodicals remain usable. */
+@Serializable
+data class PeriodicalsCapabilities(
+    @SerialName("standalone_articles") val standaloneArticles: Boolean = false,
+)
+
+/** Standalone contributions use the server's Italian column names, unlike issue indexes. */
+@Serializable
+data class StandaloneArticle(
+    val id: Int = 0,
+    @SerialName("titolo") val title: String = "",
+    @SerialName("autori") val authors: String? = null,
+    @SerialName("tipo_contributo") val contributionType: String? = null,
+    @SerialName("contenitore_tipo") val containerType: String? = null,
+    @SerialName("contenitore_titolo") val containerTitle: String? = null,
+    val issn: String? = null,
+    @SerialName("data_pubblicazione_testo") val publicationDate: String? = null,
+    @SerialName("anno_pubblicazione") val publicationYear: Int? = null,
+    val volume: String? = null,
+    @SerialName("numero") val number: String? = null,
+    @SerialName("pagine") val pages: String? = null,
+    val doi: String? = null,
+    @SerialName("supporto") val medium: String? = null,
+    val keywords: String? = null,
+    @SerialName("abstract") val description: String? = null,
+    @SerialName("testata_id") val mastheadId: Int? = null,
+    @SerialName("fascicolo_id") val issueId: Int? = null,
+    @SerialName("has_public_pdf") val hasPublicPdf: Boolean = false,
+    @SerialName("pdf_url") val pdfUrl: String? = null,
+) {
+    // Date text and page spans are citations, not ISO dates or page counts.
+    val dateLabel: String? get() = publicationDate?.takeIf { it.isNotBlank() }
+        ?: publicationYear?.toString()
+    val canOpenPdf: Boolean get() = hasPublicPdf && publicPdfUrl != null
+    val publicPdfUrl: String? get() = pdfUrl?.takeIf {
+        val uri = runCatching { java.net.URI(it) }.getOrNull()
+        uri?.scheme?.lowercase() in listOf("https", "http") && !uri?.host.isNullOrBlank()
+    }
+}

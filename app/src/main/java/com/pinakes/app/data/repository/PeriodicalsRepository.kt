@@ -1,5 +1,6 @@
 package com.pinakes.app.data.repository
 
+import com.pinakes.app.data.model.StandaloneArticle
 import com.pinakes.app.data.model.PeriodicalDetail
 import com.pinakes.app.data.model.PeriodicalIssue
 import com.pinakes.app.data.model.PeriodicalIssueDetail
@@ -30,7 +31,7 @@ class PeriodicalsRepository(
     private val network: NetworkModule,
     private val features: FeatureStore,
     private val session: SessionStore,
-) {
+) : StandaloneArticlesSource {
 
     /**
      * Probe `GET /periodicals/health`.
@@ -84,7 +85,7 @@ class PeriodicalsRepository(
      * is confirmed gone, flip the feature flag so every entry point hides immediately.
      * Returns true when the plugin is really unavailable (vs a single missing resource).
      */
-    suspend fun confirmGone(): Boolean {
+    override suspend fun confirmGone(): Boolean {
         val instance = session.instanceUrl
         val available = probeAvailability()
         // Only treat the plugin as gone when the probe actually applied to the still-current
@@ -92,4 +93,23 @@ class PeriodicalsRepository(
         val applied = applyAvailability(available, instance)
         return applied && available == false
     }
+
+    override suspend fun standaloneArticlesSupported(): Boolean? {
+        val instance = session.instanceUrl
+        val result = apiCall { network.periodicalsApi().health() }
+        if (instance != session.instanceUrl) return null
+        return when (result) {
+            is ApiResult.Success -> result.data.capabilities.standaloneArticles
+            is ApiResult.Failure -> if (result.httpStatus == 404) false else null
+        }
+    }
+
+    override suspend fun articles(query: String?, mastheadId: Int?, cursor: String?): ApiResult<StandaloneArticlesPage> =
+        when (val result = apiCall { network.periodicalsApi().articles(query, mastheadId, cursor) }) {
+            is ApiResult.Success -> ApiResult.Success(StandaloneArticlesPage(result.data, result.meta?.nextCursor), result.meta)
+            is ApiResult.Failure -> result
+        }
+
+    override suspend fun article(id: Int): ApiResult<StandaloneArticle> =
+        apiCall { network.periodicalsApi().article(id) }
 }

@@ -37,6 +37,12 @@ object Routes {
     fun periodicalDetail(id: Int): String = "periodicals/$id"
     const val ARG_PERIODICAL_ID = "periodicalId"
 
+    const val STANDALONE_ARTICLES = "periodicals/articles?periodicalId={periodicalId}"
+    fun standaloneArticles(mastheadId: Int = 0): String = "periodicals/articles?periodicalId=$mastheadId"
+    const val STANDALONE_ARTICLE = "periodicals/articles/{articleId}"
+    const val ARG_ARTICLE_ID = "articleId"
+    fun standaloneArticle(id: Int): String = "periodicals/articles/$id"
+
     // The display year rides along as a nav arg so the issues screen can title itself
     // ("Year 1998") without re-fetching the masthead detail.
     const val PERIODICAL_YEAR_ISSUES = "periodicals/years/{yearId}/{year}"

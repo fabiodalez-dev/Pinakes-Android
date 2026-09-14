@@ -22,6 +22,7 @@ data class PeriodicalDetailUiState(
     val refreshing: Boolean = false,
     /** The plugin was deactivated server-side (confirmed via health re-probe). */
     val pluginGone: Boolean = false,
+    val articlesSupported: Boolean = false,
 )
 
 @HiltViewModel
@@ -41,6 +42,11 @@ class PeriodicalDetailViewModel @Inject constructor(
     fun refresh() = load(initial = false)
 
     private fun load(initial: Boolean) {
+        viewModelScope.launch {
+            repo.standaloneArticlesSupported()?.let { supported ->
+                _state.update { it.copy(articlesSupported = supported) }
+            }
+        }
         if (initial) _state.update { it.copy(content = UiState.Loading) }
         else _state.update { it.copy(refreshing = true) }
         viewModelScope.launch {
