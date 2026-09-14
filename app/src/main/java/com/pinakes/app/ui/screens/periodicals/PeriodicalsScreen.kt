@@ -63,6 +63,7 @@ import com.pinakes.app.ui.theme.Spacing
 fun PeriodicalsScreen(
     onNavigateUp: () -> Unit,
     onOpenPeriodical: (Int) -> Unit,
+    onOpenArticles: () -> Unit,
 ) {
     val vm: PeriodicalsViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
@@ -84,6 +85,12 @@ fun PeriodicalsScreen(
         topBar = { PinakesTopBar(title = stringResource(R.string.periodicals_title), onNavigateUp = onNavigateUp) },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
+            if (state.articlesSupported) {
+                androidx.compose.material3.TextButton(
+                    onClick = onOpenArticles,
+                    modifier = Modifier.padding(horizontal = Spacing.lg),
+                ) { Text(stringResource(R.string.standalone_articles_title)) }
+            }
             Column(Modifier.padding(horizontal = Spacing.lg).padding(top = Spacing.sm)) {
                 SearchField(
                     query = state.query,

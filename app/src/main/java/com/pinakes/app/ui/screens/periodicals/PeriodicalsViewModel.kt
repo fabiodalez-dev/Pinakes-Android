@@ -27,6 +27,7 @@ data class PeriodicalsUiState(
     val error: String? = null,
     /** The plugin was deactivated server-side (confirmed via health re-probe). */
     val pluginGone: Boolean = false,
+    val articlesSupported: Boolean = false,
 ) {
     val hasMore: Boolean get() = nextCursor != null
 }
@@ -74,9 +75,20 @@ class PeriodicalsViewModel @Inject constructor(
      */
     private var generation = 0
 
-    init { load(reset = true) }
+    init { refresh() }
 
-    fun refresh() = load(reset = true)
+    fun refresh() {
+        discoverArticles()
+        load(reset = true)
+    }
+
+    private fun discoverArticles() {
+        viewModelScope.launch {
+            repo.standaloneArticlesSupported()?.let { supported ->
+                _state.update { it.copy(articlesSupported = supported) }
+            }
+        }
+    }
 
     fun onQueryChange(value: String) {
         _state.update { it.withQuery(value) }

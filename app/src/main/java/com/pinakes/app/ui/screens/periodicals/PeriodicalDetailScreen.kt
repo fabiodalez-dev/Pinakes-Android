@@ -49,6 +49,7 @@ import com.pinakes.app.ui.theme.Spacing
 fun PeriodicalDetailScreen(
     onNavigateUp: () -> Unit,
     onOpenYear: (yearId: Int, year: Int) -> Unit,
+    onOpenArticles: (Int) -> Unit,
 ) {
     val vm: PeriodicalDetailViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
@@ -81,6 +82,13 @@ fun PeriodicalDetailScreen(
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
                         item { PeriodicalHeader(detail) }
+                        if (state.articlesSupported) {
+                            item {
+                                androidx.compose.material3.TextButton(onClick = { onOpenArticles(detail.id) }) {
+                                    Text(stringResource(R.string.standalone_articles_in_masthead))
+                                }
+                            }
+                        }
                         if (detail.years.isNotEmpty()) {
                             item {
                                 Text(
