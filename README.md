@@ -111,6 +111,26 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 A prebuilt debug APK is published on the [Releases](../../releases) page.
 
+### Standalone emulator on macOS
+
+```bash
+./tools/run-emulator.sh my_avd -no-snapshot-load -gpu auto
+```
+
+The launcher forwards the remaining options to the Android SDK emulator. On macOS,
+it holds a `caffeinate` assertion for that emulator PID, then releases it when the
+emulator exits; Ctrl+C stops both. This prevents the host's background power policy
+from slowing the VM when its window is occluded. It does not change global power
+settings or Android crash reporting.
+
+An Android 15 startup ANR was reproduced before application initialization, along
+with system/launcher stalls. With the same debug APK, host priority dropped to 4
+without the assertion and startup exceeded 21 seconds; with the assertion, three
+cold starts completed in 2.3–3.1 seconds. After restarting the VM through this
+launcher, five more cold starts completed in 1.66–1.80 seconds with no ANR events.
+This is a development-emulator mitigation;
+device ANRs still require their own [trace diagnosis](https://developer.android.com/topic/performance/anrs/diagnose-and-fix-anrs).
+
 ## Point it at a Pinakes instance
 
 On first launch the app asks for the instance URL.
