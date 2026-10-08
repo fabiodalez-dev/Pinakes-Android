@@ -58,10 +58,14 @@ fun PinakesTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     singleLine: Boolean = true,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
     OutlinedTextField(
         interactionSource = interaction,
+        enabled = enabled,
+        readOnly = readOnly,
         value = value,
         onValueChange = { if (it.length <= maxLength) onValueChange(it) },
         modifier = modifier,

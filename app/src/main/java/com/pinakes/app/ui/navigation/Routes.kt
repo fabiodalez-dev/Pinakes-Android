@@ -37,8 +37,11 @@ object Routes {
     fun periodicalDetail(id: Int): String = "periodicals/$id"
     const val ARG_PERIODICAL_ID = "periodicalId"
 
-    const val STANDALONE_ARTICLES = "periodicals/articles?periodicalId={periodicalId}"
-    fun standaloneArticles(mastheadId: Int = 0): String = "periodicals/articles?periodicalId=$mastheadId"
+    const val STANDALONE_ARTICLES = "periodicals/articles?periodicalId={periodicalId}&issueId={issueId}&container={container}&keyword={keyword}&genreId={genreId}&q={q}"
+    fun standaloneArticles(mastheadId: Int = 0, issueId: Int = 0, container: String = "", keyword: String = "", genreId: Int = 0, query: String = ""): String =
+        "periodicals/articles?periodicalId=$mastheadId&issueId=$issueId&container=${Uri.encode(container)}&keyword=${Uri.encode(keyword)}&genreId=$genreId&q=${Uri.encode(query)}"
+    const val AUTHOR_WORKS = "works?author={author}&authorId={authorId}"
+    fun authorWorks(author: String, id: Int? = null) = "works?author=${Uri.encode(author)}&authorId=${id ?: 0}"
     const val STANDALONE_ARTICLE = "periodicals/articles/{articleId}"
     const val ARG_ARTICLE_ID = "articleId"
     fun standaloneArticle(id: Int): String = "periodicals/articles/$id"
@@ -56,4 +59,16 @@ object Routes {
 
     /** Graph hosting the bottom-nav + nested authed screens. */
     const val MAIN_GRAPH = "main"
+    const val DESIDERATA = "desiderata"
+    const val WANTED_BOOK = "desiderata/{wantedId}"
+    const val ARG_WANTED_ID = "wantedId"
+    fun wantedBook(id: Int) = "desiderata/$id"
+    const val DONATION = "donation?bookId={wantedId}"
+    fun donation(id: Int = 0) = "donation?bookId=$id"
+    const val ARCHIVES = "archives?parentId={archiveParentId}"
+    const val ARG_ARCHIVE_PARENT = "archiveParentId"
+    fun archives(parentId: Int = 0) = "archives?parentId=$parentId"
+    const val ARCHIVE = "archives/{archiveId}"
+    const val ARG_ARCHIVE_ID = "archiveId"
+    fun archive(id: Int) = "archives/$id"
 }

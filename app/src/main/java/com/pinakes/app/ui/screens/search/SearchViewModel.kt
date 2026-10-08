@@ -28,6 +28,7 @@ enum class BookSort(val apiValue: String, @StringRes val labelRes: Int) {
     RELEVANCE("relevance", R.string.sort_relevance),
     NEWEST("newest", R.string.sort_newest),
     OLDEST("oldest", R.string.sort_oldest),
+    AUTHOR_ASC("author_asc", R.string.sort_author_asc),
     TITLE_ASC("title_asc", R.string.sort_title_asc),
     TITLE_DESC("title_desc", R.string.sort_title_desc),
 }
@@ -41,6 +42,7 @@ data class SearchUiState(
     val availableOnly: Boolean = false,
     val selectedGenreId: Int? = null,
     val author: String = "",
+    val authorId: Int? = null,
     val publisher: String = "",
     val language: String? = null,
     val sort: BookSort = BookSort.NEWEST,
@@ -53,6 +55,8 @@ data class SearchUiState(
     val loadingMore: Boolean = false,  // pagination
     val error: String? = null,
     val filtersOpen: Boolean = false,
+    val appliedFilters: SearchFilters = SearchFilters(),
+    val searchRevision: Int = 0,
 ) {
     val hasMore: Boolean get() = nextCursor != null
 
@@ -135,7 +139,8 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
     }
 
     fun onQueryChange(value: String) {
-        _state.update { it.withQuery(value) }
+        searchGeneration++
+        _state.update { it.withQuery(value).copy(items = emptyList(), nextCursor = null, loadingMore = false, loading = true) }
         // Debounced auto-search as the user types.
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
@@ -153,7 +158,8 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
 
     // --- Draft setters for the filter sheet (no search until "Applica") ---
 
-    fun setAuthorDraft(value: String) = _state.update { it.copy(author = value) }
+    fun setAuthorDraft(value: String) = _state.update { it.copy(author = value, authorId = null) }
+    fun setAuthorIdentity(name: String, id: Int?) = _state.update { it.copy(author = name, authorId = id) }
 
     fun setPublisherDraft(value: String) = _state.update { it.copy(publisher = value) }
 
@@ -183,7 +189,7 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
             it.copy(
                 availableOnly = false,
                 selectedGenreId = null,
-                author = "",
+                author = "", authorId = null,
                 publisher = "",
                 language = null,
             )
@@ -196,6 +202,7 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
     private fun filters(): SearchFilters = _state.value.let {
         SearchFilters(
             query = it.query.takeIf { q -> q.isNotBlank() },
+            authorId = it.authorId,
             author = it.author.takeIf { a -> a.isNotBlank() },
             publisher = it.publisher.takeIf { p -> p.isNotBlank() },
             genreId = it.selectedGenreId,
@@ -231,8 +238,10 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
     private fun runSearch(reset: Boolean) {
         if (reset) searchGeneration++
         val generation = searchGeneration
+        val searchFilters = filters()
         _state.update {
             it.copy(
+                appliedFilters = searchFilters, searchRevision = generation,
                 loading = true,
                 error = null,
                 items = if (reset) emptyList() else it.items,
@@ -244,7 +253,7 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
         }
         val sort = _state.value.sort.apiValue
         viewModelScope.launch {
-            val res = catalog.search(filters(), sort = sort)
+            val res = catalog.search(searchFilters, sort = sort)
             // Discard if a newer reset (query/sort/filter change) has since superseded this run.
             if (generation != searchGeneration) return@launch
             when (res) {

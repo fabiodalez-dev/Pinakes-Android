@@ -59,6 +59,8 @@ data class HealthFeatures(
     val push: Boolean = false,
     // Star + text book reviews (a borrower can review a title; everyone reads them).
     val reviews: Boolean = false,
+    val archives: Boolean = false,
+    val desiderata: Boolean = false,
 )
 
 // ---------- Auth ----------
@@ -258,6 +260,13 @@ data class BookDetail(
     @SerialName("ebook_url") val ebookUrl: String? = null,
     @SerialName("ebook_format") val ebookFormat: String? = null, // "pdf" | "epub" | ...
     @SerialName("has_ebook") val hasEbook: Boolean = false,
+    @SerialName("digital_attachments") val digitalAttachments: List<DigitalAttachment> = emptyList(),
+    val citations: List<ArticleCitation> = emptyList(),
+    @SerialName("ris_url") val risUrl: String? = null,
+    @SerialName("genre_path") val genrePath: List<GenreRef> = emptyList(),
+    val publishers: List<GenreRef> = emptyList(),
+    val edition: String? = null,
+    @SerialName("publication_place") val publicationPlace: String? = null,
 ) {
     val authorsLabel: String get() = authors.joinToString(", ") { it.name }
     val genreLabel: String? get() = genre?.name
@@ -267,6 +276,24 @@ data class BookDetail(
     val copiesAvailable: Int get() = availability.copiesAvailable
     val loanableNow: Boolean get() = availability.loanableNow
     val available: Boolean get() = availability.loanableNow || availability.copiesAvailable > 0
+
+    /** Old servers still advertise one audio and one ebook; list-aware servers own the list. */
+    val digitalFiles: List<DigitalAttachment> get() = digitalAttachments.ifEmpty {
+        listOfNotNull(
+            audioUrl?.takeIf { hasAudio && it.isNotBlank() }?.let { DigitalAttachment(it, kind = "audio") },
+            ebookUrl?.takeIf { hasEbook && it.isNotBlank() }?.let { DigitalAttachment(it, kind = "ebook") },
+        )
+    }.filter { it.safeUrl != null }.distinctBy { it.url }
+}
+
+@Serializable
+data class DigitalAttachment(val url: String = "", val label: String = "", val kind: String = "ebook") {
+    val safeUrl: String? get() = url.takeIf {
+        val uri = runCatching { java.net.URI(it) }.getOrNull()
+        uri?.scheme?.lowercase() in listOf("http", "https") && !uri?.host.isNullOrBlank()
+    }
+    val format: String get() = runCatching { java.net.URI(url).path.substringAfterLast('.').uppercase() }.getOrDefault("")
+    val isPdf: Boolean get() = format == "PDF"
 }
 
 @Serializable
@@ -537,3 +564,6 @@ data class MyReview(
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
 )
+
+@Serializable
+data class GenreRef(val id: Int = 0, val name: String = "")

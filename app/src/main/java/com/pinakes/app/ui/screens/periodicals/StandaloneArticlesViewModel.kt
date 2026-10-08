@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.StandaloneArticle
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.StandaloneArticlesSource
+import com.pinakes.app.data.repository.ArticleFilters
 import com.pinakes.app.ui.navigation.Routes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -33,7 +34,12 @@ class StandaloneArticlesViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val mastheadId = savedStateHandle.get<Int>(Routes.ARG_PERIODICAL_ID)?.takeIf { it > 0 }
-    private val mutableState = MutableStateFlow(StandaloneArticlesUiState())
+    private val issueId = savedStateHandle.get<Int>(Routes.ARG_PERIODICAL_ISSUE_ID)?.takeIf { it > 0 }
+    private val container = savedStateHandle.get<String>("container")?.takeIf { it.isNotBlank() }
+    private val keyword = savedStateHandle.get<String>("keyword")?.takeIf { it.isNotBlank() }
+    private val genreId = savedStateHandle.get<Int>("genreId")?.takeIf { it > 0 }
+    val activeFilters = listOfNotNull(container, keyword)
+    private val mutableState = MutableStateFlow(StandaloneArticlesUiState(query = savedStateHandle.get<String>("q").orEmpty()))
     val state = mutableState.asStateFlow()
     private var supported: Boolean? = null
     private var generation = 0
@@ -70,7 +76,7 @@ class StandaloneArticlesViewModel @Inject constructor(
                 mutableState.update { it.copy(loading = false, unavailable = true) }
                 return@launch
             }
-            val result = source.articles(query, mastheadId)
+            val result = source.searchArticles(ArticleFilters(query, mastheadId, issueId, genreId, container = container, keyword = keyword))
             if (request != generation) return@launch
             when (result) {
                 is ApiResult.Success -> mutableState.update {
@@ -92,7 +98,7 @@ class StandaloneArticlesViewModel @Inject constructor(
         val request = generation
         mutableState.update { it.copy(loadingMore = true, moreError = false) }
         viewModelScope.launch {
-            val result = source.articles(current.query.takeIf { it.isNotBlank() }, mastheadId, current.nextCursor)
+            val result = source.searchArticles(ArticleFilters(current.query.takeIf { it.isNotBlank() }, mastheadId, issueId, genreId, container = container, keyword = keyword), current.nextCursor)
             if (request != generation) return@launch
             when (result) {
                 is ApiResult.Success -> mutableState.update {

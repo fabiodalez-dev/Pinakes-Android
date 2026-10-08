@@ -27,10 +27,10 @@ class StandaloneArticleUiTest {
             )
         } }
         compose.onNodeWithText("Article subtitle").assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.periodicals_open_pdf)).performClick()
-        compose.onNodeWithText("Archive copy").performClick()
+        compose.onNodeWithText(text(R.string.periodicals_open_pdf)).performScrollTo().performClick()
+        compose.onNodeWithText("Archive copy").performScrollTo().performClick()
         compose.onNodeWithText("Reading room use").assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.standalone_article_open_web)).performScrollTo().performClick()
+        compose.onNodeWithText(text(R.string.standalone_article_open_web)).performScrollTo().performScrollTo().performClick()
         compose.runOnIdle { assertEquals(listOf(1, 1, 1), listOf(pdf, resource, web)) }
     }
 
@@ -56,8 +56,8 @@ class StandaloneArticleUiTest {
                 onOpenPdf = {}, onOpenPeriodical = {}, onOpenIssue = {},
             )
         } }
-        compose.onNodeWithText("archive/1988/petersen.pdf").assertIsDisplayed().assertHasNoClickAction()
-        compose.onNodeWithText("In library only").assertIsDisplayed()
+        compose.onNodeWithText("archive/1988/petersen.pdf").performScrollTo().assertIsDisplayed().assertHasNoClickAction()
+        compose.onNodeWithText("In library only").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(text(R.string.standalone_article_online_resource)).assertDoesNotExist()
     }
 }

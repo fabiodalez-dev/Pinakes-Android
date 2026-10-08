@@ -1,5 +1,7 @@
 package com.pinakes.app.ui.screens.home
 
+import androidx.lifecycle.SavedStateHandle
+import com.pinakes.app.ui.screens.search.BookSort
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.BookSummary
@@ -28,6 +30,7 @@ data class HomeUiState(
     val available: List<BookSummary> = emptyList(),
     val loading: Boolean = true,
     val error: String? = null,
+    val sort: BookSort = BookSort.NEWEST,
 ) {
     val isEmpty: Boolean get() = !loading && error == null && available.isEmpty()
 }
@@ -37,10 +40,11 @@ class HomeViewModel @Inject constructor(
     private val catalog: CatalogRepository,
     private val session: SessionStore,
     private val features: FeatureStore,
+    private val saved: SavedStateHandle,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
-        HomeUiState(libraryName = session.libraryName?.takeIf { it.isNotBlank() })
+        HomeUiState(libraryName = session.libraryName?.takeIf { it.isNotBlank() }, sort = saved.get<String>("sort")?.let { name -> BookSort.entries.firstOrNull { it.name == name } } ?: BookSort.NEWEST)
     )
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
 
@@ -50,6 +54,7 @@ class HomeViewModel @Inject constructor(
      * the cache only holds the first unfiltered page, a subset of the real answer.
      */
     private var hasFreshShelf = false
+    private var generation = 0
 
     init {
         observeCache()
@@ -92,7 +97,7 @@ class HomeViewModel @Inject constructor(
                 catalog.observeCachedCatalog(),
                 catalogueMode(),
             ) { books, catalogueMode -> books to catalogueMode }.collectLatest { (books, catalogueMode) ->
-                if (hasFreshShelf) return@collectLatest
+                if (hasFreshShelf || _state.value.sort != BookSort.NEWEST) return@collectLatest
                 val shelfBooks =
                     if (catalogueMode) books
                     else books.filter { it.available }
@@ -120,6 +125,8 @@ class HomeViewModel @Inject constructor(
      * an error when there is nothing cached to fall back on.
      */
     fun refresh() {
+        val request = ++generation
+        val sort = _state.value.sort
         viewModelScope.launch {
             // Catalogue-only mode labels the shelf "Recently added / latest additions", so
             // query the newest titles unfiltered (no availability filter) to make the label
@@ -128,9 +135,11 @@ class HomeViewModel @Inject constructor(
             val shelfFilters =
                 if (features.features.value.catalogueMode) SearchFilters()
                 else SearchFilters(availableOnly = true)
-            val shelf = async { catalog.search(shelfFilters, limit = SHELF_LIMIT) }
+            val shelf = async { catalog.search(shelfFilters, limit = SHELF_LIMIT, sort = sort.apiValue) }
             launch { catalog.refreshCatalog() }
-            when (val res = shelf.await()) {
+            val res = shelf.await()
+            if (request != generation) return@launch
+            when (res) {
                 is ApiResult.Success -> {
                     hasFreshShelf = true
                     _state.update {
@@ -142,12 +151,20 @@ class HomeViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             loading = false,
-                            error = if (hasCache) null else res.message.takeIf { m -> m.isNotBlank() },
+                            error = if (hasCache && _state.value.available.isNotEmpty()) null else res.message.ifBlank { "Unable to load the library." },
                         )
                     }
                 }
             }
         }
+    }
+
+    fun setSort(sort: BookSort) {
+        if (sort !in listOf(BookSort.NEWEST, BookSort.TITLE_ASC, BookSort.AUTHOR_ASC) || sort == _state.value.sort) return
+        saved["sort"] = sort.name
+        hasFreshShelf = true
+        _state.update { it.copy(sort = sort, loading = true, available = emptyList(), error = null) }
+        refresh()
     }
 
     fun retry() = refresh()

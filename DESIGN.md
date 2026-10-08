@@ -258,3 +258,13 @@ The client applies these shared tokens to every existing screen. Home uses the r
 The current API does **not** supply home CMS sections/statistics/selected covers, author/publisher count facets, wanted flags, summary digital flags, related titles, citations or external-source/share targets. Do not fabricate these or imply they were ported; expose them when the server contract provides them. The original web layouts remain the reference for future additions.
 
 Fonts are bundled as static faces for reliable rendering from API 26, with Latin Extended coverage. Font sources and OFL licences are recorded in `docs/fonts/`.
+
+## Implemented optional collections (2026-10-08)
+
+Archives and library Desiderata are reachable from Home/Profile, preserving
+Home/Catalog/Library/Wishlist/Profile. They use dedicated paginated models, not
+book availability. Articles appear in Catalog and issue detail, carry analytic
+and anthology fields and the shared five-style Cite dialog; author IDs connect
+books and articles without conflating homonyms. Staff actions open protected
+PHP pages. New routes/capabilities require the matching server plugin update;
+older servers cannot supply native collections merely because the client updates.

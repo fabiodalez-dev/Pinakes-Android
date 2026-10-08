@@ -3,7 +3,8 @@
 Native Android client for a [Pinakes](https://github.com/fabiodalez-dev/Pinakes)
 library instance. Browse the catalog, check real availability, borrow and reserve
 books, read ebooks and listen to audiobooks, and manage your loans, all from your
-phone.
+phone. Optional Archives, Desiderata and analytic articles are available when the
+server advertises their APIs. The five bottom navigation destinations are retained.
 
 ![Platform](https://img.shields.io/badge/platform-Android-3DDC84)
 ![minSdk](https://img.shields.io/badge/minSdk-26-blue)
@@ -224,3 +225,23 @@ Publication screens also link to their associated articles. Article covers, subt
 and published online resources follow the server data. Public PDFs use the
 URL supplied by the server; the website action opens the article’s full page. Older servers retain the existing periodicals browser.
 See [the article integration notes](docs/emeroteca-standalone-articles.md).
+
+## Android 1.6 / current server parity
+
+The updated client reads Mobile API 1.5.0, Desiderata 1.2.0, Emeroteca 1.13.0 and
+Archives 1.5.1. Update the server/plugins before expecting the new optional
+collection screens. Older instances remain usable; unsupported article facets
+show an upgrade message rather than silently returning unfiltered results.
+
+Desiderata is the library's wanted collection, separate from a member's wishlist.
+Donation contact details come from the verified account. Proposals require
+consent and survive transport retries/process death without creating inventory.
+Archives supports paged hierarchy, text/level/year search, authorities, all
+public documents and export links. Article/book citations are formatted by the
+server, with five styles and text/HTML clipboard copies. Every digital book
+attachment is shown; audio switches one native player at a time.
+
+Administrative cataloguing and uploads open the protected PHP website, including
+the existing article form. No native administrative CRUD API is invented.
+
+See [the request-by-request Uwe verification](docs/UWE-PARITY.md).

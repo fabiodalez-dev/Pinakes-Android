@@ -24,6 +24,7 @@ data class SearchFilters(
     val genreId: Int? = null,
     val language: String? = null,
     val availableOnly: Boolean? = null,
+    val authorId: Int? = null,
 )
 
 /** One page of search results plus the cursor needed to fetch the next page. */
@@ -95,7 +96,8 @@ class CatalogRepository(
             val res = apiCall {
                 api.search(
                     q = filters.query?.takeIf { it.isNotBlank() },
-                    author = filters.author?.takeIf { it.isNotBlank() },
+                    authorId = filters.authorId,
+                    author = filters.author?.takeIf { it.isNotBlank() && filters.authorId == null },
                     publisher = filters.publisher?.takeIf { it.isNotBlank() },
                     genre = filters.genreId,
                     language = filters.language?.takeIf { it.isNotBlank() },

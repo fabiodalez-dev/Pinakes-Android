@@ -86,6 +86,7 @@ import com.pinakes.app.ui.components.AvailabilityStatus
 import com.pinakes.app.ui.components.ErrorState
 import com.pinakes.app.ui.components.HtmlText
 import com.pinakes.app.ui.components.LoadingState
+import com.pinakes.app.ui.components.CitationButton
 import com.pinakes.app.ui.components.MetadataRow
 import com.pinakes.app.ui.components.PinakesTopBar
 import com.pinakes.app.ui.components.PrimaryButton
@@ -104,6 +105,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun BookDetailScreen(
     onNavigateUp: () -> Unit,
+    onFindWorks: (String, Int?) -> Unit = { _, _ -> },
 ) {
     val app: AppViewModel = hiltViewModel()
     val features by app.features.collectAsStateWithLifecycle()
@@ -180,6 +182,7 @@ fun BookDetailScreen(
                     showReviews = features.showReviews,
                     onReserve = vm::openLoanSheet,
                     onToggleWishlist = vm::toggleWishlist,
+                    onFindWorks = onFindWorks,
                     onShowMessage = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } },
                 )
             }
@@ -330,10 +333,12 @@ internal fun DetailContent(
     onReserve: () -> Unit,
     onToggleWishlist: () -> Unit,
     onShowMessage: (String) -> Unit,
+    onFindWorks: (String, Int?) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     var showCover by remember { mutableStateOf(false) }
-    var showPdf by remember { mutableStateOf(false) }
+    var selectedPdf by remember(book.id) { mutableStateOf<String?>(null) }
+    var selectedAudio by remember(book.id) { mutableStateOf<String?>(book.audioUrl?.takeIf { book.hasAudio }) }
 
     Column(
         Modifier
@@ -370,7 +375,7 @@ internal fun DetailContent(
             if (book.authors.isEmpty()) Text(stringResource(R.string.restyle_unknown_author), style = MaterialTheme.typography.bodySmall, color = colors.muted)
             book.authors.forEach { author ->
                 Surface(shape = RoundedCornerShape(50), color = colors.surface, border = BorderStroke(1.dp, colors.line)) {
-                    Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.clickable { onFindWorks(author.name, author.id) }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         val initials = author.name.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }.take(2).map { it.first() }.joinToString("")
                         Box(Modifier.size(24.dp).background(colors.accentSoft, CircleShape), contentAlignment = Alignment.Center) {
                             Text(initials, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.accentStrong)
@@ -382,7 +387,8 @@ internal fun DetailContent(
                 }
             }
         }
-        val genrePath = book.genre?.let { genre ->
+        CitationButton(book.citations, book.risUrl)
+        val genrePath = book.genrePath.takeIf { it.isNotEmpty() }?.joinToString(" › ") { it.name } ?: book.genre?.let { genre ->
             listOfNotNull(genre.grandparent, genre.parent, genre.name, genre.subgenre)
                 .filter { it.isNotBlank() }.distinct().joinToString(" › ")
         }
@@ -469,28 +475,23 @@ internal fun DetailContent(
         ))
         Spacer(Modifier.height(48.dp))
 
-        val hasAudio = book.hasAudio && !book.audioUrl.isNullOrBlank()
-        val hasEbook = book.hasEbook && !book.ebookUrl.isNullOrBlank()
-        if (hasAudio || hasEbook) {
+        val digitalFiles = book.digitalFiles
+        if (digitalFiles.isNotEmpty()) {
             SectionTitle(stringResource(R.string.restyle_digital))
             Spacer(Modifier.height(16.dp))
         }
-        if (hasAudio) {
-            DigitalFileCard(type = "MP3", name = digitalFilename(book.audioUrl!!, book.title),
-                kind = stringResource(R.string.book_section_audiobook)) {
-                AudioPlayer(audioUrl = book.audioUrl!!)
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-        if (hasEbook) {
-            val isPdf = book.ebookFormat?.equals("pdf", ignoreCase = true) == true ||
-                book.ebookUrl!!.substringBefore('?').endsWith(".pdf", ignoreCase = true)
-            DigitalFileCard(type = book.ebookFormat?.uppercase() ?: if (isPdf) "PDF" else "eBook",
-                name = digitalFilename(book.ebookUrl!!, book.title), kind = stringResource(R.string.book_section_ebook)) {
-                PrimaryButton(label = if (isPdf) stringResource(R.string.book_read) else stringResource(R.string.ebook_open_external),
+        digitalFiles.forEach { file ->
+            val audio = file.kind == "audio"
+            DigitalFileCard(type = file.format.ifBlank { if (audio) "Audio" else "eBook" },
+                name = file.label.ifBlank { digitalFilename(file.url, book.title) },
+                kind = stringResource(if (audio) R.string.book_section_audiobook else if (file.kind == "supplement") R.string.book_section_related_documents else R.string.book_section_ebook)) {
+                if (audio && selectedAudio == file.url) {
+                    androidx.compose.runtime.key(file.url) { AudioPlayer(audioUrl = file.url) }
+                } else PrimaryButton(label = stringResource(if (audio) R.string.collection_play else if (file.isPdf) R.string.book_read else R.string.ebook_open_external),
                     onClick = {
-                        if (isPdf) showPdf = true
-                        else runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(book.ebookUrl))) }
+                        if (audio) selectedAudio = file.url
+                        else if (file.isPdf) selectedPdf = file.url
+                        else runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(file.url))) }
                             .onFailure { onShowMessage(context.getString(R.string.ebook_error)) }
                     }, modifier = Modifier.fillMaxWidth(), dark = true)
             }
@@ -521,7 +522,9 @@ internal fun DetailContent(
             Column(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs)) {
                 // Blank guards: the API can send an empty string (not null) for a
                 // missing field — don't render a labelled row with no value.
-                book.publisher?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_publisher), it) }
+                (book.publishers.takeIf { it.isNotEmpty() }?.joinToString("; ") { it.name } ?: book.publisher)?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_publisher), it) }
+                book.edition?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_edition), it) }
+                book.publicationPlace?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_publication_place), it) }
                 book.year?.let { MetadataRow(stringResource(R.string.book_meta_year), it.toString()) }
                 book.language?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_language), it) }
                 book.pages?.let { MetadataRow(stringResource(R.string.book_meta_pages), it.toString()) }
@@ -560,10 +563,10 @@ internal fun DetailContent(
     }
 
     // In-app PDF reader overlay.
-    if (showPdf && !book.ebookUrl.isNullOrBlank()) {
+    selectedPdf?.let { pdf ->
         PdfReaderDialog(
-            pdfUrl = book.ebookUrl!!,
-            onDismiss = { showPdf = false },
+            pdfUrl = pdf,
+            onDismiss = { selectedPdf = null },
         )
     }
 }

@@ -44,6 +44,7 @@ fun StandaloneArticlesScreen(
                 placeholder = stringResource(R.string.standalone_articles_search),
                 modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
             )
+            vm.activeFilters.forEach { Text(it, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = Spacing.lg)) }
             when {
                 state.loading -> LoadingState(label = stringResource(R.string.standalone_articles_loading))
                 state.unavailable -> EmptyState(
@@ -84,14 +85,12 @@ fun StandaloneArticlesScreen(
 }
 
 @Composable
-private fun StandaloneArticleRow(article: StandaloneArticle, onClick: () -> Unit) {
+internal fun StandaloneArticleRow(article: StandaloneArticle, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick).padding(vertical = Spacing.lg),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        article.coverUrl?.takeIf { it.isNotBlank() }?.let { cover ->
-            BookCover(article.title, cover, Modifier.width(64.dp).height(96.dp), compact = true)
-        }
+        BookCover(article.title, article.coverUrl, Modifier.width(64.dp).height(96.dp), compact = true, author = article.authors, publisher = article.containerTitle)
         Column(
             Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),

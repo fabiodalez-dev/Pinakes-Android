@@ -6,6 +6,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -20,6 +22,7 @@ import com.pinakes.app.data.store.AuthState
 import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.screens.bookclub.BookClubHomeScreen
 import com.pinakes.app.ui.screens.bookclub.ClubDetailScreen
+import com.pinakes.app.ui.screens.collections.*
 import com.pinakes.app.ui.screens.contact.ContactScreen
 import com.pinakes.app.ui.screens.detail.BookDetailScreen
 import com.pinakes.app.ui.screens.login.ForgotPasswordScreen
@@ -39,6 +42,7 @@ import com.pinakes.app.ui.screens.reviews.MyReviewsScreen
  * Root navigation. The high-level [AuthState] decides the start destination; within the
  * authenticated graph, [MainScaffold] hosts the bottom-nav tabs and nested routes.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
     val app: AppViewModel = hiltViewModel()
@@ -105,6 +109,12 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onOpenMyReviews = { navController.navigate(Routes.MY_REVIEWS) },
                 onOpenBookClub = { navController.navigate(Routes.BOOK_CLUB) },
                 onOpenPeriodicals = { navController.navigate(Routes.PERIODICALS) },
+                onOpenArticles = { navController.navigate(Routes.standaloneArticles()) },
+                onOpenDesiderata = { navController.navigate(Routes.DESIDERATA) },
+                onOpenArchives = { navController.navigate(Routes.archives()) },
+                onOpenArticle = { navController.navigate(Routes.standaloneArticle(it)) },
+                onOpenWanted = { navController.navigate(Routes.wantedBook(it)) },
+                onOpenArchive = { navController.navigate(Routes.archive(it)) },
             )
         }
 
@@ -121,7 +131,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
             enterTransition = slideIn,
             popExitTransition = slideOut,
         ) {
-            BookDetailScreen(onNavigateUp = { navController.popBackStack() })
+            BookDetailScreen(onNavigateUp = { navController.popBackStack() }, onFindWorks = { name, id -> navController.navigate(Routes.authorWorks(name, id)) })
         }
 
         composable(
@@ -173,7 +183,10 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
 
         composable(
             Routes.STANDALONE_ARTICLES,
-            arguments = listOf(navArgument(Routes.ARG_PERIODICAL_ID) { type = NavType.IntType; defaultValue = 0 }),
+            arguments = listOf(navArgument(Routes.ARG_PERIODICAL_ID) { type = NavType.IntType; defaultValue = 0 },
+                navArgument(Routes.ARG_PERIODICAL_ISSUE_ID) { type = NavType.IntType; defaultValue = 0 },
+                navArgument("container") { defaultValue = "" }, navArgument("keyword") { defaultValue = "" },
+                navArgument("genreId") { type = NavType.IntType; defaultValue = 0 }, navArgument("q") { defaultValue = "" }),
             enterTransition = slideIn, popExitTransition = slideOut,
         ) {
             StandaloneArticlesScreen(
@@ -190,7 +203,33 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onNavigateUp = { navController.popBackStack() },
                 onOpenPeriodical = { id -> navController.navigate(Routes.periodicalDetail(id)) },
                 onOpenIssue = { id -> navController.navigate(Routes.periodicalIssue(id)) },
+                onFindWorks = { name, id -> navController.navigate(Routes.authorWorks(name, id)) },
+                onFindArticles = { container, keyword, genre -> navController.navigate(Routes.standaloneArticles(container = container, keyword = keyword, genreId = genre)) },
             )
+        }
+
+        composable(Routes.AUTHOR_WORKS, arguments = listOf(navArgument("author") { defaultValue = "" }, navArgument("authorId") { type = NavType.IntType; defaultValue = 0 })) { entry ->
+            androidx.compose.material3.Scaffold(topBar = { com.pinakes.app.ui.components.PinakesTopBar(entry.arguments?.getString("author").orEmpty(), onNavigateUp = { navController.popBackStack() }) }) { padding ->
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.padding(padding)) {
+                    com.pinakes.app.ui.screens.search.SearchScreen(onBookClick = { navController.navigate(Routes.bookDetail(it)) },
+                        onArticleClick = { navController.navigate(Routes.standaloneArticle(it)) }, initialAuthor = entry.arguments?.getString("author"), initialAuthorId = entry.arguments?.getInt("authorId"))
+                }
+            }
+        }
+        composable(Routes.DESIDERATA) {
+            DesiderataScreen({ navController.popBackStack() }, { navController.navigate(Routes.wantedBook(it)) }, { navController.navigate(Routes.donation(it)) })
+        }
+        composable(Routes.WANTED_BOOK, arguments = listOf(navArgument(Routes.ARG_WANTED_ID) { type = NavType.IntType })) {
+            WantedBookScreen({ navController.popBackStack() }, { navController.navigate(Routes.donation(it)) })
+        }
+        composable(Routes.DONATION, arguments = listOf(navArgument(Routes.ARG_WANTED_ID) { type = NavType.IntType; defaultValue = 0 })) {
+            DonationScreen({ navController.popBackStack() }, { if (!navController.popBackStack(Routes.DESIDERATA, false)) navController.navigate(Routes.DESIDERATA) { popUpTo(Routes.DONATION) { inclusive = true } } })
+        }
+        composable(Routes.ARCHIVES, arguments = listOf(navArgument(Routes.ARG_ARCHIVE_PARENT) { type = NavType.IntType; defaultValue = 0 })) {
+            ArchivesScreen({ navController.popBackStack() }, { navController.navigate(Routes.archive(it)) })
+        }
+        composable(Routes.ARCHIVE, arguments = listOf(navArgument(Routes.ARG_ARCHIVE_ID) { type = NavType.IntType })) {
+            ArchiveScreen({ navController.popBackStack() }, { navController.navigate(Routes.archive(it)) }, { navController.navigate(Routes.archives(it)) })
         }
 
         // ---- Periodicals / Emeroteca (optional plugin) ----
@@ -242,7 +281,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
             enterTransition = slideIn,
             popExitTransition = slideOut,
         ) {
-            IssueDetailScreen(onNavigateUp = { navController.popBackStack() })
+            IssueDetailScreen(onNavigateUp = { navController.popBackStack() }, onOpenArticle = { navController.navigate(Routes.standaloneArticle(it)) }, onFindArticles = { navController.navigate(Routes.standaloneArticles(issueId = it)) })
         }
     }
 }
