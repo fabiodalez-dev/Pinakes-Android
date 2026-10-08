@@ -1,5 +1,6 @@
 package com.pinakes.app.ui.screens.periodicals
 
+import com.pinakes.app.ui.theme.PublicationTitleStyle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -135,7 +136,7 @@ private fun IssueHeader(issue: PeriodicalIssueDetail) {
             Spacer(Modifier.height(Spacing.md))
             Text(
                 issueHeading(issue.number, issue.title),
-                style = MaterialTheme.typography.titleMedium,
+                style = PublicationTitleStyle,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             val yearLine = issue.year?.let { y ->
@@ -191,7 +192,7 @@ private fun ArticleRow(article: IssueArticle) {
             Column(Modifier.weight(1f)) {
                 Text(
                     article.title,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = PublicationTitleStyle,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 article.authors?.takeIf { it.isNotBlank() }?.let {

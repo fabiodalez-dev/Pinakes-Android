@@ -1,5 +1,6 @@
 package com.pinakes.app.ui.screens.periodicals
 
+import com.pinakes.app.ui.theme.PublicationTitleStyle
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -88,7 +89,7 @@ private fun StandaloneArticleRow(article: StandaloneArticle, onClick: () -> Unit
         Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick).padding(vertical = Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Text(article.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+        Text(article.title, style = PublicationTitleStyle, color = MaterialTheme.colorScheme.onSurface)
         article.authors?.takeIf { it.isNotBlank() }?.let {
             Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
         }

@@ -26,6 +26,9 @@ private fun heading(size: Int, line: Int) = TextStyle(fontFamily = Fraunces,
 private fun ui(size: Int, line: Int, weight: FontWeight = FontWeight.Normal) = TextStyle(fontFamily = Geist,
     fontWeight = weight, fontSize = size.sp, lineHeight = line.sp, letterSpacing = 0.sp)
 
+/** Publication titles stay distinct from interface labels in compact rows. */
+val PublicationTitleStyle = heading(17, 21)
+
 val PinakesTypography = Typography(
     displayLarge = heading(54, 58), displayMedium = heading(44, 48), displaySmall = heading(40, 44),
     headlineLarge = heading(36, 40), headlineMedium = heading(32, 36), headlineSmall = heading(28, 32),

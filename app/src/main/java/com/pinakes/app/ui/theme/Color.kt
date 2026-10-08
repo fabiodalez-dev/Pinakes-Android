@@ -62,7 +62,10 @@ class PinakesColors(palette: ThemePalette, val darkMode: Boolean) {
     val accentSofter = mix(accent, background, .05f)
     val accentLine = mix(accent, surface, .16f)
     val heroWash = if (darkMode) mix(accent, background, .10f) else mix(accent, Color(0xFFF7F1F3), .06f)
-    val dark = readableColor(palette.secondary, Color.White)
+    val dark = readableColor(
+        if (darkMode) readableColor(palette.secondary, surface, minimum = 3.0) else palette.secondary,
+        Color.White,
+    )
     val buttonText = palette.buttonText
     val button = readableColor(palette.button, buttonText)
     val coverBlank = Color(0xFF2A2230)

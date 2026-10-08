@@ -61,8 +61,8 @@ Login, home, catalog, book detail and calendar captures use the 2026 interface o
 | **Sign in & sign up** | Email/password login, **in-app registration** and **password recovery**, mapped error messages, secure token storage |
 | **Home** | Searchable library hero, a fan of real shelf covers, and an "Available now" / recent shelf |
 | **Catalog** | Two-column book grid or compact list, infinite scroll, search, sort and a filter sheet (availability, genre, author, publisher, language) |
-| **Book detail** | HTML-rendered description, tap-to-zoom cover, full metadata block (ISBN, year, pages …), genre chip |
-| **Availability** | Colour-coded state: green available, red on loan, amber reserved |
+| **Book detail** | HTML-rendered description, tap-to-zoom cover, full metadata block (ISBN, year, pages …), genre hierarchy |
+| **Availability** | Neutral status pills with a coloured dot: green available, red on loan, amber reserved |
 | **Loan calendar** | Pick a start date on a calendar that paints already-booked days and pre-selects the first free day |
 | **Audiobooks** | In-app player (Media3 ExoPlayer) when the title has an audio file |
 | **Ebooks** | In-app PDF reader (PdfRenderer); other formats open externally |

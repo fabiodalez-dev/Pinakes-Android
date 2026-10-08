@@ -56,7 +56,7 @@ The other themes, for testing (primary · button · secondary · button_text):
 - Minimal `#404040` · `#808080` · `#000000` · `#FFFFFF`
 - Coral Warm `#F43F5E` · `#FB7185` · `#9F1239` · `#FFFFFF`
 
-**Pairing rule (the most common bug on the web):** a filled surface always carries its paired text colour. `button` ↔ `buttonText`. `dark` ↔ white. `accent` is for text, icons, dots, outlines and tinted backgrounds (`accentSoft`), and is never the fill under accent-coloured text. Never put `accent` text on a `button` fill. Check every themed screen with at least Classic, Ocean Blue and Minimal.
+**Pairing rule (the most common bug on the web):** a filled surface always carries its paired text colour. `button` ↔ `buttonText`. `dark` ↔ white. In dark mode the dark action fill is lifted just enough to contrast 3:1 with its card, while retaining 4.5:1 with white text. `accent` is for text, icons, dots, outlines and tinted backgrounds (`accentSoft`), and is never the fill under accent-coloured text. Never put `accent` text on a `button` fill. Check every themed screen with at least Classic, Ocean Blue and Minimal.
 
 **Contrast:** the current web uses `ThemeColorizer::readableSurface()` and readable accent tokens. Preserve each theme's hue and the `button` / `buttonText` pairing, moving the surface or accent text only as far as needed for 4.5:1. The Android palette applies the same rule in sRGB; raw `primary` remains the source for washes, rules and cover tints. This supersedes the earlier instruction to retain inaccessible light-button/white-text pairs.
 
@@ -148,7 +148,7 @@ Grid: 2 columns on phones, 28 vertical / 14 horizontal gap. An optional list vie
 - **Chip link** (Cerca su, Condividi): transparent, 1dp `line2`, 13sp `ink`, fully round, 5×11. Pressed → accent border and text.
 
 ### Inputs
-Fill `surface` (or `soft` for the search field), radius 10, **no border** (Fabio's call), `ink` text, `faint` placeholder. Focus → 1dp accent border plus a 3dp `accentLine` ring.
+Fill `soft` on white cards and dialogs (including search), radius 10, **no border** (Fabio's call). The neutral fill keeps an unfocused field distinguishable from its white host. Use `ink` text, `faint` placeholder. On Android, outlined fields use Material’s accent focus outline so floating labels and validation copy stay outside it; the label-free search control adds a 3dp `accentLine` ring.
 
 ### Chips
 - Author chip: white pill, 1dp `line`, a 24dp circle with the initials (`accentSoft` fill, `accentStrong` text, 11/700), the name 14/500. Roles other than author follow the name: "· Traduttore".

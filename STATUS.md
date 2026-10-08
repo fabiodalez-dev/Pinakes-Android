@@ -6,9 +6,9 @@ The app now uses the 2026 web design: Geist / Fraunces, warm neutrals, a server-
 
 - Debug APK: `pinakes-debug.apk`, copied from `app/build/outputs/apk/debug/app-debug.apk` (generated locally and ignored by Git).
 - Package: `com.pinakes.app`, version `1.5.2` (16), minSdk 26, target/compileSdk 35.
-- Local verification: **169 unit tests, 10 Compose device tests, zero lint errors**, and successful debug + R8 release builds.
+- Local verification: **169 unit tests, 12 Compose device tests, zero lint errors**, and successful debug + R8 release builds.
 - Verification commands: `assembleDebug`, `testDebugUnitTest`, `lintDebug`, `connectedDebugAndroidTest`, `assembleRelease`.
-- Unit tests cover the existing contracts and theme contrast/mixing. Compose device tests cover full tall artwork, missing metadata, grid actions, view selection, digital-file cards, narrow search placeholders, circulation actions and theme pairings.
+- Unit tests cover the existing contracts and theme contrast/mixing. Compose device tests cover full tall artwork, missing metadata, grid actions, view selection, digital-file cards, narrow search placeholders, circulation actions theme pairings, reachable empty-home actions and query preservation during loading.
 - Release builds exercise R8 and resource shrinking. Without release credentials the output is unsigned; no store release is published by this change.
 - `ThemePalette` defaults to Classic / Covers. Discovery does not expose theme, CMS home sections, richer catalog facets, wanted flags or related/citation/share data yet; these are documented as future API work in DESIGN.md.
 

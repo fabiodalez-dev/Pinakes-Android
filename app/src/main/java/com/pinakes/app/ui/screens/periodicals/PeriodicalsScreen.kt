@@ -1,5 +1,6 @@
 package com.pinakes.app.ui.screens.periodicals
 
+import com.pinakes.app.ui.theme.PublicationTitleStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -193,7 +194,7 @@ private fun PeriodicalCard(periodical: PeriodicalSummary, onClick: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(
                     periodical.title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = PublicationTitleStyle,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

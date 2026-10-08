@@ -20,7 +20,9 @@ class ThemePaletteTest {
         for (palette in palettes) for (dark in listOf(false, true)) {
             val c = PinakesColors(palette, dark)
             val pairs = listOf(c.accentText to c.background, c.accentStrong to c.accentSoft,
-                c.buttonText to c.button, Color.White to c.dark, c.ink to c.surface, c.muted to c.background)
+                c.buttonText to c.button, Color.White to c.dark, c.ink to c.surface, c.muted to c.background,
+                c.ink to c.soft, c.muted to c.soft, c.accentStrong to c.soft)
+            if (dark) assertTrue("Dark button must be distinguishable from its card", contrastRatio(c.dark, c.surface) >= 2.9999)
             pairs.forEach { (text, surface) -> assertTrue("$palette dark=$dark contrast=${contrastRatio(text, surface)}",
                 contrastRatio(text, surface) >= 4.4999) }
         }

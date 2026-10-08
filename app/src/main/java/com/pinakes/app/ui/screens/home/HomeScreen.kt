@@ -4,6 +4,8 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
@@ -74,8 +76,20 @@ fun HomeScreen(
     val features by app.features.collectAsStateWithLifecycle()
     val vm: HomeViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
-    val catalogueMode = features.catalogueMode
+    HomeContent(state, features.catalogueMode, onBookClick, onBrowseCatalog, onSearch, vm::retry)
+}
 
+/** Query state belongs above the phase transition, so loading cannot clear a draft. */
+@Composable
+internal fun HomeContent(
+    state: HomeUiState,
+    catalogueMode: Boolean,
+    onBookClick: (Int) -> Unit,
+    onBrowseCatalog: () -> Unit,
+    onSearch: (String) -> Unit,
+    onRetry: () -> Unit,
+) {
+    var heroQuery by rememberSaveable { mutableStateOf("") }
     Crossfade(
         targetState = when {
             state.loading -> HomePhase.Loading
@@ -87,8 +101,8 @@ fun HomeScreen(
         label = "home_phase",
     ) { phase ->
         when (phase) {
-            HomePhase.Loading -> Column(Modifier.fillMaxSize()) {
-                HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode, books = state.available, onBookClick = onBookClick, onSearch = onSearch)
+            HomePhase.Loading -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode, books = state.available, onBookClick = onBookClick, onSearch = onSearch, query = heroQuery, onQueryChange = { heroQuery = it })
                 Column(Modifier.padding(horizontal = Spacing.lg)) {
                     SectionHeader(showSeeAll = false, catalogueMode = catalogueMode, onSeeAll = {})
                     Spacer(Modifier.height(Spacing.md))
@@ -101,18 +115,19 @@ fun HomeScreen(
 
             HomePhase.Error -> ErrorState(
                 message = state.error ?: stringResource(R.string.home_error),
-                onRetry = vm::retry,
+                onRetry = onRetry,
             )
 
-            HomePhase.Empty -> Column(Modifier.fillMaxSize()) {
-                HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode, books = state.available, onBookClick = onBookClick, onSearch = onSearch)
-                EmptyState(
-                    title = stringResource(R.string.home_empty_title),
-                    subtitle = stringResource(R.string.home_empty_subtitle),
-                    icon = Icons.AutoMirrored.Outlined.MenuBook,
-                    actionLabel = stringResource(R.string.home_browse_catalog),
-                    onAction = onBrowseCatalog,
-                )
+            HomePhase.Empty -> LazyColumn(Modifier.fillMaxSize()) {
+                item { HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode, books = state.available,
+                    onBookClick = onBookClick, onSearch = onSearch, query = heroQuery, onQueryChange = { heroQuery = it }) }
+                item {
+                    EmptyState(
+                        title = stringResource(R.string.home_empty_title), subtitle = stringResource(R.string.home_empty_subtitle),
+                        icon = Icons.AutoMirrored.Outlined.MenuBook, actionLabel = stringResource(R.string.home_browse_catalog),
+                        onAction = onBrowseCatalog,
+                    )
+                }
             }
 
             HomePhase.Content -> LazyColumn(
@@ -120,7 +135,7 @@ fun HomeScreen(
                 contentPadding = PaddingValues(bottom = Spacing.xxl),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
-                item { HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode, books = state.available, onBookClick = onBookClick, onSearch = onSearch) }
+                item { HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode, books = state.available, onBookClick = onBookClick, onSearch = onSearch, query = heroQuery, onQueryChange = { heroQuery = it }) }
                 item {
                     Box(Modifier.padding(horizontal = Spacing.lg)) {
                         SectionHeader(showSeeAll = true, catalogueMode = catalogueMode, onSeeAll = onBrowseCatalog)
@@ -158,9 +173,8 @@ private enum class HomePhase { Loading, Error, Empty, Content }
 /** The library identity and the real shelf covers, never a decorative stock photo. */
 @Composable
 private fun HomeHeader(libraryName: String?, catalogueMode: Boolean, books: List<BookSummary>,
-    onBookClick: (Int) -> Unit, onSearch: (String) -> Unit) {
+    onBookClick: (Int) -> Unit, onSearch: (String) -> Unit, query: String, onQueryChange: (String) -> Unit) {
     val colors = LocalPinakesColors.current
-    var query by rememberSaveable { mutableStateOf("") }
     val centered = colors.heroStyle == HeroStyle.Centered
     Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(colors.accentSofter, colors.background)))
         .padding(horizontal = Spacing.lg, vertical = Spacing.xxl),
@@ -182,7 +196,7 @@ private fun HomeHeader(libraryName: String?, catalogueMode: Boolean, books: List
             Text(stringResource(R.string.home_browse_only_note), style = MaterialTheme.typography.labelMedium, color = colors.accentText)
         }
         Spacer(Modifier.height(24.dp))
-        SearchField(query, { query = it }, Modifier.fillMaxWidth(),
+        SearchField(query, onQueryChange, Modifier.fillMaxWidth(),
             placeholder = stringResource(R.string.restyle_search_catalog), onSearch = { onSearch(query) })
         Spacer(Modifier.height(8.dp))
         PrimaryButton(stringResource(R.string.cd_search), { onSearch(query) }, modifier = Modifier.fillMaxWidth(),

@@ -60,12 +60,11 @@ fun PinakesTextField(
     singleLine: Boolean = true,
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
     OutlinedTextField(
         interactionSource = interaction,
         value = value,
         onValueChange = { if (it.length <= maxLength) onValueChange(it) },
-        modifier = modifier.then(if (focused) Modifier.border(3.dp, LocalPinakesColors.current.accentLine, MaterialTheme.shapes.small) else Modifier),
+        modifier = modifier,
         label = { Text(label) },
         placeholder = if (placeholder.isNotBlank()) ({ Text(placeholder) }) else null,
         leadingIcon = leadingIcon?.let { icon ->
@@ -85,9 +84,9 @@ fun PinakesTextField(
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
             unfocusedBorderColor = Color.Transparent,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
         ),
     )
 }
@@ -198,12 +197,11 @@ private fun PinakesTextField(
     visualTransformation: VisualTransformation,
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
     OutlinedTextField(
         interactionSource = interaction,
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.then(if (focused) Modifier.border(3.dp, LocalPinakesColors.current.accentLine, MaterialTheme.shapes.small) else Modifier),
+        modifier = modifier,
         label = { Text(label) },
         trailingIcon = trailingIcon,
         isError = isError,
@@ -218,9 +216,9 @@ private fun PinakesTextField(
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
             unfocusedBorderColor = Color.Transparent,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
         ),
     )
 }

@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -354,7 +355,7 @@ internal fun DetailContent(
                 }
             }
             book.publisher?.takeIf { it.isNotBlank() }?.let { Text(it, color = colors.accentText, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)) }
-            book.year?.let { Text("· $it", color = colors.muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)) }
+            book.year?.let { Text(if (book.publisher.isNullOrBlank()) "$it" else "· $it", color = colors.muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)) }
         }
         Spacer(Modifier.height(16.dp))
         Text(book.title, style = MaterialTheme.typography.headlineLarge, color = colors.ink)
@@ -379,9 +380,13 @@ internal fun DetailContent(
                 }
             }
         }
-        book.genreLabel?.takeIf { it.isNotBlank() }?.let { genre ->
+        val genrePath = book.genre?.let { genre ->
+            listOfNotNull(genre.grandparent, genre.parent, genre.name, genre.subgenre)
+                .filter { it.isNotBlank() }.distinct().joinToString(" › ")
+        }
+        genrePath?.takeIf { it.isNotBlank() }?.let { genre ->
             Spacer(Modifier.height(16.dp))
-            GenreChip(genre)
+            GenrePath(genre)
         }
         Spacer(Modifier.height(24.dp))
         Surface(shape = MaterialTheme.shapes.large, color = colors.surface, border = BorderStroke(1.dp, colors.line),
@@ -637,18 +642,15 @@ private data class BannerSpec(
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
 )
 
-/** Magenta-tinted genre chip (primaryContainer / onPrimaryContainer). Shown when present. */
 @Composable
-private fun GenreChip(label: String) {
-    Surface(
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.primaryContainer,
-    ) {
+private fun GenrePath(label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(Icons.Outlined.LocalOffer, contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

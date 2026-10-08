@@ -1,5 +1,6 @@
 package com.pinakes.app.ui.screens.bookclub
 
+import com.pinakes.app.ui.theme.PublicationTitleStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -278,7 +279,7 @@ private fun ClubBookCard(book: ClubBook, canParticipate: Boolean, onUpdateProgre
         Column(Modifier.padding(Spacing.lg)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(book.title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(book.title, style = PublicationTitleStyle, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     if (book.authors.isNotBlank()) {
                         Text(book.authors, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }

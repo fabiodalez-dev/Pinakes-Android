@@ -1,5 +1,6 @@
 package com.pinakes.app.ui.screens.periodicals
 
+import com.pinakes.app.ui.theme.PublicationTitleStyle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -177,7 +178,7 @@ private fun IssueRow(issue: PeriodicalIssue, onClick: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(
                     issueHeading(issue.number, issue.title),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = PublicationTitleStyle,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

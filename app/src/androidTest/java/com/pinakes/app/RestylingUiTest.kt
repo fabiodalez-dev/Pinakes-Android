@@ -15,6 +15,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.ui.components.*
 import com.pinakes.app.ui.screens.detail.DetailContent
+import com.pinakes.app.ui.screens.home.HomeContent
+import com.pinakes.app.ui.screens.home.HomeUiState
 import com.pinakes.app.ui.theme.*
 import org.junit.Assert.*
 import org.junit.Rule
@@ -112,6 +114,24 @@ class RestylingUiTest {
             placeholder = "Search the entire catalog by title, author or publisher") } }
         val bounds = compose.onNodeWithTag("search").getUnclippedBoundsInRoot()
         assertTrue("Placeholder expanded the search field to multiple lines", (bounds.bottom - bounds.top) <= 60.dp)
+    }
+
+    @Test fun emptyHomeKeepsItsCatalogActionReachableOnAShortPhone() {
+        var browsed = false
+        compose.setContent { PinakesTheme { Surface(Modifier.size(360.dp, 480.dp)) {
+            HomeContent(HomeUiState(libraryName = "Library", loading = false), false, {}, { browsed = true }, {}, {})
+        } } }
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(text(R.string.home_browse_catalog)))
+        compose.onNodeWithText(text(R.string.home_browse_catalog)).performClick()
+        assertTrue(browsed)
+    }
+
+    @Test fun homeSearchSurvivesTheLoadingPhaseTransition() {
+        var state by mutableStateOf(HomeUiState(libraryName = "Library", loading = true))
+        compose.setContent { PinakesTheme { HomeContent(state, false, {}, {}, {}, {}) } }
+        compose.onNode(hasSetTextAction()).performTextInput("Eco")
+        compose.runOnIdle { state = state.copy(loading = false) }
+        compose.onNode(hasSetTextAction()).assertTextEquals("Eco")
     }
 
     @Test fun oceanThemeUsesItsButtonTextPair() = themedButtons(ThemePalette(Color(0xFF0284C7), Color(0xFF0C4A6E), Color(0xFF0EA5E9)))
