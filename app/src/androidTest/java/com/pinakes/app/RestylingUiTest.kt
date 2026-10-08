@@ -77,7 +77,8 @@ class RestylingUiTest {
         compose.waitUntil(10000) { tone != null }
         compose.runOnIdle { assertEquals(BookPlaceholderPapers[bookPlaceholderTone(title)], tone) }
         compose.onAllNodesWithContentDescription(title).assertCountEquals(1)
-        compose.onNodeWithText("Umberto Eco", useUnmergedTree = true).assertDoesNotExist()
+        // The merged accessibility tree stops at the decorative binding.
+        compose.onNodeWithText("Umberto Eco").assertDoesNotExist()
     }
 
     @Test fun gridFallbackKeepsMetadataAndOpensTheBook() {

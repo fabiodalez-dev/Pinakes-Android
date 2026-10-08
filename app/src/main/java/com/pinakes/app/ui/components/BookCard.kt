@@ -27,6 +27,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,7 +53,8 @@ fun BookCover(title: String, coverUrl: String?, modifier: Modifier = Modifier, c
     val imageUrl = bookCoverImageUrl(coverUrl)
     val image = remember(imageUrl, onTone != null) { ImageRequest.Builder(context).data(imageUrl).allowHardware(onTone == null).build() }
     val shape = RoundedCornerShape(topStart = 2.dp, topEnd = 5.dp, bottomEnd = 5.dp, bottomStart = 2.dp)
-    Box(modifier.shadow(if (compact) 3.dp else 12.dp, shape, ambientColor = Color(0xFF320F23), spotColor = Color(0xFF320F23))) {
+    Box(modifier.semantics { contentDescription = title }
+        .shadow(if (compact) 3.dp else 12.dp, shape, ambientColor = Color(0xFF320F23), spotColor = Color(0xFF320F23))) {
         // Paper block, peeking from the fore-edge of the book.
         Canvas(Modifier.fillMaxSize().padding(top = 3.dp, bottom = 3.dp)) {
             drawRect(Color(0xFFF6F2EE))
@@ -66,7 +69,7 @@ fun BookCover(title: String, coverUrl: String?, modifier: Modifier = Modifier, c
             val blank: @Composable () -> Unit = {
                 BookPlaceholder(title, author, publisher, compact, onTone)
             }
-            SubcomposeAsyncImage(model = image, contentDescription = title, modifier = Modifier.fillMaxSize(),
+            SubcomposeAsyncImage(model = image, contentDescription = null, modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit, loading = { blank() }, error = { blank() },
                 onSuccess = { success ->
                     if (onTone != null) (success.result.drawable as? BitmapDrawable)?.bitmap?.let { bitmap ->
