@@ -119,8 +119,8 @@ A prebuilt debug APK is published on the [Releases](../../releases) page.
 
 The launcher forwards the remaining options to the Android SDK emulator. On macOS,
 it holds a `caffeinate` assertion for that emulator PID, then releases it when the
-emulator exits; Ctrl+C stops both. This prevents the host's background power policy
-from slowing the VM when its window is occluded. It does not change global power
+emulator exits; Ctrl+C stops both. This reduces host power throttling during local
+testing. It does not change global power
 settings or Android crash reporting.
 
 An Android 15 startup ANR was reproduced before application initialization, along
@@ -128,7 +128,10 @@ with system/launcher stalls. With the same debug APK, host priority dropped to 4
 without the assertion and startup exceeded 21 seconds; with the assertion, three
 cold starts completed in 2.3–3.1 seconds. After restarting the VM through this
 launcher, five more cold starts completed in 1.66–1.80 seconds with no ANR events.
-This is a development-emulator mitigation;
+An older AVD still stalled after a cold boot, and a restored snapshot retained a
+system-not-responding dialog. The assertion alone does not repair an unhealthy
+AVD; use a fresh development AVD without deleting needed user data. This is a
+development-emulator mitigation;
 device ANRs still require their own [trace diagnosis](https://developer.android.com/topic/performance/anrs/diagnose-and-fix-anrs).
 
 ## Point it at a Pinakes instance

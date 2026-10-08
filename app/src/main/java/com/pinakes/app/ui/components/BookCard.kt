@@ -44,10 +44,12 @@ import com.pinakes.app.ui.theme.LocalPinakesColors
 
 /** A complete cover, including unusually tall books and square record sleeves. */
 @Composable
-fun BookCover(title: String, coverUrl: String?, modifier: Modifier = Modifier, compact: Boolean = false, onTone: ((Color) -> Unit)? = null) {
+fun BookCover(title: String, coverUrl: String?, modifier: Modifier = Modifier, compact: Boolean = false, onTone: ((Color) -> Unit)? = null,
+              author: String? = null, publisher: String? = null) {
     val colors = LocalPinakesColors.current
     val context = LocalContext.current
-    val image = remember(coverUrl, onTone != null) { ImageRequest.Builder(context).data(coverUrl).allowHardware(onTone == null).build() }
+    val imageUrl = bookCoverImageUrl(coverUrl)
+    val image = remember(imageUrl, onTone != null) { ImageRequest.Builder(context).data(imageUrl).allowHardware(onTone == null).build() }
     val shape = RoundedCornerShape(topStart = 2.dp, topEnd = 5.dp, bottomEnd = 5.dp, bottomStart = 2.dp)
     Box(modifier.shadow(if (compact) 3.dp else 12.dp, shape, ambientColor = Color(0xFF320F23), spotColor = Color(0xFF320F23))) {
         // Paper block, peeking from the fore-edge of the book.
@@ -62,17 +64,7 @@ fun BookCover(title: String, coverUrl: String?, modifier: Modifier = Modifier, c
         }
         Box(Modifier.fillMaxSize().padding(end = 4.dp).clip(shape).background(colors.coverBlank)) {
             val blank: @Composable () -> Unit = {
-                Column(Modifier.fillMaxSize().padding(horizontal = if (compact) 6.dp else 16.dp, vertical = if (compact) 8.dp else 44.dp),
-                    verticalArrangement = Arrangement.SpaceBetween) {
-                    Text(title, fontFamily = Fraunces, fontWeight = FontWeight.Medium,
-                        fontSize = if (compact) 11.sp else 17.sp, lineHeight = if (compact) 13.sp else 21.sp,
-                        color = Color.White, maxLines = if (compact) 3 else 5, overflow = TextOverflow.Ellipsis)
-                    if (!compact) Column {
-                        Box(Modifier.width(22.dp).height(2.dp).background(colors.accent))
-                        Spacer(Modifier.height(8.dp))
-                        Text("PINAKES", color = Color.White.copy(alpha = .7f), fontSize = 10.sp, letterSpacing = 1.2.sp)
-                    }
-                }
+                BookPlaceholder(title, author, publisher, compact, onTone)
             }
             SubcomposeAsyncImage(model = image, contentDescription = title, modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit, loading = { blank() }, error = { blank() },
@@ -110,7 +102,7 @@ fun BookCard(
     subtitle: String? = null, mediaType: String? = null,
 ) {
     Row(modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        BookCover(title, coverUrl, Modifier.width(64.dp).height(96.dp), compact = true)
+        BookCover(title, coverUrl, Modifier.width(64.dp).height(96.dp), compact = true, author = author, publisher = publisher)
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             BookTitle(title)
@@ -145,7 +137,8 @@ fun BookCardGrid(
         Box(Modifier.fillMaxWidth().then(if (colors.cardStyle == CardStyle.Tinted)
             Modifier.background(com.pinakes.app.ui.theme.mix(coverTone, colors.surface, .16f), RoundedCornerShape(16.dp)).padding(18.dp) else Modifier)) {
             Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).graphicsLayer { translationY = lift.dp.toPx() }) {
-                BookCover(title, coverUrl, Modifier.fillMaxSize(), onTone = if (colors.cardStyle == CardStyle.Tinted) ({ coverTone = it }) else null)
+                BookCover(title, coverUrl, Modifier.fillMaxSize(), onTone = if (colors.cardStyle == CardStyle.Tinted) ({ coverTone = it }) else null,
+                    author = author, publisher = publisher)
                 AvailabilityChip(status, modifier = Modifier.align(Alignment.TopStart).padding(8.dp))
                 Box(Modifier.align(Alignment.BottomEnd).padding(10.dp)) { MediaTypeIcon(mediaType, onCover = true) }
             }

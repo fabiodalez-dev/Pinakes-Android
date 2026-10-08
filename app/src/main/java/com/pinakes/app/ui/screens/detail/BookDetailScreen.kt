@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.shape.CircleShape
 import com.pinakes.app.ui.components.BookQuickFacts
 import com.pinakes.app.ui.components.BookCover
+import com.pinakes.app.ui.components.bookCoverImageUrl
 import com.pinakes.app.ui.components.DigitalFileCard
 import com.pinakes.app.ui.components.MediaTypeIcon
 import com.pinakes.app.ui.theme.LocalPinakesColors
@@ -343,8 +344,9 @@ internal fun DetailContent(
     ) {
         val colors = LocalPinakesColors.current
         BookCover(book.title, book.coverUrl, Modifier.widthIn(max = 340.dp).fillMaxWidth().aspectRatio(2f / 3f)
-            .align(Alignment.CenterHorizontally).then(if (!book.coverUrl.isNullOrBlank())
-                Modifier.clickable(onClickLabel = stringResource(R.string.cd_cover_zoom)) { showCover = true } else Modifier))
+            .align(Alignment.CenterHorizontally).then(if (bookCoverImageUrl(book.coverUrl) != null)
+                Modifier.clickable(onClickLabel = stringResource(R.string.cd_cover_zoom)) { showCover = true } else Modifier),
+            author = book.authorsLabel, publisher = book.publisher)
         Spacer(Modifier.height(32.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.fillMaxWidth()) {
@@ -549,7 +551,7 @@ internal fun DetailContent(
     }
 
     // Full-screen zoomable cover overlay.
-    if (showCover && book.coverUrl != null) {
+    if (showCover && bookCoverImageUrl(book.coverUrl) != null) {
         ZoomableCoverDialog(
             imageUrl = book.coverUrl!!,
             contentDescription = book.title,

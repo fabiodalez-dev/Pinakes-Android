@@ -63,6 +63,23 @@ class RestylingUiTest {
         }
     }
 
+    @Test fun legacyImageUsesTheBindingColourAndAnnouncesTheTitleOnce() {
+        val bitmap = Bitmap.createBitmap(20, 30, Bitmap.Config.ARGB_8888)
+        bitmap.eraseColor(android.graphics.Color.RED)
+        val file = File(context.cacheDir, "placeholder.png")
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        var tone: Color? = null
+        val title = "Il nome della rosa"
+        compose.setContent { PinakesTheme {
+            BookCover(title, file.toURI().toString(), Modifier.size(160.dp, 240.dp),
+                author = "Umberto Eco", publisher = "Bompiani", onTone = { tone = it })
+        } }
+        compose.waitUntil(10000) { tone != null }
+        compose.runOnIdle { assertEquals(BookPlaceholderPapers[bookPlaceholderTone(title)], tone) }
+        compose.onAllNodesWithContentDescription(title).assertCountEquals(1)
+        compose.onNodeWithText("Umberto Eco", useUnmergedTree = true).assertDoesNotExist()
+    }
+
     @Test fun gridFallbackKeepsMetadataAndOpensTheBook() {
         var clicked = false
         compose.setContent { PinakesTheme { Surface { Row(Modifier.width(328.dp)) {
