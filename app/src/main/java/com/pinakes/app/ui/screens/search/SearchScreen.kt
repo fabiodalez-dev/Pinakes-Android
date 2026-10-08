@@ -79,7 +79,10 @@ fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQue
     val showArticles by collectionVm.showArticles.collectAsStateWithLifecycle()
     val showWanted by collectionVm.showWanted.collectAsStateWithLifecycle()
     val showArchives by collectionVm.showArchives.collectAsStateWithLifecycle()
-    androidx.compose.runtime.LaunchedEffect(state.searchRevision, features) { collectionVm.search(state.appliedFilters, features) }
+    androidx.compose.runtime.LaunchedEffect(state.searchRevision, features, state.query) {
+        if (state.query.trim() != state.appliedFilters.query.orEmpty().trim()) collectionVm.clear()
+        else collectionVm.search(state.appliedFilters, features)
+    }
     androidx.compose.runtime.LaunchedEffect(initialAuthor) { initialAuthor?.let { vm.setAuthorIdentity(it, initialAuthorId?.takeIf { id -> id > 0 }); vm.applyFilters() } }
     val otherResults = (showArticles && (articles.items.isNotEmpty() || articles.error != null)) || (showWanted && (wanted.items.isNotEmpty() || wanted.error != null)) || (showArchives && (archives.items.isNotEmpty() || archives.error != null))
     val otherLoading = (showArticles && articles.loading) || (showWanted && wanted.loading) || (showArchives && archives.loading)

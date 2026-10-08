@@ -151,7 +151,7 @@ class HomeViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             loading = false,
-                            error = if (hasCache && _state.value.available.isNotEmpty()) null else res.message.ifBlank { "Unable to load the library." },
+                            error = if (hasCache && _state.value.available.isNotEmpty()) null else res.message,
                         )
                     }
                 }

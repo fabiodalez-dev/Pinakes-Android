@@ -36,10 +36,11 @@ class CollectionSearchViewModel @Inject constructor(private val collections: Col
         showArticles.value = false; showWanted.value = false; showArchives.value = false
         val query = filters.query.orEmpty()
         // Inventory-only facets cannot truthfully be applied to wanted books or archival units.
-        val onlyQuery = filters.author.isNullOrBlank() && filters.publisher.isNullOrBlank() && filters.genreId == null && filters.language == null && filters.availableOnly != true
+        val hasArticleFacet = !filters.author.isNullOrBlank() || filters.authorId != null || !filters.publisher.isNullOrBlank() || filters.genreId != null || !filters.language.isNullOrBlank()
+        val onlyQuery = !hasArticleFacet && filters.availableOnly != true
         if (query.isNotBlank() && onlyQuery && features.desiderataAvailable) { showWanted.value = true; wantedPager.reload(query) }
         if (query.isNotBlank() && onlyQuery && features.archivesAvailable) { showArchives.value = true; archivePager.reload(ArchiveFilters(query)) }
-        if (features.periodicalsAvailable && filters.availableOnly != true) viewModelScope.launch {
+        if (features.periodicalsAvailable && filters.availableOnly != true && (query.isNotBlank() || hasArticleFacet)) viewModelScope.launch {
             val supported = articles.standaloneArticlesSupported()
             if (request != generation || supported != true) return@launch
             showArticles.value = true
@@ -47,6 +48,7 @@ class CollectionSearchViewModel @Inject constructor(private val collections: Col
                 author = filters.author?.takeIf { filters.authorId == null }, authorId = filters.authorId, publisher = filters.publisher))
         }
     }
+    fun clear() { generation++; showArticles.value = false; showWanted.value = false; showArchives.value = false }
     fun moreArticles() = articlePager.more()
     fun moreWanted() = wantedPager.more()
     fun moreArchives() = archivePager.more()

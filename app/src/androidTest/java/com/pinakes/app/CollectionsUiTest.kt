@@ -49,7 +49,7 @@ class CollectionsUiTest {
         } }
         compose.onNodeWithText("Hans Uwe Petersen").performScrollTo().performClick()
         assertEquals(42, selectedAuthor)
-        compose.onNodeWithText(text(R.string.article_cite)).performScrollTo().performClick()
+        compose.onNodeWithText(text(R.string.citation_cite)).performScrollTo().performClick()
         compose.onNodeWithText("Oxford (Umeå)").performClick()
         compose.onNodeWithText("Oxford reference").assertIsDisplayed()
         compose.onNodeWithText(text(R.string.citation_copy)).assertHasClickAction()

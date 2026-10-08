@@ -31,11 +31,11 @@ fun CitationButton(citations: List<ArticleCitation>, risUrl: String? = null, mar
     val clipboard = remember(context) { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
     val copied = stringResource(R.string.citation_copied)
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        if (citations.isNotEmpty()) TextButton({ open = true }) { Text(stringResource(R.string.article_cite)) }
+        if (citations.isNotEmpty()) TextButton({ open = true }) { Text(stringResource(R.string.citation_cite)) }
         risUrl?.let { url -> TextButton({ openWeb(context, url) }) { Text(stringResource(R.string.citation_ris)) } }
         marcXmlUrl?.let { url -> TextButton({ openWeb(context, url) }) { Text("MARCXML") } }
     }
-    if (open) AlertDialog(onDismissRequest = { open = false }, title = { Text(stringResource(R.string.article_cite)) },
+    if (open) AlertDialog(onDismissRequest = { open = false }, title = { Text(stringResource(R.string.citation_cite)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {

@@ -217,7 +217,7 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
         _state.update { it.copy(loadingMore = true) }
         val generation = searchGeneration
         viewModelScope.launch {
-            val res = catalog.search(filters(), cursor = s.nextCursor, sort = s.sort.apiValue)
+            val res = catalog.search(s.appliedFilters, cursor = s.nextCursor, sort = s.sort.apiValue)
             // A sort/filter reset superseded this page mid-flight: drop it so we neither append
             // stale-sort items nor overwrite the fresh cursor. The reset already cleared loadingMore.
             if (generation != searchGeneration) return@launch

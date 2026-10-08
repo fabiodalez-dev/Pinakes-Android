@@ -26,6 +26,8 @@ import com.pinakes.app.ui.components.BookCardGrid
 import com.pinakes.app.ui.components.SearchField
 import com.pinakes.app.ui.theme.HeroStyle
 import com.pinakes.app.ui.theme.LocalPinakesColors
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -127,7 +129,7 @@ internal fun HomeContent(
             }
 
             HomePhase.Error -> ErrorState(
-                message = state.error ?: stringResource(R.string.home_error),
+                message = state.error?.takeIf(String::isNotBlank) ?: stringResource(R.string.home_error),
                 onRetry = onRetry,
             )
 
@@ -276,9 +278,10 @@ private fun SectionHeader(showSeeAll: Boolean, catalogueMode: Boolean, onSeeAll:
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CollectionDestinations(periodicals: (() -> Unit)?, desiderata: (() -> Unit)?, archives: (() -> Unit)?, articles: (() -> Unit)?) {
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Spacing.lg), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+    FlowRow(Modifier.fillMaxWidth().padding(horizontal = Spacing.lg), horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         articles?.let { androidx.compose.material3.TextButton(it) { Text(stringResource(R.string.standalone_articles_title)) } }
         periodicals?.let { androidx.compose.material3.TextButton(it) { Text(stringResource(R.string.periodicals_title)) } }
         desiderata?.let { androidx.compose.material3.TextButton(it) { Text(stringResource(R.string.desiderata_title)) } }

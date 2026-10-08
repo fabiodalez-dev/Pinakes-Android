@@ -255,7 +255,7 @@ The client applies these shared tokens to every existing screen. Home uses the r
 
 `ThemePalette` supports both hero styles and both card styles. Defaults remain Classic / Covers until discovery supplies server theme settings. Tinted cards sample the loaded cover on a 12×12 bitmap; they do not fetch a second image. Dark mode remains opt-in and follows the app preference, including calendar colours and status dots.
 
-The current API does **not** supply home CMS sections/statistics/selected covers, author/publisher count facets, wanted flags, summary digital flags, related titles, citations or external-source/share targets. Do not fabricate these or imply they were ported; expose them when the server contract provides them. The original web layouts remain the reference for future additions.
+The coordinated server contract supplies library Desiderata, Archives, complete digital attachments and citations. Home CMS sections/statistics/selected covers, author/publisher count facets, related-title recommendations and external-source/share targets remain outside the mobile API; the client does not fabricate them. The original web layouts remain the reference for future additions.
 
 Fonts are bundled as static faces for reliable rendering from API 26, with Latin Extended coverage. Font sources and OFL licences are recorded in `docs/fonts/`.
 

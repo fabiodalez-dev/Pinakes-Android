@@ -6,7 +6,7 @@ The app now uses the 2026 web design: Geist / Fraunces, warm neutrals, a server-
 
 - Debug APK: `pinakes-debug.apk`, copied from `app/build/outputs/apk/debug/app-debug.apk` (generated locally and ignored by Git).
 - Package: `com.pinakes.app`, version `1.6.0` (17), minSdk 26, target/compileSdk 35.
-- Local verification: **184 unit tests, 19 Compose device tests, zero lint errors**, and successful debug + R8 release builds.
+- Local verification: **185 unit tests, 19 Compose device tests, zero lint errors**, and successful debug + R8 release builds.
 - Verification commands: `assembleDebug`, `testDebugUnitTest`, `lintDebug`, `assembleRelease`, `assembleDebugAndroidTest`; the 19 device tests run through `am instrument` on a separate Android 15 AVD, preserving the authenticated demo device.
 - Unit tests cover the existing contracts and theme contrast/mixing. Compose device tests cover full tall artwork, missing metadata, grid actions, view selection, digital-file cards, narrow search placeholders, circulation actions theme pairings, reachable empty-home actions and query preservation during loading.
 - Release builds exercise R8 and resource shrinking. Without release credentials the output is unsigned; no store release is published by this change.

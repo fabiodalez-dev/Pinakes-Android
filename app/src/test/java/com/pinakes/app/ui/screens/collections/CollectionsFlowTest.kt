@@ -6,6 +6,8 @@ import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.*
 import com.pinakes.app.ui.navigation.Routes
 import com.pinakes.app.ui.screens.search.genrePath
+import com.pinakes.app.ui.screens.search.CollectionSearchViewModel
+import com.pinakes.app.data.store.InstanceFeatures
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.*
 import kotlinx.serialization.json.Json
@@ -114,6 +116,32 @@ class CollectionsFlowTest {
         var tree = GenreNode(id = 20, name = "leaf")
         for (id in 19 downTo 1) tree = GenreNode(id, "$id", listOf(tree))
         assertEquals((1..20).toList(), genrePath(listOf(tree), 20).map { it.id })
+    }
+
+    @Test fun catalogBrowseSkipsArticlesButSharedAuthorAndQueriesFindThem() = runTest {
+        val requests = mutableListOf<ArticleFilters>()
+        val articles = object : StandaloneArticlesSource {
+            override suspend fun standaloneArticlesSupported() = true
+            override suspend fun articles(query: String?, mastheadId: Int?, cursor: String?) = ApiResult.Success(StandaloneArticlesPage(emptyList()))
+            override suspend fun searchArticles(filters: ArticleFilters, cursor: String?): ApiResult<StandaloneArticlesPage> {
+                requests += filters
+                return ApiResult.Success(StandaloneArticlesPage(emptyList()))
+            }
+            override suspend fun article(id: Int) = ApiResult.Success(StandaloneArticle(id = id))
+            override suspend fun confirmGone() = false
+        }
+        val vm = CollectionSearchViewModel(Source(), articles)
+        val features = InstanceFeatures(periodicalsAvailable = true, desiderataAvailable = true, archivesAvailable = true)
+        vm.search(SearchFilters(), features); advanceUntilIdle()
+        assertTrue(requests.isEmpty()); assertFalse(vm.showArticles.value)
+        vm.search(SearchFilters(authorId = 42), features); advanceUntilIdle()
+        assertEquals(42, requests.single().authorId); assertTrue(vm.showArticles.value)
+        assertFalse(vm.showWanted.value); assertFalse(vm.showArchives.value)
+        vm.search(SearchFilters(query = "library"), features); advanceUntilIdle()
+        assertEquals("library", requests.last().query)
+        assertTrue(vm.showWanted.value); assertTrue(vm.showArchives.value)
+        vm.clear()
+        assertFalse(vm.showArticles.value); assertFalse(vm.showWanted.value); assertFalse(vm.showArchives.value)
     }
 
     @Test fun currentServerWireFormatCarriesAllFilesAndCitationStyles() {
