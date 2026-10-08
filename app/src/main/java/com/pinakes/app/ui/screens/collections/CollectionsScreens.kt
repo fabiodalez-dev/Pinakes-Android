@@ -125,7 +125,7 @@ fun ArchiveScreen(onNavigateUp: () -> Unit, onOpenArchive: (Int) -> Unit, onOpen
             Metadata(stringResource(R.string.archives_dates), record.datesLabel)
             Metadata(stringResource(R.string.archives_extent), record.extent)
             Metadata(stringResource(R.string.archives_material), record.material)
-            record.fields.forEach { (key, value) -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            record.fields.filterKeys { it != "extent" || record.extent.isNullOrBlank() }.forEach { (key, value) -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Text(stringResource(archiveFieldLabel(key)), style = MaterialTheme.typography.labelLarge)
                 HtmlText(value)
             } }
