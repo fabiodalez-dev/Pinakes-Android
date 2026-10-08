@@ -53,8 +53,8 @@ On first launch the app shows **Onboarding**: enter your Pinakes instance URL.
 
 ## Internationalization (i18n)
 
-The app is **fully localized in 4 languages — Italian, English, French, German** — matching the
-the app's supported locales (the PHP server also supports Danish). It follows the **device locale** by default and offers an **in-app language
+The app supports **4 languages — Italian, English, French, German**; the PHP server also supports Danish.
+It follows the **device locale** by default and offers an **in-app language
 switcher** in Profile (System default / Italiano / English / Français / Deutsch) via
 `AppCompatDelegate.setApplicationLocales(...)`, persisted across restarts (`autoStoreLocales`).
 
