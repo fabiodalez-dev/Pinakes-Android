@@ -1,14 +1,16 @@
 # Pinakes Android — Build Status
 
-**Build: GREEN.** `./gradlew assembleDebug` succeeds; `./gradlew lintDebug` passes (0 errors). Kotlin compiles clean.
+## 2026 restyle (2026-10-08)
 
-- **APK:** `pinakes-debug.apk` (repo root, ~20 MB) — copied from `app/build/outputs/apk/debug/app-debug.apk`.
-  Install: `adb install -r pinakes-debug.apk`.
-- **Package:** `com.pinakes.app` · versionName `1.0` · minSdk 26 · target/compileSdk 35 · launchable `MainActivity`.
-- **Verified on an emulator against a live Pinakes instance** (Android 15 / API 35 AVD → `http://10.0.2.2:8081`):
-  onboarding → `/health` discovery → login (`200`) → catalog search with real books → book cards with
-  correct titles/authors/availability. Two real bugs were found and fixed during this smoke test — see
-  **Fixes applied** below. The app is **fully localized in 4 languages** (German verified live) — see **i18n**.
+The app now uses the 2026 web design: Geist / Fraunces, warm neutrals, a server-ready `ThemePalette`, complete 3D book covers, a searchable home hero with a cover fan, catalog grid/list views, dot status pills, grouped availability/actions and one card per exposed digital asset. Shared tokens apply to all existing account and plugin screens. The Mobile API and all circulation/authentication contracts are unchanged.
+
+- Debug APK: `pinakes-debug.apk`, copied from `app/build/outputs/apk/debug/app-debug.apk` (generated locally and ignored by Git).
+- Package: `com.pinakes.app`, version `1.5.2` (16), minSdk 26, target/compileSdk 35.
+- Local verification: **169 unit tests, 10 Compose device tests, zero lint errors**, and successful debug + R8 release builds.
+- Verification commands: `assembleDebug`, `testDebugUnitTest`, `lintDebug`, `connectedDebugAndroidTest`, `assembleRelease`.
+- Unit tests cover the existing contracts and theme contrast/mixing. Compose device tests cover full tall artwork, missing metadata, grid actions, view selection, digital-file cards, narrow search placeholders, circulation actions and theme pairings.
+- Release builds exercise R8 and resource shrinking. Without release credentials the output is unsigned; no store release is published by this change.
+- `ThemePalette` defaults to Classic / Covers. Discovery does not expose theme, CMS home sections, richer catalog facets, wanted flags or related/citation/share data yet; these are documented as future API work in DESIGN.md.
 
 ## Install & point at an instance
 
@@ -40,11 +42,10 @@ On first launch the app shows **Onboarding**: enter your Pinakes instance URL.
 | 9. Contact | ✅ | `POST /messages` subject+body form, success state |
 
 - **Bottom nav:** Search / Library / Wishlist / Profile. **Nested routes:** Book Detail, Notifications, Contact.
-- **Design system:** Material 3 light **and** dark, brand magenta `#D70161` + indigo `#6366F1`,
-  Inter (bundled), rounded cards, soft shadows, brand-gradient header on onboarding/login,
-  navigation transitions + list/press animations, adaptive launcher icon.
-- **Architecture:** Navigation-Compose + ViewModel/StateFlow, manual DI (`ServiceLocator` via a
-  `LocalServices` composition local), Retrofit + OkHttp + kotlinx.serialization, Coil for covers.
+- **Design system:** Material 3 light **and** dark, 2026 theme-derived colours (Classic magenta by default),
+  bundled Geist / Fraunces, warm neutrals, complete book covers, rounded controls and subtle hero washes.
+  Calendar and status colours follow the app theme. The adaptive launcher icon is preserved.
+- **Architecture:** Navigation-Compose + ViewModel/StateFlow + Hilt, Retrofit + OkHttp + kotlinx.serialization, Coil for covers.
   All loading/empty/error states handled per screen.
 
 ## Internationalization (i18n)

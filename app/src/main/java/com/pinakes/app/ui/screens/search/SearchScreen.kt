@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,6 +49,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pinakes.app.R
 import com.pinakes.app.data.model.BookSummary
 import com.pinakes.app.ui.components.AvailabilityStatus
+import com.pinakes.app.ui.components.BookCardGrid
+import com.pinakes.app.ui.components.CatalogViewToggle
 import com.pinakes.app.ui.components.BookCard
 import com.pinakes.app.ui.components.BookCardSkeleton
 import com.pinakes.app.ui.components.EmptyState
@@ -57,9 +60,13 @@ import com.pinakes.app.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchScreen(onBookClick: (Int) -> Unit) {
+fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQueryConsumed: () -> Unit = {}) {
     val vm: SearchViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
+    var gridView by rememberSaveable { mutableStateOf(true) }
+    androidx.compose.runtime.LaunchedEffect(initialQuery) {
+        if (initialQuery != null) { vm.onQueryChange(initialQuery); vm.submitSearch(); onQueryConsumed() }
+    }
     val listState = rememberLazyListState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -130,7 +137,9 @@ fun SearchScreen(onBookClick: (Int) -> Unit) {
                     }
                 }
             }
-            Spacer(Modifier.height(Spacing.sm))
+            Text(stringResource(R.string.sort_label, stringResource(state.sort.labelRes)),
+                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = Spacing.sm))
         }
 
         Box(Modifier.fillMaxSize()) {
@@ -188,7 +197,7 @@ fun SearchScreen(onBookClick: (Int) -> Unit) {
                                 horizontal = Spacing.lg,
                                 vertical = Spacing.sm,
                             ),
-                            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                            verticalArrangement = Arrangement.spacedBy(if (gridView) 28.dp else Spacing.md),
                         ) {
                             item {
                                 val browsingAll = state.query.isBlank() && !state.hasActiveFilters
@@ -215,27 +224,28 @@ fun SearchScreen(onBookClick: (Int) -> Unit) {
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.weight(1f, fill = false),
                                     )
-                                    Text(
-                                        text = stringResource(
-                                            R.string.sort_label,
-                                            stringResource(state.sort.labelRes),
-                                        ),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                                    CatalogViewToggle(gridView, onChange = { gridView = it })
                                 }
                             }
-                            items(state.items, key = { it.id }) { book ->
-                                BookCard(
-                                    title = book.title,
-                                    author = book.authorsLabel,
-                                    coverUrl = book.coverUrl,
-                                    status = book.availabilityStatus(),
-                                    year = book.year?.toString(),
-                                    publisher = book.publisher,
-                                    onClick = { onBookClick(book.id) },
-                                    modifier = Modifier.animateItem(),
-                                )
+                            if (gridView) {
+                                items(state.items.chunked(2), key = { row -> row.joinToString("-") { it.id.toString() } }) { row ->
+                                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                        row.forEach { book ->
+                                            BookCardGrid(title = book.title, author = book.authorsLabel, coverUrl = book.coverUrl,
+                                                status = book.availabilityStatus(), subtitle = book.subtitle, publisher = book.publisher,
+                                                year = book.year?.toString(), mediaType = book.mediaType,
+                                                onClick = { onBookClick(book.id) }, modifier = Modifier.weight(1f))
+                                        }
+                                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                                    }
+                                }
+                            } else {
+                                items(state.items, key = { it.id }) { book ->
+                                    BookCard(title = book.title, author = book.authorsLabel, coverUrl = book.coverUrl,
+                                        status = book.availabilityStatus(), year = book.year?.toString(), publisher = book.publisher,
+                                        subtitle = book.subtitle, mediaType = book.mediaType,
+                                        onClick = { onBookClick(book.id) }, modifier = Modifier.animateItem())
+                                }
                             }
                             if (state.loadingMore) {
                                 item {

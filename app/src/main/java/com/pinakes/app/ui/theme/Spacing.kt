@@ -22,4 +22,4 @@ object Spacing {
 val ScreenPadding   = Spacing.lg   // 16.dp — screen horizontal edges
 val CardPadding     = Spacing.lg   // 16.dp — card inner padding
 val ListItemGap     = Spacing.md   // 12.dp — vertical gap between list items
-val SectionGap      = Spacing.xl   // 24.dp — gap between major sections
+val SectionGap      = Spacing.xxxl   // 48.dp — gap between major sections

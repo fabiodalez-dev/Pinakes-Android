@@ -45,6 +45,7 @@ fun MainScaffold(
     val app: AppViewModel = hiltViewModel()
     val features by app.features.collectAsStateWithLifecycle()
 
+    var pendingCatalogQuery by rememberSaveable { mutableStateOf<String?>(null) }
     var tab by rememberSaveable { mutableStateOf(PinakesTab.Home) }
 
     // If the active tab is gated off (e.g. server switched to CATALOGUE-ONLY MODE while the
@@ -88,8 +89,9 @@ fun MainScaffold(
                 PinakesTab.Home -> HomeScreen(
                     onBookClick = onOpenBook,
                     onBrowseCatalog = { tab = PinakesTab.Catalog },
+                    onSearch = { query -> pendingCatalogQuery = query; tab = PinakesTab.Catalog },
                 )
-                PinakesTab.Catalog -> SearchScreen(onBookClick = onOpenBook)
+                PinakesTab.Catalog -> SearchScreen(onBookClick = onOpenBook, initialQuery = pendingCatalogQuery, onQueryConsumed = { pendingCatalogQuery = null })
                 PinakesTab.Library -> LibraryScreen(onBookClick = onOpenBook)
                 PinakesTab.Wishlist -> WishlistScreen(onBookClick = onOpenBook)
                 PinakesTab.Profile -> ProfileScreen(

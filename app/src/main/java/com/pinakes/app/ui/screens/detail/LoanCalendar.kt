@@ -124,7 +124,7 @@ fun LoanCalendar(
     onSelect: (isoDate: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = com.pinakes.app.ui.theme.LocalPinakesColors.current.darkMode
     val today = remember { LocalDate.now() }
     val model = remember(calendar) { CalendarModel(calendar) }
 

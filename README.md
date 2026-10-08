@@ -30,7 +30,13 @@ The app is server-agnostic: it works against any Pinakes instance that has the
 Mobile API enabled, and it adapts to that instance's settings (language,
 catalogue-only mode, push availability).
 
+## 2026 interface
+
+The Android interface follows the public Pinakes 2026 restyle: shared theme tokens, Geist for controls, Fraunces for titles, fitted book artwork and a quiet warm background. `ThemePalette` accepts library colours and hero/card styles; Classic / Covers are the built-in defaults until the Mobile API exposes theme settings. Existing circulation, account and plugin flows remain available. See [DESIGN.md](DESIGN.md) for the component contract and API limitations.
+
 ## Screenshots
+
+Login, home, catalog, book detail and calendar captures use the 2026 interface on Android 15 at 360 dp, with fixture data. The remaining account captures document the earlier flow layout.
 
 <table>
   <tr>
@@ -53,8 +59,8 @@ catalogue-only mode, push availability).
 |------|--------------|
 | **Onboarding** | Enter the instance URL, `/health` discovery card (library name, logo, HTTPS check, mobile-access check) |
 | **Sign in & sign up** | Email/password login, **in-app registration** and **password recovery**, mapped error messages, secure token storage |
-| **Home** | An "Available now" landing showing what you can borrow today |
-| **Catalog** | The full catalog with infinite scroll, search, and a filter sheet (availability, genre, author, publisher, language) |
+| **Home** | Searchable library hero, a fan of real shelf covers, and an "Available now" / recent shelf |
+| **Catalog** | Two-column book grid or compact list, infinite scroll, search, sort and a filter sheet (availability, genre, author, publisher, language) |
 | **Book detail** | HTML-rendered description, tap-to-zoom cover, full metadata block (ISBN, year, pages …), genre chip |
 | **Availability** | Colour-coded state: green available, red on loan, amber reserved |
 | **Loan calendar** | Pick a start date on a calendar that paints already-booked days and pre-selects the first free day |
@@ -65,13 +71,13 @@ catalogue-only mode, push availability).
 | **Book Club** | When the instance runs the **Book Club** plugin: browse your clubs and the directory, open a club's reading list / polls / meetings, join, vote in-app (simple / multi / weighted ballots), RSVP to meetings and track your reading progress — advanced poll modes and proposing a title deep-link to the web |
 | **Profile** | Edit profile, change password, device list, theme switcher, language switcher, logout |
 | **Notifications** | Loan due/overdue, reservation ready, book available |
-| **Themes** | Material 3 light and dark, light by default; pick light/dark/system in Profile |
+| **Themes** | 2026 warm neutrals, Geist + Fraunces, complete 3D covers and paired theme colours. Light by default; pick light/dark/system in Profile |
 | **Languages** | Italian, English, French, German, following the device locale or an in-app choice |
 
 ## Tech stack
 
 - **Kotlin 2.0** + **Jetpack Compose** (Material 3), single-module app
-- **Navigation-Compose** + `ViewModel`/`StateFlow`, manual DI via a `ServiceLocator`
+- **Navigation-Compose** + `ViewModel`/`StateFlow` + Hilt
 - **Retrofit + OkHttp + kotlinx.serialization** for the `/api/v1` client (`{data, meta, error}` envelope)
 - **Coil** for cover images, **Media3 ExoPlayer** for audio, platform `PdfRenderer` for PDFs
 - **AndroidX Security** (`EncryptedSharedPreferences`) for the bearer token and instance URL
@@ -89,6 +95,9 @@ catalogue-only mode, push availability).
 ```bash
 ./gradlew assembleDebug   # debug APK → app/build/outputs/apk/debug/app-debug.apk
 ./gradlew lintDebug       # static analysis
+./gradlew testDebugUnitTest
+./gradlew connectedDebugAndroidTest  # UI regression tests, with a running emulator
+./gradlew assembleRelease # R8 + resource shrinking, unsigned without release credentials
 ```
 
 Create a `local.properties` with `sdk.dir=/path/to/android-sdk` (or set `ANDROID_HOME`).

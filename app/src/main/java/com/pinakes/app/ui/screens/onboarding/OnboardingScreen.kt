@@ -47,132 +47,121 @@ import com.pinakes.app.ui.theme.AvailableOnContainerDark
 import com.pinakes.app.ui.theme.AvailableOnContainerLight
 import com.pinakes.app.ui.theme.Spacing
 
-/**
- * Minimal onboarding: centered column on a plain surface, bare logo, a readable URL field, and
- * the discovery result as a clean card. Solid magenta Continue. No gradient panel. (DESIGN.md.)
- */
+/** Library discovery on the shared 2026 authentication surface. */
 @Composable
 fun OnboardingScreen(onContinue: () -> Unit) {
     val vm: OnboardingViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
 
-    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            val form = Modifier.fillMaxWidth().widthIn(max = 420.dp)
+    com.pinakes.app.ui.components.AuthForm {
+        val form = Modifier.fillMaxWidth().widthIn(max = 420.dp)
 
-            Spacer(Modifier.height(Spacing.xxxl))
+        Spacer(Modifier.height(Spacing.xxxl))
 
-            // Bare logo — no circle, ring, or card.
-            Image(
-                painter = painterResource(R.drawable.brand_logo),
-                contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier.height(52.dp),
-            )
+        // Bare logo — no circle, ring, or card.
+        Image(
+            painter = painterResource(R.drawable.brand_logo),
+            contentDescription = stringResource(R.string.app_name),
+            modifier = Modifier.height(52.dp),
+        )
 
-            Spacer(Modifier.height(Spacing.xl))
+        Spacer(Modifier.height(Spacing.xl))
 
-            Text(
-                text = stringResource(R.string.onboarding_title),
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(Spacing.sm))
-            Text(
-                text = stringResource(R.string.onboarding_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
+        Text(
+            text = stringResource(R.string.onboarding_title),
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(Spacing.sm))
+        Text(
+            text = stringResource(R.string.onboarding_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
 
-            Spacer(Modifier.height(Spacing.xxl))
+        Spacer(Modifier.height(Spacing.xxl))
 
-            val errorMessage = state.error ?: state.errorRes?.let { stringResource(it) }
-            UrlField(
-                value = state.url,
-                onValueChange = vm::onUrlChange,
-                label = stringResource(R.string.onboarding_url_label),
-                modifier = form,
-                isError = errorMessage != null,
-                errorText = errorMessage.orEmpty(),
-                onDone = vm::discover,
-            )
+        val errorMessage = state.error ?: state.errorRes?.let { stringResource(it) }
+        UrlField(
+            value = state.url,
+            onValueChange = vm::onUrlChange,
+            label = stringResource(R.string.onboarding_url_label),
+            modifier = form,
+            isError = errorMessage != null,
+            errorText = errorMessage.orEmpty(),
+            onDone = vm::discover,
+        )
+
+        Spacer(Modifier.height(Spacing.lg))
+
+        if (state.discovery == null) {
+            Row(
+                // Toggle from the whole row (not just the switch): a screen reader
+                // announces the label together with the on/off state, and the larger
+                // touch target is easier to hit. onCheckedChange = null makes the Switch
+                // a passive indicator of the row's toggle state.
+                modifier = form.toggleable(
+                    value = state.allowInsecureHttp,
+                    role = Role.Switch,
+                    onValueChange = vm::onAllowInsecureChange,
+                ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.onboarding_allow_http_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        stringResource(R.string.onboarding_allow_http_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.width(Spacing.md))
+                Switch(
+                    checked = state.allowInsecureHttp,
+                    onCheckedChange = null,
+                )
+            }
 
             Spacer(Modifier.height(Spacing.lg))
 
-            if (state.discovery == null) {
-                Row(
-                    // Toggle from the whole row (not just the switch): a screen reader
-                    // announces the label together with the on/off state, and the larger
-                    // touch target is easier to hit. onCheckedChange = null makes the Switch
-                    // a passive indicator of the row's toggle state.
-                    modifier = form.toggleable(
-                        value = state.allowInsecureHttp,
-                        role = Role.Switch,
-                        onValueChange = vm::onAllowInsecureChange,
-                    ),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            stringResource(R.string.onboarding_allow_http_label),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            stringResource(R.string.onboarding_allow_http_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Spacer(Modifier.width(Spacing.md))
-                    Switch(
-                        checked = state.allowInsecureHttp,
-                        onCheckedChange = null,
-                    )
-                }
-
-                Spacer(Modifier.height(Spacing.lg))
-
-                PrimaryButton(
-                    label = stringResource(R.string.action_discover_library),
-                    onClick = vm::discover,
-                    modifier = form,
-                    loading = state.checking,
-                )
-            }
-
-            state.discovery?.let { d ->
-                Spacer(Modifier.height(Spacing.sm))
-                DiscoveryCard(d, modifier = form)
-                Spacer(Modifier.height(Spacing.lg))
-                val canContinue = d.health.appAccessEnabled && d.transportAllowed
-                PrimaryButton(
-                    label = stringResource(R.string.action_continue),
-                    onClick = { if (vm.confirm()) onContinue() },
-                    modifier = form,
-                    enabled = canContinue,
-                )
-                if (!d.transportAllowed) {
-                    Spacer(Modifier.height(Spacing.sm))
-                    Text(
-                        stringResource(R.string.onboarding_http_warning),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-            Spacer(Modifier.height(Spacing.xxxl))
+            PrimaryButton(
+                label = stringResource(R.string.action_discover_library),
+                onClick = vm::discover,
+                modifier = form,
+                loading = state.checking,
+            )
         }
+
+        state.discovery?.let { d ->
+            Spacer(Modifier.height(Spacing.sm))
+            DiscoveryCard(d, modifier = form)
+            Spacer(Modifier.height(Spacing.lg))
+            val canContinue = d.health.appAccessEnabled && d.transportAllowed
+            PrimaryButton(
+                label = stringResource(R.string.action_continue),
+                onClick = { if (vm.confirm()) onContinue() },
+                modifier = form,
+                enabled = canContinue,
+            )
+            if (!d.transportAllowed) {
+                Spacer(Modifier.height(Spacing.sm))
+                Text(
+                    stringResource(R.string.onboarding_http_warning),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        Spacer(Modifier.height(Spacing.xxxl))
     }
+
 }
 
 @Composable
@@ -185,16 +174,16 @@ private fun DiscoveryCard(d: HealthDiscovery, modifier: Modifier = Modifier) {
         Column(Modifier.padding(Spacing.lg)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = if (d.health.logo != null) androidx.compose.ui.graphics.RectangleShape else MaterialTheme.shapes.small,
+                    color = if (d.health.logo != null) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.primaryContainer,
                     modifier = Modifier.size(48.dp),
                 ) {
                     if (d.health.logo != null) {
                         SubcomposeAsyncImage(
                             model = d.health.logo,
                             contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.clip(CircleShape),
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier,
                         )
                     } else {
                         Column(
@@ -256,7 +245,7 @@ private fun StatusLine(ok: Boolean, okText: String, warnText: String) {
     ) {
         // "secure / app-access OK" is a positive status → availability-green token (the only
         // extra semantic colour allowed). Warnings use the error role.
-        val okTint = if (isSystemInDarkTheme()) AvailableOnContainerDark else AvailableOnContainerLight
+        val okTint = if (com.pinakes.app.ui.theme.LocalPinakesColors.current.darkMode) AvailableOnContainerDark else AvailableOnContainerLight
         val tint = if (ok) okTint else MaterialTheme.colorScheme.error
         Icon(
             imageVector = if (ok) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,

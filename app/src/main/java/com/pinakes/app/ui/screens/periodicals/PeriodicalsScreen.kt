@@ -244,7 +244,7 @@ fun PeriodicalLogo(
         model = url,
         contentDescription = contentDescription,
         modifier = modifier,
-        contentScale = ContentScale.Crop,
+        contentScale = ContentScale.Fit,
         loading = { PeriodicalLogoPlaceholder() },
         error = { PeriodicalLogoPlaceholder() },
     )

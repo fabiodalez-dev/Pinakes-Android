@@ -5,6 +5,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
@@ -14,6 +16,7 @@ enum class ThemeMode { LIGHT, DARK, SYSTEM }
 @Composable
 fun PinakesTheme(
     mode: ThemeMode = ThemeMode.LIGHT,
+    palette: ThemePalette = ThemePalette(),
     content: @Composable () -> Unit,
 ) {
     val dark = when (mode) {
@@ -36,10 +39,13 @@ fun PinakesTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = if (dark) DarkColors else LightColors,
-        typography = PinakesTypography,
-        shapes = PinakesShapes,
-        content = content,
-    )
+    val colors = remember(palette, dark) { PinakesColors(palette, dark) }
+    CompositionLocalProvider(LocalPinakesColors provides colors) {
+        MaterialTheme(
+            colorScheme = remember(palette, dark) { if (dark) darkColors(palette) else lightColors(palette) },
+            typography = PinakesTypography,
+            shapes = PinakesShapes,
+            content = content,
+        )
+    }
 }

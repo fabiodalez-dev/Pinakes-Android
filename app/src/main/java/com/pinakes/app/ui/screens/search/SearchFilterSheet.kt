@@ -60,7 +60,7 @@ fun SearchFilterSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        containerColor = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -75,7 +75,7 @@ fun SearchFilterSheet(
             ) {
                 Text(
                     text = stringResource(R.string.filters_title),
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),
                 )
@@ -105,7 +105,7 @@ fun SearchFilterSheet(
                 colors = chipColors,
             )
 
-            Spacer(Modifier.height(Spacing.lg))
+            Spacer(Modifier.height(28.dp))
 
             // --- Genre (cascade from /catalog/genres) ---
             // The backend `genre` filter matches at ANY level, so whatever node the user
@@ -156,7 +156,7 @@ fun SearchFilterSheet(
                         }
                     }
                 }
-                Spacer(Modifier.height(Spacing.lg))
+                Spacer(Modifier.height(28.dp))
             }
 
             // --- Author ---
@@ -184,7 +184,7 @@ fun SearchFilterSheet(
                 keyboardActions = KeyboardActions(onDone = { onApply() }),
             )
 
-            Spacer(Modifier.height(Spacing.lg))
+            Spacer(Modifier.height(28.dp))
 
             // --- Language ---
             SectionLabel(stringResource(R.string.filters_section_language))
@@ -223,7 +223,7 @@ fun SearchFilterSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Spacer(Modifier.height(Spacing.lg))
+            Spacer(Modifier.height(28.dp))
         }
     }
 }

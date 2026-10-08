@@ -5,6 +5,16 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.shape.CircleShape
+import com.pinakes.app.ui.components.BookQuickFacts
+import com.pinakes.app.ui.components.BookCover
+import com.pinakes.app.ui.components.DigitalFileCard
+import com.pinakes.app.ui.components.MediaTypeIcon
+import com.pinakes.app.ui.theme.LocalPinakesColors
+import com.pinakes.app.ui.theme.Fraunces
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -306,8 +316,9 @@ private fun FallbackDatePicker(
     DatePicker(state = datePickerState, title = null, headline = null, showModeToggle = false)
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DetailContent(
+internal fun DetailContent(
     book: BookDetail,
     wishlisted: Boolean,
     reserveBusy: Boolean,
@@ -326,91 +337,68 @@ private fun DetailContent(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
+            .background(Brush.verticalGradient(listOf(LocalPinakesColors.current.heroWash, LocalPinakesColors.current.background), endY = 1200f))
             .padding(Spacing.lg),
     ) {
-        // Header: cover + title block
-        Row {
-            Box(
-                Modifier
-                    .width(120.dp)
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .then(
-                        if (book.coverUrl != null)
-                            Modifier.clickable(
-                                onClickLabel = stringResource(R.string.cd_cover_zoom),
-                            ) { showCover = true }
-                        else Modifier
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (book.coverUrl != null) {
-                    SubcomposeAsyncImage(
-                        model = book.coverUrl,
-                        contentDescription = book.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                        error = {
-                            Icon(
-                                Icons.AutoMirrored.Outlined.MenuBook,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outlineVariant,
-                                modifier = Modifier.size(40.dp),
-                            )
-                        },
-                    )
-                } else {
-                    Icon(
-                        Icons.AutoMirrored.Outlined.MenuBook,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.outlineVariant,
-                        modifier = Modifier.size(40.dp),
-                    )
+        val colors = LocalPinakesColors.current
+        BookCover(book.title, book.coverUrl, Modifier.widthIn(max = 340.dp).fillMaxWidth().aspectRatio(2f / 3f)
+            .align(Alignment.CenterHorizontally).then(if (!book.coverUrl.isNullOrBlank())
+                Modifier.clickable(onClickLabel = stringResource(R.string.cd_cover_zoom)) { showCover = true } else Modifier))
+        Spacer(Modifier.height(32.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth()) {
+            Surface(shape = RoundedCornerShape(50), color = colors.surface, border = BorderStroke(1.dp, colors.line)) {
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    MediaTypeIcon(book.mediaType)
+                    Text(book.mediaType?.takeIf { it.isNotBlank() } ?: stringResource(R.string.title_book), style = MaterialTheme.typography.labelMedium)
                 }
             }
-            Spacer(Modifier.width(Spacing.lg))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    book.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                if (!book.subtitle.isNullOrBlank()) {
-                    Spacer(Modifier.height(Spacing.xs))
-                    Text(book.subtitle!!, style = MaterialTheme.typography.titleSmall, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurface)
-                }
-                if (book.authorsLabel.isNotBlank()) {
-                    Spacer(Modifier.height(Spacing.sm))
-                    Text(
-                        book.authorsLabel,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-                Spacer(Modifier.height(Spacing.md))
-                // Colour-code WHY a title isn't free: green available, red on-loan,
-                // amber reserved/scheduled. Falls back to the binary available flag.
-                val availableLabel = stringResource(R.string.book_copies_available_of, book.copiesAvailable, book.copiesTotal)
-                val (availStatus, availLabel) = when (book.availability.state) {
-                    "available" -> AvailabilityStatus.Available to availableLabel
-                    "on_loan"   -> AvailabilityStatus.Unavailable to stringResource(R.string.book_on_loan)
-                    "reserved"  -> AvailabilityStatus.DueSoon to stringResource(R.string.availability_reserved)
-                    "unavailable" -> AvailabilityStatus.Unavailable to stringResource(R.string.availability_unavailable)
-                    else -> if (book.available) AvailabilityStatus.Available to availableLabel
-                            else AvailabilityStatus.Unavailable to stringResource(R.string.book_on_loan)
-                }
-                AvailabilityChip(status = availStatus, label = availLabel)
-                book.genreLabel?.takeIf { it.isNotBlank() }?.let { genre ->
-                    Spacer(Modifier.height(Spacing.sm))
-                    GenreChip(genre)
+            book.publisher?.takeIf { it.isNotBlank() }?.let { Text(it, color = colors.accentText, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)) }
+            book.year?.let { Text("· $it", color = colors.muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)) }
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(book.title, style = MaterialTheme.typography.headlineLarge, color = colors.ink)
+        if (!book.subtitle.isNullOrBlank()) {
+            Spacer(Modifier.height(8.dp))
+            Text(book.subtitle!!, style = MaterialTheme.typography.titleLarge, fontStyle = FontStyle.Italic, color = colors.muted)
+        }
+        Spacer(Modifier.height(16.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (book.authors.isEmpty()) Text(stringResource(R.string.restyle_unknown_author), style = MaterialTheme.typography.bodySmall, color = colors.muted)
+            book.authors.forEach { author ->
+                Surface(shape = RoundedCornerShape(50), color = colors.surface, border = BorderStroke(1.dp, colors.line)) {
+                    Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        val initials = author.name.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }.take(2).map { it.first() }.joinToString("")
+                        Box(Modifier.size(24.dp).background(colors.accentSoft, CircleShape), contentAlignment = Alignment.Center) {
+                            Text(initials, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.accentStrong)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(author.name + (author.role?.takeIf { it.isNotBlank() && it != "autore" && it != "author" }?.let { " · $it" } ?: ""),
+                            style = MaterialTheme.typography.bodyMedium)
+                    }
                 }
             }
         }
-
-        Spacer(Modifier.height(Spacing.lg))
+        book.genreLabel?.takeIf { it.isNotBlank() }?.let { genre ->
+            Spacer(Modifier.height(16.dp))
+            GenreChip(genre)
+        }
+        Spacer(Modifier.height(24.dp))
+        Surface(shape = MaterialTheme.shapes.large, color = colors.surface, border = BorderStroke(1.dp, colors.line),
+            shadowElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(22.dp)) {
+            val availableLabel = stringResource(R.string.book_copies_available_of, book.copiesAvailable, book.copiesTotal)
+            val (availStatus, availLabel) = when (book.availability.state) {
+                "available" -> AvailabilityStatus.Available to stringResource(R.string.availability_available)
+                "on_loan" -> AvailabilityStatus.Unavailable to stringResource(R.string.book_on_loan)
+                "reserved" -> AvailabilityStatus.DueSoon to stringResource(R.string.availability_reserved)
+                "unavailable" -> AvailabilityStatus.Unavailable to stringResource(R.string.availability_unavailable)
+                else -> if (book.available) AvailabilityStatus.Available to stringResource(R.string.availability_available)
+                    else AvailabilityStatus.Unavailable to stringResource(R.string.book_on_loan)
+            }
+            AvailabilityChip(availStatus, availLabel)
+            Text(availableLabel, style = MaterialTheme.typography.bodyMedium, color = colors.muted)
+            Spacer(Modifier.height(16.dp))
 
         // Personal-status banner: makes the user's own relationship to this book explicit,
         // so a generic "available" chip isn't the only signal. The wishlist-only variant is
@@ -427,7 +415,7 @@ private fun DetailContent(
                 if (ph.hasRead) add(stringResource(R.string.book_history_previously_read) to AvailabilityStatus.Available)
             }
             if (chips.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     chips.forEach { (label, status) -> AvailabilityChip(status = status, label = label) }
                 }
                 Spacer(Modifier.height(Spacing.lg))
@@ -443,13 +431,13 @@ private fun DetailContent(
         // The label adapts: "Request loan" when a copy is free now, "Reserve" when it isn't.
         val showLoanButton = canBorrow
         if (showLoanButton || showWishlist) {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (showLoanButton) {
                     PrimaryButton(
                         label = if (book.available) stringResource(R.string.book_request_loan) else stringResource(R.string.book_reserve),
                         onClick = onReserve,
                         loading = reserveBusy,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
                 if (showWishlist) {
@@ -457,52 +445,58 @@ private fun DetailContent(
                         label = if (wishlisted) stringResource(R.string.book_wishlisted) else stringResource(R.string.book_wishlist),
                         onClick = onToggleWishlist,
                         leadingIcon = if (wishlisted) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
         }
 
-        // Audiobook player (when the API reports an audiobook for this title).
-        if (book.hasAudio && !book.audioUrl.isNullOrBlank()) {
-            Spacer(Modifier.height(Spacing.lg))
-            SectionTitle(stringResource(R.string.book_section_audiobook))
-            Spacer(Modifier.height(Spacing.sm))
-            AudioPlayer(audioUrl = book.audioUrl!!)
         }
+        }
+        Spacer(Modifier.height(24.dp))
+        BookQuickFacts(listOfNotNull(
+            book.year?.let { stringResource(R.string.book_meta_year) to it.toString() },
+            book.pages?.let { stringResource(R.string.book_meta_pages) to it.toString() },
+            book.format?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.book_meta_format) to it },
+            book.isbn13?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.book_meta_isbn13) to it },
+        ))
+        Spacer(Modifier.height(48.dp))
 
-        // E-book "Read" action: in-app PDF reader, or ACTION_VIEW for other formats (epub, …).
-        if (book.hasEbook && !book.ebookUrl.isNullOrBlank()) {
-            Spacer(Modifier.height(Spacing.lg))
-            SectionTitle(stringResource(R.string.book_section_ebook))
-            Spacer(Modifier.height(Spacing.sm))
+        val hasAudio = book.hasAudio && !book.audioUrl.isNullOrBlank()
+        val hasEbook = book.hasEbook && !book.ebookUrl.isNullOrBlank()
+        if (hasAudio || hasEbook) {
+            SectionTitle(stringResource(R.string.restyle_digital))
+            Spacer(Modifier.height(16.dp))
+        }
+        if (hasAudio) {
+            DigitalFileCard(type = "MP3", name = digitalFilename(book.audioUrl!!, book.title),
+                kind = stringResource(R.string.book_section_audiobook)) {
+                AudioPlayer(audioUrl = book.audioUrl!!)
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+        if (hasEbook) {
             val isPdf = book.ebookFormat?.equals("pdf", ignoreCase = true) == true ||
                 book.ebookUrl!!.substringBefore('?').endsWith(".pdf", ignoreCase = true)
-            PrimaryButton(
-                label = if (isPdf) stringResource(R.string.book_read) else stringResource(R.string.ebook_open_external),
-                onClick = {
-                    if (isPdf) {
-                        showPdf = true
-                    } else {
-                        runCatching {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(book.ebookUrl)))
-                        }.onFailure {
-                            if (it is ActivityNotFoundException) { /* no viewer available; nothing to do */ }
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
+            DigitalFileCard(type = book.ebookFormat?.uppercase() ?: if (isPdf) "PDF" else "eBook",
+                name = digitalFilename(book.ebookUrl!!, book.title), kind = stringResource(R.string.book_section_ebook)) {
+                PrimaryButton(label = if (isPdf) stringResource(R.string.book_read) else stringResource(R.string.ebook_open_external),
+                    onClick = {
+                        if (isPdf) showPdf = true
+                        else runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(book.ebookUrl))) }
+                            .onFailure { onShowMessage(context.getString(R.string.ebook_error)) }
+                    }, modifier = Modifier.fillMaxWidth(), dark = true)
+            }
+            Spacer(Modifier.height(16.dp))
         }
-
-        Spacer(Modifier.height(Spacing.lg))
+        Spacer(Modifier.height(32.dp))
 
         if (!book.description.isNullOrBlank()) {
             SectionTitle(stringResource(R.string.book_section_about))
             Spacer(Modifier.height(Spacing.sm))
             HtmlText(
                 html = book.description!!,
-                style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp),
+                style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 28.sp),
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(Spacing.xl))
@@ -524,6 +518,8 @@ private fun DetailContent(
                 book.year?.let { MetadataRow(stringResource(R.string.book_meta_year), it.toString()) }
                 book.language?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_language), it) }
                 book.pages?.let { MetadataRow(stringResource(R.string.book_meta_pages), it.toString()) }
+                book.format?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_format), it) }
+                book.series?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_series), it) }
                 book.isbn13?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_isbn13), it) }
                 book.isbn10?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_isbn10), it) }
                 book.ean?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_ean), it) }
@@ -662,11 +658,13 @@ private fun GenreChip(label: String) {
 private fun SectionTitle(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.headlineMedium,
         color = MaterialTheme.colorScheme.onSurface,
     )
 }
+
+private fun digitalFilename(url: String, fallback: String): String =
+    Uri.parse(url).lastPathSegment?.takeIf { it.isNotBlank() } ?: fallback
 
 private val displayDateFormatter: DateTimeFormatter =
     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())
