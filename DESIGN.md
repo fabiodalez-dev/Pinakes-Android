@@ -148,7 +148,7 @@ Grid: 2 columns on phones, 28 vertical / 14 horizontal gap. An optional list vie
 - **Chip link** (Cerca su, Condividi): transparent, 1dp `line2`, 13sp `ink`, fully round, 5×11. Pressed → accent border and text.
 
 ### Inputs
-Fill `soft` on white cards and dialogs (including search), radius 10, **no border** (Fabio's call). The neutral fill keeps an unfocused field distinguishable from its white host. Use `ink` text, `faint` placeholder. On Android, outlined fields use Material’s accent focus outline so floating labels and validation copy stay outside it; the label-free search control adds a 3dp `accentLine` ring.
+Fill `soft` on white cards and dialogs (including search), radius 10, **no border** (Fabio's call). The neutral fill keeps an unfocused field distinguishable from its host. Edit-profile and password dialogs explicitly use `surface`, so their container never equals the `soft` field fill in either mode. Use `ink` text, `faint` placeholder. On Android, outlined fields use Material’s accent focus outline so floating labels and validation copy stay outside it; the label-free search control adds a 3dp `accentLine` ring.
 
 ### Chips
 - Author chip: white pill, 1dp `line`, a 24dp circle with the initials (`accentSoft` fill, `accentStrong` text, 11/700), the name 14/500. Roles other than author follow the name: "· Traduttore".

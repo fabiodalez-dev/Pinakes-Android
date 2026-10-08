@@ -540,6 +540,7 @@ private fun EditProfileDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(R.string.profile_edit_title), style = MaterialTheme.typography.titleMedium) },
         text = {
             Column(
@@ -750,6 +751,7 @@ private fun ChangePasswordDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(R.string.profile_change_password_title), style = MaterialTheme.typography.titleMedium) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
