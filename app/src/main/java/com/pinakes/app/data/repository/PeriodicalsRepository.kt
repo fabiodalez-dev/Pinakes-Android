@@ -112,4 +112,8 @@ class PeriodicalsRepository(
 
     override suspend fun article(id: Int): ApiResult<StandaloneArticle> =
         apiCall { network.periodicalsApi().article(id) }
+
+    override fun articleWebUrl(id: Int): String? = session.instanceOrigin
+        ?.trimEnd('/')?.takeIf { id > 0 && it.isNotBlank() }
+        ?.let { "$it/emeroteca/articolo/$id" }
 }

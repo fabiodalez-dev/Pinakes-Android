@@ -85,24 +85,35 @@ fun StandaloneArticlesScreen(
 
 @Composable
 private fun StandaloneArticleRow(article: StandaloneArticle, onClick: () -> Unit) {
-    Column(
+    Row(
         Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick).padding(vertical = Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Text(article.title, style = PublicationTitleStyle, color = MaterialTheme.colorScheme.onSurface)
-        article.authors?.takeIf { it.isNotBlank() }?.let {
-            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+        article.coverUrl?.takeIf { it.isNotBlank() }?.let { cover ->
+            BookCover(article.title, cover, Modifier.width(64.dp).height(96.dp), compact = true)
         }
-        article.containerTitle?.takeIf { it.isNotBlank() }?.let {
-            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(
+            Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            Text(article.title, style = PublicationTitleStyle, color = MaterialTheme.colorScheme.onSurface)
+            article.subtitle?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            article.authors?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+            }
+            article.containerTitle?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            val citation = listOfNotNull(
+                article.dateLabel,
+                article.volume?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.standalone_article_volume, it) },
+                article.number?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.standalone_article_number, it) },
+                article.pages?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.standalone_article_pages, it) },
+            ).joinToString(" · ")
+            if (citation.isNotBlank()) Text(citation, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        val citation = listOfNotNull(
-            article.dateLabel,
-            article.volume?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.standalone_article_volume, it) },
-            article.number?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.standalone_article_number, it) },
-            article.pages?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.standalone_article_pages, it) },
-        ).joinToString(" · ")
-        if (citation.isNotBlank()) Text(citation, style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

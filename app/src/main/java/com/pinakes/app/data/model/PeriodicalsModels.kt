@@ -161,6 +161,8 @@ data class PeriodicalsCapabilities(
 data class StandaloneArticle(
     val id: Int = 0,
     @SerialName("titolo") val title: String = "",
+    @SerialName("sottotitolo") val subtitle: String? = null,
+    @SerialName("cover_url") val coverUrl: String? = null,
     @SerialName("autori") val authors: String? = null,
     @SerialName("tipo_contributo") val contributionType: String? = null,
     @SerialName("contenitore_tipo") val containerType: String? = null,
@@ -179,12 +181,23 @@ data class StandaloneArticle(
     @SerialName("fascicolo_id") val issueId: Int? = null,
     @SerialName("has_public_pdf") val hasPublicPdf: Boolean = false,
     @SerialName("pdf_url") val pdfUrl: String? = null,
+    @SerialName("has_public_resource") val hasPublicResource: Boolean = false,
+    @SerialName("risorsa_url") val resourceAddress: String? = null,
+    @SerialName("risorsa_testo") val resourceLabel: String? = null,
+    @SerialName("risorsa_accesso") val resourceAccess: String? = null,
 ) {
     // Date text and page spans are citations, not ISO dates or page counts.
     val dateLabel: String? get() = publicationDate?.takeIf { it.isNotBlank() }
         ?: publicationYear?.toString()
     val canOpenPdf: Boolean get() = hasPublicPdf && publicPdfUrl != null
     val publicPdfUrl: String? get() = pdfUrl?.takeIf {
+        val uri = runCatching { java.net.URI(it) }.getOrNull()
+        uri?.scheme?.lowercase() in listOf("https", "http") && !uri?.host.isNullOrBlank()
+    }
+    // Published archive references are readable text; only HTTP(S) addresses
+    // become actions. Old servers omit the flag, so they expose no resource.
+    val publicResourceAddress: String? get() = resourceAddress?.trim()?.takeIf { hasPublicResource && it.isNotEmpty() }
+    val publicResourceUrl: String? get() = publicResourceAddress?.takeIf {
         val uri = runCatching { java.net.URI(it) }.getOrNull()
         uri?.scheme?.lowercase() in listOf("https", "http") && !uri?.host.isNullOrBlank()
     }

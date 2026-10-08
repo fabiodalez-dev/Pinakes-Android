@@ -14,4 +14,5 @@ interface StandaloneArticlesSource {
     suspend fun articles(query: String? = null, mastheadId: Int? = null, cursor: String? = null): ApiResult<StandaloneArticlesPage>
     suspend fun article(id: Int): ApiResult<StandaloneArticle>
     suspend fun confirmGone(): Boolean
+    fun articleWebUrl(id: Int): String? = null
 }
