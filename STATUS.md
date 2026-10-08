@@ -44,7 +44,7 @@ On first launch the app shows **Onboarding**: enter your Pinakes instance URL.
 | 8. Notifications | ✅ | Feed w/ per-type icons, read/unread styling, **pull-to-refresh** |
 | 9. Contact | ✅ | `POST /messages` subject+body form, success state |
 
-- **Bottom nav:** Search / Library / Wishlist / Profile. **Nested routes:** Book Detail, Notifications, Contact.
+- **Bottom nav:** Home / Catalog / Library / Wishlist / Profile. **Nested routes:** Book Detail, Notifications, Contact and optional collection details.
 - **Design system:** Material 3 light **and** dark, 2026 theme-derived colours (Classic magenta by default),
   bundled Geist / Fraunces, warm neutrals, complete book covers, rounded controls and subtle hero washes.
   Calendar and status colours follow the app theme. The adaptive launcher icon is preserved.
@@ -54,11 +54,11 @@ On first launch the app shows **Onboarding**: enter your Pinakes instance URL.
 ## Internationalization (i18n)
 
 The app is **fully localized in 4 languages — Italian, English, French, German** — matching the
-Pinakes backend locales. It follows the **device locale** by default and offers an **in-app language
+the app's supported locales (the PHP server also supports Danish). It follows the **device locale** by default and offers an **in-app language
 switcher** in Profile (System default / Italiano / English / Français / Deutsch) via
 `AppCompatDelegate.setApplicationLocales(...)`, persisted across restarts (`autoStoreLocales`).
 
-- **Single source of truth = JSON.** Translations live in `i18n/{en,it,fr,de}.json` (209 keys each,
+- **Single source of truth = JSON.** Translations live in `i18n/{en,it,fr,de}.json` (622 keys each,
   en = default/source). A Gradle task (`GenerateI18nResTask`) generates `res/values*/strings.xml` from
   those JSONs at build time, so the app uses standard Android string resources but the editable source
   stays JSON — syncable with the web app's `locale/*.json`.
