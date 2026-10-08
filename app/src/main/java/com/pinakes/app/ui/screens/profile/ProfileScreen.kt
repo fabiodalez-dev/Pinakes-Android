@@ -620,8 +620,8 @@ private fun GenderField(value: String, onValueChange: (String) -> Unit) {
 
     Surface(
         onClick = { dialogOpen = true },
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(Modifier.padding(Spacing.lg), verticalAlignment = Alignment.CenterVertically) {
@@ -684,8 +684,8 @@ private fun DateField(value: String, label: String, onValueChange: (String) -> U
     var pickerOpen by remember { mutableStateOf(false) }
     Surface(
         onClick = { pickerOpen = true },
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(Modifier.padding(Spacing.lg), verticalAlignment = Alignment.CenterVertically) {
