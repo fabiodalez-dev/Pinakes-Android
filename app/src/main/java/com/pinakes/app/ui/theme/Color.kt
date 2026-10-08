@@ -58,7 +58,7 @@ class PinakesColors(palette: ThemePalette, val darkMode: Boolean) {
     val line2 = if (darkMode) Color(0xFF928F94) else Color(0xFFE2DCE0)
     val accentText = readableColor(if (darkMode) mix(accent, Color.White, .55f) else accent, background)
     val accentSoft = mix(accent, surface, if (darkMode) .18f else .09f)
-    val accentStrong = readableColor(accentText, accentSoft)
+    val accentStrong = readableColor(mix(accentText, if (darkMode) Color.White else Color.Black, .78f), accentSoft)
     val accentSofter = mix(accent, background, .05f)
     val accentLine = mix(accent, surface, .16f)
     val heroWash = if (darkMode) mix(accent, background, .10f) else mix(accent, Color(0xFFF7F1F3), .06f)
