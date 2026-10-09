@@ -60,7 +60,7 @@ fun SearchFilterSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        containerColor = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -75,7 +75,7 @@ fun SearchFilterSheet(
             ) {
                 Text(
                     text = stringResource(R.string.filters_title),
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),
                 )
@@ -105,7 +105,7 @@ fun SearchFilterSheet(
                 colors = chipColors,
             )
 
-            Spacer(Modifier.height(Spacing.lg))
+            Spacer(Modifier.height(28.dp))
 
             // --- Genre (cascade from /catalog/genres) ---
             // The backend `genre` filter matches at ANY level, so whatever node the user
@@ -156,7 +156,7 @@ fun SearchFilterSheet(
                         }
                     }
                 }
-                Spacer(Modifier.height(Spacing.lg))
+                Spacer(Modifier.height(28.dp))
             }
 
             // --- Author ---
@@ -184,7 +184,7 @@ fun SearchFilterSheet(
                 keyboardActions = KeyboardActions(onDone = { onApply() }),
             )
 
-            Spacer(Modifier.height(Spacing.lg))
+            Spacer(Modifier.height(28.dp))
 
             // --- Language ---
             SectionLabel(stringResource(R.string.filters_section_language))
@@ -223,33 +223,24 @@ fun SearchFilterSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Spacer(Modifier.height(Spacing.lg))
+            Spacer(Modifier.height(28.dp))
         }
     }
 }
 
-/** Guard against a pathological or cyclic genre tree overflowing the stack. */
-private const val MAX_GENRE_DEPTH = 8
-
-/**
- * Depth-first search for [id] in the genre tree, returning the root→node path (inclusive)
- * or an empty list if not found. Used to reveal the selected branch's sub-category rows.
- *
- * Bounded by [MAX_GENRE_DEPTH] and a visited-id set so a cyclic or unexpectedly deep tree
- * (e.g. from a malformed server payload) can't cause unbounded recursion / a StackOverflow.
- */
-private fun genrePath(nodes: List<GenreNode>, id: Int): List<GenreNode> {
-    fun walk(level: List<GenreNode>, depth: Int, visited: MutableSet<Int>): List<GenreNode> {
-        if (depth > MAX_GENRE_DEPTH) return emptyList()
-        for (node in level) {
-            if (!visited.add(node.id)) continue // repeat id (cycle) → don't descend again
-            if (node.id == id) return listOf(node)
-            val sub = walk(node.children, depth + 1, visited)
-            if (sub.isNotEmpty()) return listOf(node) + sub
-        }
-        return emptyList()
+/** Iterative traversal supports every genre depth without risking stack overflow. */
+internal fun genrePath(nodes: List<GenreNode>, id: Int): List<GenreNode> {
+    val pending = ArrayDeque<Pair<GenreNode, List<GenreNode>>>()
+    nodes.asReversed().forEach { pending.addLast(it to emptyList()) }
+    val seen = mutableSetOf<Int>()
+    while (pending.isNotEmpty()) {
+        val (node, parents) = pending.removeLast()
+        if (!seen.add(node.id)) continue
+        val path = parents + node
+        if (node.id == id) return path
+        node.children.asReversed().forEach { pending.addLast(it to path) }
     }
-    return walk(nodes, 0, mutableSetOf())
+    return emptyList()
 }
 
 @Composable

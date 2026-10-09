@@ -89,71 +89,63 @@ fun ForgotPasswordScreen(onBackToLogin: () -> Unit) {
     val form = Modifier.fillMaxWidth().widthIn(max = 420.dp)
     val errorMessage = state.error ?: state.errorRes?.let { stringResource(it) }
 
-    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.forgot_password_title),
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(Spacing.sm))
-            Text(
-                text = stringResource(R.string.forgot_password_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = form,
-            )
+    com.pinakes.app.ui.components.AuthForm {
+        Text(
+            text = stringResource(R.string.forgot_password_title),
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(Spacing.sm))
+        Text(
+            text = stringResource(R.string.forgot_password_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = form,
+        )
 
-            Spacer(Modifier.height(Spacing.xxl))
+        Spacer(Modifier.height(Spacing.xxl))
 
-            if (state.sent) {
-                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primaryContainer, modifier = form) {
-                    Text(
-                        text = stringResource(R.string.forgot_password_sent),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(Spacing.md),
-                    )
-                }
-                Spacer(Modifier.height(Spacing.xl))
-                PrimaryButton(
-                    label = stringResource(R.string.auth_back_to_login),
-                    onClick = onBackToLogin,
-                    modifier = form,
-                )
-            } else {
-                PinakesTextField(
-                    value = state.email,
-                    onValueChange = vm::onEmailChange,
-                    label = stringResource(R.string.login_email_label),
-                    modifier = form,
-                    isError = errorMessage != null,
-                    errorText = errorMessage.orEmpty(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { vm.submit() }),
-                )
-                Spacer(Modifier.height(Spacing.xl))
-                PrimaryButton(
-                    label = stringResource(R.string.forgot_password_action),
-                    onClick = vm::submit,
-                    modifier = form,
-                    loading = state.loading,
-                )
-                Spacer(Modifier.height(Spacing.sm))
-                PinakesTextButton(
-                    label = stringResource(R.string.auth_back_to_login),
-                    onClick = onBackToLogin,
+        if (state.sent) {
+            Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primaryContainer, modifier = form) {
+                Text(
+                    text = stringResource(R.string.forgot_password_sent),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(Spacing.md),
                 )
             }
+            Spacer(Modifier.height(Spacing.xl))
+            PrimaryButton(
+                label = stringResource(R.string.auth_back_to_login),
+                onClick = onBackToLogin,
+                modifier = form,
+            )
+        } else {
+            PinakesTextField(
+                value = state.email,
+                onValueChange = vm::onEmailChange,
+                label = stringResource(R.string.login_email_label),
+                modifier = form,
+                isError = errorMessage != null,
+                errorText = errorMessage.orEmpty(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { vm.submit() }),
+            )
+            Spacer(Modifier.height(Spacing.xl))
+            PrimaryButton(
+                label = stringResource(R.string.forgot_password_action),
+                onClick = vm::submit,
+                modifier = form,
+                loading = state.loading,
+            )
+            Spacer(Modifier.height(Spacing.sm))
+            PinakesTextButton(
+                label = stringResource(R.string.auth_back_to_login),
+                onClick = onBackToLogin,
+            )
         }
     }
+
 }

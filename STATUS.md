@@ -1,14 +1,19 @@
 # Pinakes Android — Build Status
 
-**Build: GREEN.** `./gradlew assembleDebug` succeeds; `./gradlew lintDebug` passes (0 errors). Kotlin compiles clean.
+## 2026 restyle (2026-10-08)
 
-- **APK:** `pinakes-debug.apk` (repo root, ~20 MB) — copied from `app/build/outputs/apk/debug/app-debug.apk`.
-  Install: `adb install -r pinakes-debug.apk`.
-- **Package:** `com.pinakes.app` · versionName `1.0` · minSdk 26 · target/compileSdk 35 · launchable `MainActivity`.
-- **Verified on an emulator against a live Pinakes instance** (Android 15 / API 35 AVD → `http://10.0.2.2:8081`):
-  onboarding → `/health` discovery → login (`200`) → catalog search with real books → book cards with
-  correct titles/authors/availability. Two real bugs were found and fixed during this smoke test — see
-  **Fixes applied** below. The app is **fully localized in 4 languages** (German verified live) — see **i18n**.
+The app now uses the 2026 web design: Geist / Fraunces, warm neutrals, a server-ready `ThemePalette`, complete 3D book covers, a searchable home hero with a cover fan, catalog grid/list views, dot status pills, grouped availability/actions and one card per exposed digital asset. Shared tokens apply to all existing account and plugin screens. The five-section bottom navigation is retained. Article lists and details now show server-resolved covers, subtitles, published online resources and access conditions, with a website action for the existing staff management flows. Native collections require the additive Mobile API 1.5.0 server update; existing circulation and authentication routes are retained.
+
+- Debug APK: `pinakes-debug.apk`, copied from `app/build/outputs/apk/debug/app-debug.apk` (generated locally and ignored by Git).
+- Package: `com.pinakes.app`, version `1.6.0` (17), minSdk 26, target/compileSdk 35.
+- Local verification: **185 unit tests, 19 Compose device tests, zero lint errors**, and successful debug + R8 release builds.
+- Verification commands: `assembleDebug`, `testDebugUnitTest`, `lintDebug`, `assembleRelease`, `assembleDebugAndroidTest`; the 19 device tests run through `am instrument` on a separate Android 15 AVD, preserving the authenticated demo device.
+- Unit tests cover the existing contracts and theme contrast/mixing. Compose device tests cover full tall artwork, missing metadata, grid actions, view selection, digital-file cards, narrow search placeholders, circulation actions theme pairings, reachable empty-home actions and query preservation during loading.
+- Release builds exercise R8 and resource shrinking. Without release credentials the output is unsigned; no store release is published by this change.
+- macOS standalone emulator startup: `tools/run-emulator.sh` keeps a power assertion scoped to the emulator PID. A control with the identical debug APK reproduced a 21-second startup timeout at host priority 4; three starts with the assertion completed in 2.3–3.1 seconds. After a VM restart through the launcher, five more cold starts completed in 1.66–1.80 seconds with no ANR events. The original startup ANR also coincided with system/launcher stalls. An older AVD still stalled on a later cold boot, and a snapshot retained a system ANR dialog: the assertion does not repair an unhealthy AVD. No Sentry events are suppressed, and no production-device ANR fix is claimed.
+- New native sections: Desiderata with verified-account donation proposals and durable retry recovery; Archives with hierarchy, filters, authorities, documents and exports; analytic articles with all bibliographic fields, five citation styles, rich clipboard, shared-author navigation and issue contributions. Home and catalog support author sorting; every digital attachment and publisher is shown. Staff management uses protected website pages. See [Uwe parity](docs/UWE-PARITY.md).
+- Headless Android 15 completed the device tests while older GUI AVDs stalled despite the scoped power assertion. GUI and headless emulator processes had different host scheduling priorities; this is development-environment evidence, not a production ANR fix.
+- `ThemePalette` defaults to Classic / Covers. Discovery does not expose theme, CMS home sections, richer catalog facets, CMS-driven home ordering or share data yet; these are documented as future API work in DESIGN.md.
 
 ## Install & point at an instance
 
@@ -39,22 +44,21 @@ On first launch the app shows **Onboarding**: enter your Pinakes instance URL.
 | 8. Notifications | ✅ | Feed w/ per-type icons, read/unread styling, **pull-to-refresh** |
 | 9. Contact | ✅ | `POST /messages` subject+body form, success state |
 
-- **Bottom nav:** Search / Library / Wishlist / Profile. **Nested routes:** Book Detail, Notifications, Contact.
-- **Design system:** Material 3 light **and** dark, brand magenta `#D70161` + indigo `#6366F1`,
-  Inter (bundled), rounded cards, soft shadows, brand-gradient header on onboarding/login,
-  navigation transitions + list/press animations, adaptive launcher icon.
-- **Architecture:** Navigation-Compose + ViewModel/StateFlow, manual DI (`ServiceLocator` via a
-  `LocalServices` composition local), Retrofit + OkHttp + kotlinx.serialization, Coil for covers.
+- **Bottom nav:** Home / Catalog / Library / Wishlist / Profile. **Nested routes:** Book Detail, Notifications, Contact and optional collection details.
+- **Design system:** Material 3 light **and** dark, 2026 theme-derived colours (Classic magenta by default),
+  bundled Geist / Fraunces, warm neutrals, complete book covers, rounded controls and subtle hero washes.
+  Calendar and status colours follow the app theme. The adaptive launcher icon is preserved.
+- **Architecture:** Navigation-Compose + ViewModel/StateFlow + Hilt, Retrofit + OkHttp + kotlinx.serialization, Coil for covers.
   All loading/empty/error states handled per screen.
 
 ## Internationalization (i18n)
 
-The app is **fully localized in 4 languages — Italian, English, French, German** — matching the
-Pinakes backend locales. It follows the **device locale** by default and offers an **in-app language
+The app supports **4 languages — Italian, English, French, German**; the PHP server also supports Danish.
+It follows the **device locale** by default and offers an **in-app language
 switcher** in Profile (System default / Italiano / English / Français / Deutsch) via
 `AppCompatDelegate.setApplicationLocales(...)`, persisted across restarts (`autoStoreLocales`).
 
-- **Single source of truth = JSON.** Translations live in `i18n/{en,it,fr,de}.json` (209 keys each,
+- **Single source of truth = JSON.** Translations live in `i18n/{en,it,fr,de}.json` (622 keys each,
   en = default/source). A Gradle task (`GenerateI18nResTask`) generates `res/values*/strings.xml` from
   those JSONs at build time, so the app uses standard Android string resources but the editable source
   stays JSON — syncable with the web app's `locale/*.json`.

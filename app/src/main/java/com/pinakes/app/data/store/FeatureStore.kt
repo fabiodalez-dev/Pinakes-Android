@@ -46,6 +46,8 @@ data class InstanceFeatures(
      * `GET /api/v1/periodicals/health` probe (2xx → on, 404 → off), hidden until confirmed.
      */
     val periodicalsAvailable: Boolean = false,
+    val archivesAvailable: Boolean = false,
+    val desiderataAvailable: Boolean = false,
 ) {
     /** Library tab (loans + reservations) is shown only when at least one of them is enabled. */
     val showLibrary: Boolean get() = loans || reservations
@@ -102,6 +104,8 @@ class FeatureStore(context: Context) {
             registrationEnabled = health.registrationEnabled,
             bookClubAvailable = prefs.getBoolean(KEY_BOOK_CLUB, false),
             periodicalsAvailable = prefs.getBoolean(KEY_PERIODICALS, false),
+            archivesAvailable = f.archives && health.appAccessEnabled,
+            desiderataAvailable = f.desiderata && health.appAccessEnabled,
         )
         prefs.edit()
             .putBoolean(KEY_KNOWN, true)
@@ -115,6 +119,8 @@ class FeatureStore(context: Context) {
             .putBoolean(KEY_PUSH, value.push)
             .putBoolean(KEY_REVIEWS, value.reviews)
             .putBoolean(KEY_REGISTRATION_ENABLED, value.registrationEnabled)
+            .putBoolean("archives", value.archivesAvailable)
+            .putBoolean("desiderata", value.desiderataAvailable)
             .apply()
         _features.value = value
     }
@@ -155,6 +161,8 @@ class FeatureStore(context: Context) {
             registrationEnabled = prefs.getBoolean(KEY_REGISTRATION_ENABLED, false),
             bookClubAvailable = prefs.getBoolean(KEY_BOOK_CLUB, false),
             periodicalsAvailable = prefs.getBoolean(KEY_PERIODICALS, false),
+            archivesAvailable = prefs.getBoolean("archives", false),
+            desiderataAvailable = prefs.getBoolean("desiderata", false),
         )
     }
 

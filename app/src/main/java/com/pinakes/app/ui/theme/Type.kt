@@ -4,38 +4,36 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.pinakes.app.R
 
-val Inter = FontFamily(
-    Font(R.font.inter_regular,  FontWeight.Normal),
-    Font(R.font.inter_medium,   FontWeight.Medium),
-    Font(R.font.inter_semibold, FontWeight.SemiBold),
-    Font(R.font.inter_bold,     FontWeight.Bold),
+val Geist = FontFamily(
+    Font(R.font.geist_regular, FontWeight.Normal),
+    Font(R.font.geist_medium, FontWeight.Medium),
+    Font(R.font.geist_semibold, FontWeight.SemiBold),
+    Font(R.font.geist_bold, FontWeight.Bold),
 )
+val Fraunces = FontFamily(
+    Font(R.font.fraunces_medium, FontWeight.Medium),
+    Font(R.font.fraunces_italic_medium, FontWeight.Medium, FontStyle.Italic),
+)
+val PinakesFontFamily = Geist
 
-// Use Inter; falls back to system SansSerif if the font resources are missing.
-val PinakesFontFamily = Inter
+private fun heading(size: Int, line: Int) = TextStyle(fontFamily = Fraunces,
+    fontWeight = FontWeight.Medium, fontSize = size.sp, lineHeight = line.sp, letterSpacing = (-size * .02).sp)
+private fun ui(size: Int, line: Int, weight: FontWeight = FontWeight.Normal) = TextStyle(fontFamily = Geist,
+    fontWeight = weight, fontSize = size.sp, lineHeight = line.sp, letterSpacing = 0.sp)
+
+/** Publication titles stay distinct from interface labels in compact rows. */
+val PublicationTitleStyle = heading(17, 21)
 
 val PinakesTypography = Typography(
-    displayLarge  = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.Bold,     fontSize = 57.sp, lineHeight = 64.sp, letterSpacing = (-0.25).sp),
-    displayMedium = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.Bold,     fontSize = 45.sp, lineHeight = 52.sp, letterSpacing = 0.sp),
-    displaySmall  = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 36.sp, lineHeight = 44.sp, letterSpacing = 0.sp),
-
-    headlineLarge  = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 32.sp, lineHeight = 40.sp, letterSpacing = 0.sp),
-    headlineMedium = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 28.sp, lineHeight = 36.sp, letterSpacing = 0.sp),
-    headlineSmall  = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 24.sp, lineHeight = 32.sp, letterSpacing = 0.sp),
-
-    titleLarge  = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = 0.sp),
-    titleMedium = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.Medium,   fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 0.15.sp),
-    titleSmall  = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.Medium,   fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
-
-    bodyLarge  = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 0.5.sp),
-    bodyMedium = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.25.sp),
-    bodySmall  = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.4.sp),
-
-    labelLarge  = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
-    labelMedium = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp),
-    labelSmall  = TextStyle(fontFamily = PinakesFontFamily, fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp),
+    displayLarge = heading(54, 58), displayMedium = heading(44, 48), displaySmall = heading(40, 44),
+    headlineLarge = heading(36, 40), headlineMedium = heading(32, 36), headlineSmall = heading(28, 32),
+    titleLarge = heading(24, 28), titleMedium = ui(16, 24, FontWeight.Medium), titleSmall = ui(14, 20, FontWeight.Medium),
+    bodyLarge = ui(16, 27), bodyMedium = ui(14, 22), bodySmall = ui(13, 18),
+    labelLarge = ui(15, 20, FontWeight.SemiBold), labelMedium = ui(12, 16, FontWeight.Medium),
+    labelSmall = ui(11, 16, FontWeight.SemiBold),
 )

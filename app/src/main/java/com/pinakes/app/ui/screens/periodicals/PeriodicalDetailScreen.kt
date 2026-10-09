@@ -129,7 +129,7 @@ private fun PeriodicalHeader(detail: PeriodicalDetail) {
                 Column(Modifier.weight(1f)) {
                     Text(
                         detail.title,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     detail.subtitle?.takeIf { it.isNotBlank() }?.let {

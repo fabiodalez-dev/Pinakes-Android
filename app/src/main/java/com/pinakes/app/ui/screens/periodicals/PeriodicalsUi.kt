@@ -21,6 +21,7 @@ val PERIODICAL_TYPES = listOf("rivista", "giornale", "magazine", "bollettino", "
 /** Localized label for a masthead type. Unknown values fall back to the generic "rivista". */
 @StringRes
 fun periodicalTypeLabelRes(type: String): Int = when (type) {
+    "antologia" -> R.string.article_anthology
     "giornale" -> R.string.periodicals_type_giornale
     "magazine" -> R.string.periodicals_type_magazine
     "bollettino" -> R.string.periodicals_type_bollettino

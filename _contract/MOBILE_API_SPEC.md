@@ -10,6 +10,14 @@
 
 ## Goal
 
+### Implemented extension: Mobile API 1.5.0 / Android 1.6.0
+
+The coordinated changes in Pinakes #458 and Android #41 add capability-gated Archives and library Desiderata, separate from circulation inventory and personal wishlist. Authenticated collection routes provide independent cursors, public archive hierarchy/metadata/documents/exports, and verified-account donation proposals with consent. Proposal UUIDs survive retries and process death; the server deduplicates per account and exposes account-scoped outcome recovery.
+
+Analytic article search supports shared author IDs, publisher, complete genre ancestry, language, container and keyword filters. Unsupported analytic filters require a server upgrade rather than returning unfiltered results. Book and article details expose complete bibliographic metadata, five server-generated citation styles and digital attachments; article RIS/MARCXML and protected staff-management links are retained. Old circulation routes stay compatible. See [the parity matrix](../docs/UWE-PARITY.md) and [release preparation](../docs/PLAY-RELEASES.md) for version dependencies and verified boundaries.
+
+### Original API scope
+
 Expose **everything a logged-in library user can do on the web** through a
 versioned REST API, so a native app can deliver: catalog search, book detail,
 loan/reservation requests, wishlist, profile, contact messaging, and push
@@ -31,7 +39,7 @@ stock). The app stores the instance URL + a long-lived per-device token.
 | Pagination | **Cursor-based** for catalog/lists: `meta.next_cursor` (opaque), `?cursor=...&limit=...`. |
 | Localization | Strings in the **instance locale** (decided at install); **dates ISO-8601 UTC**; the app formats locally. |
 | Write actions | reserve / request loan, **cancel reservation**, wishlist add/remove, **edit profile + change password**, **send contact message**. |
-| Search filters | text (title/author/keyword), author/publisher, **genre cascade (3 levels) + language**, **availability (loanable now)**. |
+| Search filters | text (title/author/keyword), author identity/publisher, **complete genre ancestry + language**, **availability (loanable now)**. |
 | Book detail | **Full** payload (availability, copies, shelf/location, absolute cover URL, full metadata, related) **+ personal history** (has the user read/reserved/wishlisted it). |
 | Caching | **ETag / Last-Modified** + cache headers on read endpoints; honor `If-None-Match` → 304. |
 | Push transport | **UnifiedPush** primary (the library manager self-registers a provider and creates the credentials — minimal setup). Behind a **pluggable `PushProvider` abstraction** (UnifiedPush impl now; FCM impl optional/stub). |

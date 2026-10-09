@@ -163,10 +163,11 @@ android {
 
     defaultConfig {
         applicationId = "com.pinakes.app"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 26
         targetSdk = 35
-        versionCode = 16
-        versionName = "1.5.2"
+        versionCode = 17
+        versionName = "1.6.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -281,6 +282,10 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
     debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.runner)
 
     implementation(libs.androidx.navigation.compose)
 

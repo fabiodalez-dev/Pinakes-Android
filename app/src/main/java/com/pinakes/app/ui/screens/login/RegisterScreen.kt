@@ -225,181 +225,173 @@ fun RegisterScreen(onBackToLogin: () -> Unit) {
     val form = Modifier.fillMaxWidth().widthIn(max = 420.dp)
     val errorMessage = state.error ?: state.errorRes?.let { stringResource(it) }
 
-    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.register_title),
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(Spacing.sm))
-            Text(
-                text = stringResource(R.string.register_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = form,
-            )
+    com.pinakes.app.ui.components.AuthForm {
+        Text(
+            text = stringResource(R.string.register_title),
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(Spacing.sm))
+        Text(
+            text = stringResource(R.string.register_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = form,
+        )
 
-            Spacer(Modifier.height(Spacing.xxl))
+        Spacer(Modifier.height(Spacing.xxl))
 
-            if (!features.registrationEnabled) {
-                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = form) {
-                    Text(
-                        text = stringResource(R.string.register_disabled),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(Spacing.md),
-                    )
-                }
-                Spacer(Modifier.height(Spacing.xl))
-                PrimaryButton(label = stringResource(R.string.auth_back_to_login), onClick = onBackToLogin, modifier = form)
-                return@Column
-            }
-
-            if (state.sent) {
-                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primaryContainer, modifier = form) {
-                    Text(
-                        text = stringResource(R.string.register_sent),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(Spacing.md),
-                    )
-                }
-                Spacer(Modifier.height(Spacing.xl))
-                PrimaryButton(label = stringResource(R.string.auth_back_to_login), onClick = onBackToLogin, modifier = form)
-                return@Column
-            }
-
-            PinakesTextField(
-                value = state.nome,
-                onValueChange = vm::onNomeChange,
-                label = requiredLabel(stringResource(R.string.profile_first_name), true),
-                modifier = form,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            )
-            Spacer(Modifier.height(Spacing.md))
-            PinakesTextField(
-                value = state.cognome,
-                onValueChange = vm::onCognomeChange,
-                label = requiredLabel(stringResource(R.string.profile_last_name), state.builtinRequired("cognome")),
-                modifier = form,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            )
-            Spacer(Modifier.height(Spacing.md))
-            PinakesTextField(
-                value = state.email,
-                onValueChange = vm::onEmailChange,
-                label = requiredLabel(stringResource(R.string.login_email_label), true),
-                modifier = form,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
-            )
-            Spacer(Modifier.height(Spacing.md))
-            PinakesTextField(
-                value = state.telefono,
-                onValueChange = vm::onTelefonoChange,
-                label = requiredLabel(stringResource(R.string.register_phone), state.builtinRequired("telefono")),
-                modifier = form,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
-            )
-            Spacer(Modifier.height(Spacing.md))
-            PinakesTextField(
-                value = state.indirizzo,
-                onValueChange = vm::onIndirizzoChange,
-                label = requiredLabel(stringResource(R.string.register_address), state.builtinRequired("indirizzo")),
-                modifier = form,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            )
-            // Schema fetch failed: registration still works with the built-in
-            // defaults, but tell the user extra fields may be missing and let
-            // them retry rather than silently omitting required custom fields.
-            if (state.schemaFailed) {
-                Spacer(Modifier.height(Spacing.md))
-                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = form) {
-                    Row(
-                        modifier = Modifier.padding(Spacing.md),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.register_schema_failed),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-                        PinakesTextButton(label = stringResource(R.string.action_retry), onClick = vm::loadSchema)
-                    }
-                }
-            }
-            // Instance-defined custom fields, rendered by type.
-            state.customFields.forEach { def ->
-                Spacer(Modifier.height(Spacing.md))
-                CustomFieldInput(
-                    def = def,
-                    value = state.customValues[def.id].orEmpty(),
-                    onValueChange = { vm.onCustomFieldChange(def.id, it) },
-                    modifier = form,
-                )
-            }
-            Spacer(Modifier.height(Spacing.md))
-            PasswordField(
-                value = state.password,
-                onValueChange = vm::onPasswordChange,
-                modifier = form,
-                imeAction = ImeAction.Next,
-            )
-            Spacer(Modifier.height(Spacing.md))
-            PasswordField(
-                value = state.passwordConfirm,
-                onValueChange = vm::onPasswordConfirmChange,
-                label = stringResource(R.string.register_confirm_password),
-                modifier = form,
-                imeAction = ImeAction.Done,
-                keyboardActions = KeyboardActions(onDone = { vm.submit() }),
-            )
-            Spacer(Modifier.height(Spacing.md))
-            Row(modifier = form, verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = state.privacyAccepted, onCheckedChange = vm::onPrivacyChange)
+        if (!features.registrationEnabled) {
+            Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = form) {
                 Text(
-                    text = stringResource(R.string.register_privacy),
-                    style = MaterialTheme.typography.bodySmall,
+                    text = stringResource(R.string.register_disabled),
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(Spacing.md),
                 )
             }
+            Spacer(Modifier.height(Spacing.xl))
+            PrimaryButton(label = stringResource(R.string.auth_back_to_login), onClick = onBackToLogin, modifier = form)
+            return@AuthForm
+        }
 
-            if (errorMessage != null) {
-                Spacer(Modifier.height(Spacing.md))
-                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.errorContainer, modifier = form) {
+        if (state.sent) {
+            Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primaryContainer, modifier = form) {
+                Text(
+                    text = stringResource(R.string.register_sent),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(Spacing.md),
+                )
+            }
+            Spacer(Modifier.height(Spacing.xl))
+            PrimaryButton(label = stringResource(R.string.auth_back_to_login), onClick = onBackToLogin, modifier = form)
+            return@AuthForm
+        }
+
+        PinakesTextField(
+            value = state.nome,
+            onValueChange = vm::onNomeChange,
+            label = requiredLabel(stringResource(R.string.profile_first_name), true),
+            modifier = form,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+        )
+        Spacer(Modifier.height(Spacing.md))
+        PinakesTextField(
+            value = state.cognome,
+            onValueChange = vm::onCognomeChange,
+            label = requiredLabel(stringResource(R.string.profile_last_name), state.builtinRequired("cognome")),
+            modifier = form,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+        )
+        Spacer(Modifier.height(Spacing.md))
+        PinakesTextField(
+            value = state.email,
+            onValueChange = vm::onEmailChange,
+            label = requiredLabel(stringResource(R.string.login_email_label), true),
+            modifier = form,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+        )
+        Spacer(Modifier.height(Spacing.md))
+        PinakesTextField(
+            value = state.telefono,
+            onValueChange = vm::onTelefonoChange,
+            label = requiredLabel(stringResource(R.string.register_phone), state.builtinRequired("telefono")),
+            modifier = form,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
+        )
+        Spacer(Modifier.height(Spacing.md))
+        PinakesTextField(
+            value = state.indirizzo,
+            onValueChange = vm::onIndirizzoChange,
+            label = requiredLabel(stringResource(R.string.register_address), state.builtinRequired("indirizzo")),
+            modifier = form,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+        )
+        // Schema fetch failed: registration still works with the built-in
+        // defaults, but tell the user extra fields may be missing and let
+        // them retry rather than silently omitting required custom fields.
+        if (state.schemaFailed) {
+            Spacer(Modifier.height(Spacing.md))
+            Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = form) {
+                Row(
+                    modifier = Modifier.padding(Spacing.md),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(
-                        text = errorMessage,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(Spacing.md),
+                        text = stringResource(R.string.register_schema_failed),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
                     )
+                    PinakesTextButton(label = stringResource(R.string.action_retry), onClick = vm::loadSchema)
                 }
             }
-
-            Spacer(Modifier.height(Spacing.xl))
-            PrimaryButton(
-                label = stringResource(R.string.register_action),
-                onClick = vm::submit,
-                modifier = form,
-                // Spinner + disabled while the account request is in flight OR
-                // the schema is still loading — the submit() guard also blocks
-                // the latter, this just reflects it visually.
-                loading = state.loading || state.schemaLoading,
-            )
-            Spacer(Modifier.height(Spacing.sm))
-            PinakesTextButton(label = stringResource(R.string.auth_back_to_login), onClick = onBackToLogin)
         }
+        // Instance-defined custom fields, rendered by type.
+        state.customFields.forEach { def ->
+            Spacer(Modifier.height(Spacing.md))
+            CustomFieldInput(
+                def = def,
+                value = state.customValues[def.id].orEmpty(),
+                onValueChange = { vm.onCustomFieldChange(def.id, it) },
+                modifier = form,
+            )
+        }
+        Spacer(Modifier.height(Spacing.md))
+        PasswordField(
+            value = state.password,
+            onValueChange = vm::onPasswordChange,
+            modifier = form,
+            imeAction = ImeAction.Next,
+        )
+        Spacer(Modifier.height(Spacing.md))
+        PasswordField(
+            value = state.passwordConfirm,
+            onValueChange = vm::onPasswordConfirmChange,
+            label = stringResource(R.string.register_confirm_password),
+            modifier = form,
+            imeAction = ImeAction.Done,
+            keyboardActions = KeyboardActions(onDone = { vm.submit() }),
+        )
+        Spacer(Modifier.height(Spacing.md))
+        Row(modifier = form, verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = state.privacyAccepted, onCheckedChange = vm::onPrivacyChange)
+            Text(
+                text = stringResource(R.string.register_privacy),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (errorMessage != null) {
+            Spacer(Modifier.height(Spacing.md))
+            Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.errorContainer, modifier = form) {
+                Text(
+                    text = errorMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(Spacing.md),
+                )
+            }
+        }
+
+        Spacer(Modifier.height(Spacing.xl))
+        PrimaryButton(
+            label = stringResource(R.string.register_action),
+            onClick = vm::submit,
+            modifier = form,
+            // Spinner + disabled while the account request is in flight OR
+            // the schema is still loading — the submit() guard also blocks
+            // the latter, this just reflects it visually.
+            loading = state.loading || state.schemaLoading,
+        )
+        Spacer(Modifier.height(Spacing.sm))
+        PinakesTextButton(label = stringResource(R.string.auth_back_to_login), onClick = onBackToLogin)
     }
+
 }
 
 /** Appends a " *" marker to a field label when the instance requires it. */

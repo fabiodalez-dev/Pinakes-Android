@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PhoneAndroid
@@ -93,6 +94,9 @@ fun ProfileScreen(
     onOpenMyReviews: () -> Unit,
     onOpenBookClub: () -> Unit,
     onOpenPeriodicals: () -> Unit,
+    onOpenArticles: () -> Unit,
+    onOpenDesiderata: () -> Unit,
+    onOpenArchives: () -> Unit,
 ) {
     val app: AppViewModel = hiltViewModel()
     val vm: ProfileViewModel = hiltViewModel()
@@ -123,6 +127,11 @@ fun ProfileScreen(
                     onOpenMyReviews = onOpenMyReviews,
                     onOpenBookClub = onOpenBookClub,
                     onOpenPeriodicals = onOpenPeriodicals,
+                    onOpenArticles = onOpenArticles,
+                    onOpenDesiderata = onOpenDesiderata,
+                    onOpenArchives = onOpenArchives,
+                    showDesiderata = features.desiderataAvailable,
+                    showArchives = features.archivesAvailable,
                     showNotifications = features.notifications,
                     showContact = features.messages,
                     showReviews = features.showReviews,
@@ -192,11 +201,16 @@ private fun ProfileContent(
     onOpenMyReviews: () -> Unit,
     onOpenBookClub: () -> Unit,
     onOpenPeriodicals: () -> Unit,
+    onOpenArticles: () -> Unit,
+    onOpenDesiderata: () -> Unit,
+    onOpenArchives: () -> Unit,
     showNotifications: Boolean,
     showContact: Boolean,
     showReviews: Boolean,
     showBookClub: Boolean,
     showPeriodicals: Boolean,
+    showDesiderata: Boolean,
+    showArchives: Boolean,
 ) {
     Column(
         Modifier
@@ -267,9 +281,12 @@ private fun ProfileContent(
         if (showBookClub) {
             ActionRow(Icons.Outlined.Groups, stringResource(R.string.profile_action_book_club), onClick = onOpenBookClub)
         }
+        if (showPeriodicals) ActionRow(Icons.Outlined.Newspaper, stringResource(R.string.standalone_articles_title), onClick = onOpenArticles)
         if (showPeriodicals) {
             ActionRow(Icons.Outlined.Newspaper, stringResource(R.string.profile_action_periodicals), onClick = onOpenPeriodicals)
         }
+        if (showDesiderata) ActionRow(Icons.Outlined.AutoStories, stringResource(R.string.desiderata_title), onClick = onOpenDesiderata)
+        if (showArchives) ActionRow(Icons.Outlined.AutoStories, stringResource(R.string.archives_title), onClick = onOpenArchives)
         if (showNotifications) {
             ActionRow(Icons.Outlined.Notifications, stringResource(R.string.profile_action_notifications), onClick = onOpenNotifications)
         }
@@ -540,6 +557,7 @@ private fun EditProfileDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(R.string.profile_edit_title), style = MaterialTheme.typography.titleMedium) },
         text = {
             Column(
@@ -619,8 +637,8 @@ private fun GenderField(value: String, onValueChange: (String) -> Unit) {
 
     Surface(
         onClick = { dialogOpen = true },
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(Modifier.padding(Spacing.lg), verticalAlignment = Alignment.CenterVertically) {
@@ -683,8 +701,8 @@ private fun DateField(value: String, label: String, onValueChange: (String) -> U
     var pickerOpen by remember { mutableStateOf(false) }
     Surface(
         onClick = { pickerOpen = true },
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(Modifier.padding(Spacing.lg), verticalAlignment = Alignment.CenterVertically) {
@@ -750,6 +768,7 @@ private fun ChangePasswordDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(R.string.profile_change_password_title), style = MaterialTheme.typography.titleMedium) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {

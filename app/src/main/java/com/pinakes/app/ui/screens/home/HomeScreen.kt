@@ -2,6 +2,32 @@ package com.pinakes.app.ui.screens.home
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.pinakes.app.ui.screens.search.BookSort
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import com.pinakes.app.data.model.BookSummary
+import com.pinakes.app.ui.components.BookCover
+import com.pinakes.app.ui.components.BookCardGrid
+import com.pinakes.app.ui.components.SearchField
+import com.pinakes.app.ui.theme.HeroStyle
+import com.pinakes.app.ui.theme.LocalPinakesColors
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +42,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +74,11 @@ import com.pinakes.app.ui.theme.Spacing
 fun HomeScreen(
     onBookClick: (Int) -> Unit,
     onBrowseCatalog: () -> Unit,
+    onSearch: (String) -> Unit = { onBrowseCatalog() },
+    onOpenPeriodicals: (() -> Unit)? = null,
+    onOpenArticles: (() -> Unit)? = null,
+    onOpenDesiderata: (() -> Unit)? = null,
+    onOpenArchives: (() -> Unit)? = null,
 ) {
     // Feature flags come from the Hilt-provided AppViewModel; the screen ViewModel is also
     // created by Hilt via hiltViewModel() instead of a hand-written ViewModelProvider.Factory.
@@ -54,8 +86,25 @@ fun HomeScreen(
     val features by app.features.collectAsStateWithLifecycle()
     val vm: HomeViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
-    val catalogueMode = features.catalogueMode
+    HomeContent(state, features.catalogueMode, onBookClick, onBrowseCatalog, onSearch, vm::retry, onOpenPeriodicals, onOpenArticles, onOpenDesiderata, onOpenArchives, vm::setSort)
+}
 
+/** Query state belongs above the phase transition, so loading cannot clear a draft. */
+@Composable
+internal fun HomeContent(
+    state: HomeUiState,
+    catalogueMode: Boolean,
+    onBookClick: (Int) -> Unit,
+    onBrowseCatalog: () -> Unit,
+    onSearch: (String) -> Unit,
+    onRetry: () -> Unit,
+    onOpenPeriodicals: (() -> Unit)? = null,
+    onOpenArticles: (() -> Unit)? = null,
+    onOpenDesiderata: (() -> Unit)? = null,
+    onOpenArchives: (() -> Unit)? = null,
+    onSort: (BookSort) -> Unit = {},
+) {
+    var heroQuery by rememberSaveable { mutableStateOf("") }
     Crossfade(
         targetState = when {
             state.loading -> HomePhase.Loading
@@ -67,8 +116,8 @@ fun HomeScreen(
         label = "home_phase",
     ) { phase ->
         when (phase) {
-            HomePhase.Loading -> Column(Modifier.fillMaxSize()) {
-                HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode)
+            HomePhase.Loading -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode, books = state.available, onBookClick = onBookClick, onSearch = onSearch, query = heroQuery, onQueryChange = { heroQuery = it })
                 Column(Modifier.padding(horizontal = Spacing.lg)) {
                     SectionHeader(showSeeAll = false, catalogueMode = catalogueMode, onSeeAll = {})
                     Spacer(Modifier.height(Spacing.md))
@@ -80,19 +129,21 @@ fun HomeScreen(
             }
 
             HomePhase.Error -> ErrorState(
-                message = state.error ?: stringResource(R.string.home_error),
-                onRetry = vm::retry,
+                message = state.error?.takeIf(String::isNotBlank) ?: stringResource(R.string.home_error),
+                onRetry = onRetry,
             )
 
-            HomePhase.Empty -> Column(Modifier.fillMaxSize()) {
-                HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode)
-                EmptyState(
-                    title = stringResource(R.string.home_empty_title),
-                    subtitle = stringResource(R.string.home_empty_subtitle),
-                    icon = Icons.AutoMirrored.Outlined.MenuBook,
-                    actionLabel = stringResource(R.string.home_browse_catalog),
-                    onAction = onBrowseCatalog,
-                )
+            HomePhase.Empty -> LazyColumn(Modifier.fillMaxSize()) {
+                item { HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode, books = state.available,
+                    onBookClick = onBookClick, onSearch = onSearch, query = heroQuery, onQueryChange = { heroQuery = it }) }
+                item { CollectionDestinations(onOpenPeriodicals, onOpenDesiderata, onOpenArchives, onOpenArticles) }
+                item {
+                    EmptyState(
+                        title = stringResource(R.string.home_empty_title), subtitle = stringResource(R.string.home_empty_subtitle),
+                        icon = Icons.AutoMirrored.Outlined.MenuBook, actionLabel = stringResource(R.string.home_browse_catalog),
+                        onAction = onBrowseCatalog,
+                    )
+                }
             }
 
             HomePhase.Content -> LazyColumn(
@@ -100,23 +151,22 @@ fun HomeScreen(
                 contentPadding = PaddingValues(bottom = Spacing.xxl),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
-                item { HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode) }
+                item { HomeHeader(libraryName = state.libraryName, catalogueMode = catalogueMode, books = state.available, onBookClick = onBookClick, onSearch = onSearch, query = heroQuery, onQueryChange = { heroQuery = it }) }
+                item { CollectionDestinations(onOpenPeriodicals, onOpenDesiderata, onOpenArchives, onOpenArticles) }
                 item {
                     Box(Modifier.padding(horizontal = Spacing.lg)) {
-                        SectionHeader(showSeeAll = true, catalogueMode = catalogueMode, onSeeAll = onBrowseCatalog)
+                        SectionHeader(showSeeAll = true, catalogueMode = catalogueMode, onSeeAll = onBrowseCatalog, sort = state.sort, onSort = onSort)
                     }
                 }
-                items(state.available, key = { it.id }) { book ->
-                    Box(Modifier.padding(horizontal = Spacing.lg)) {
-                        BookCard(
-                            title = book.title,
-                            author = book.authorsLabel,
-                            coverUrl = book.coverUrl,
-                            status = book.availabilityStatus(),
-                            year = book.year?.toString(),
-                            publisher = book.publisher,
-                            onClick = { onBookClick(book.id) },
-                        )
+                items(state.available.chunked(2), key = { row -> row.joinToString("-") { it.id.toString() } }) { row ->
+                    Row(Modifier.padding(horizontal = Spacing.lg, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        row.forEach { book ->
+                            BookCardGrid(title = book.title, author = book.authorsLabel, coverUrl = book.coverUrl,
+                                status = book.availabilityStatus(), subtitle = book.subtitle, publisher = book.publisher,
+                                year = book.year?.toString(), mediaType = book.mediaType,
+                                onClick = { onBookClick(book.id) }, modifier = Modifier.weight(1f))
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
                 item {
@@ -126,6 +176,7 @@ fun HomeScreen(
                             onClick = onBrowseCatalog,
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = Icons.Outlined.AutoStories,
+                            dark = true,
                         )
                     }
                 }
@@ -136,49 +187,57 @@ fun HomeScreen(
 
 private enum class HomePhase { Loading, Error, Empty, Content }
 
-/** Minimal plain-surface header: a quiet greeting, the library name in magenta, a subtitle. */
+/** The library identity and the real shelf covers, never a decorative stock photo. */
 @Composable
-private fun HomeHeader(libraryName: String?, catalogueMode: Boolean) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.lg)
-            .padding(top = Spacing.xl, bottom = Spacing.md),
-    ) {
-        Text(
-            text = stringResource(R.string.home_greeting),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(Spacing.xxs))
-        Text(
-            text = libraryName ?: stringResource(R.string.app_name),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(Modifier.height(Spacing.xs))
-        Text(
-            // In CATALOGUE-ONLY MODE the catalog is read-only, so avoid "borrow" wording.
-            text = if (catalogueMode) stringResource(R.string.home_subtitle_catalogue)
-            else stringResource(R.string.home_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        // Subtle one-time-style caption that this is a browse-only library. Minimal, no banner.
+private fun HomeHeader(libraryName: String?, catalogueMode: Boolean, books: List<BookSummary>,
+    onBookClick: (Int) -> Unit, onSearch: (String) -> Unit, query: String, onQueryChange: (String) -> Unit) {
+    val colors = LocalPinakesColors.current
+    val centered = colors.heroStyle == HeroStyle.Centered
+    Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(colors.accentSofter, colors.background)))
+        .padding(horizontal = Spacing.lg, vertical = Spacing.xxl),
+        horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start) {
+        Text(stringResource(R.string.home_greeting), style = MaterialTheme.typography.labelMedium, color = colors.muted)
+        Spacer(Modifier.height(12.dp))
+        val name = libraryName ?: stringResource(R.string.app_name)
+        val lastSpace = name.lastIndexOf(' ')
+        Text(buildAnnotatedString {
+            if (lastSpace >= 0) append(name.substring(0, lastSpace + 1))
+            withStyle(SpanStyle(color = colors.accentText, fontStyle = FontStyle.Italic)) { append(name.substring(lastSpace + 1)) }
+        }, style = MaterialTheme.typography.displaySmall,
+            textAlign = if (centered) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
+        Spacer(Modifier.height(12.dp))
+        Text(if (catalogueMode) stringResource(R.string.home_subtitle_catalogue) else stringResource(R.string.home_subtitle),
+            style = MaterialTheme.typography.bodyMedium, color = colors.muted)
         if (catalogueMode) {
-            Spacer(Modifier.height(Spacing.xs))
-            Text(
-                text = stringResource(R.string.home_browse_only_note),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.home_browse_only_note), style = MaterialTheme.typography.labelMedium, color = colors.accentText)
+        }
+        Spacer(Modifier.height(24.dp))
+        SearchField(query, onQueryChange, Modifier.fillMaxWidth(),
+            placeholder = stringResource(R.string.restyle_search_catalog), onSearch = { onSearch(query) })
+        Spacer(Modifier.height(8.dp))
+        PrimaryButton(stringResource(R.string.cd_search), { onSearch(query) }, modifier = Modifier.fillMaxWidth(),
+            leadingIcon = Icons.Outlined.Search)
+        if (!centered) {
+            val fan = books.filter { com.pinakes.app.ui.components.bookCoverImageUrl(it.coverUrl) != null }.take(4)
+            if (fan.isNotEmpty()) {
+                Box(Modifier.fillMaxWidth().height(210.dp).padding(top = 28.dp), contentAlignment = Alignment.Center) {
+                    fan.forEachIndexed { index, book ->
+                        val position = index - (fan.size - 1) / 2f
+                        BookCover(book.title, book.coverUrl, Modifier.width(96.dp).height(144.dp)
+                            .offset(x = (position * 58).dp, y = (kotlin.math.abs(position) * 7).dp)
+                            .graphicsLayer { rotationZ = position * 8 }
+                            .clickable { onBookClick(book.id) }, author = book.authorsLabel, publisher = book.publisher)
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun SectionHeader(showSeeAll: Boolean, catalogueMode: Boolean, onSeeAll: () -> Unit) {
+private fun SectionHeader(showSeeAll: Boolean, catalogueMode: Boolean, onSeeAll: () -> Unit, sort: BookSort = BookSort.NEWEST, onSort: (BookSort) -> Unit = {}) {
+    var choosingSort by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -187,12 +246,19 @@ private fun SectionHeader(showSeeAll: Boolean, catalogueMode: Boolean, onSeeAll:
             Text(
                 // In CATALOGUE-ONLY MODE the shelf isn't about borrowing — it's the newest
                 // titles added to the library, so label it "Recently added" to match.
-                text = if (catalogueMode) stringResource(R.string.home_section_recent)
+                text = if (sort != BookSort.NEWEST) stringResource(sort.labelRes) else if (catalogueMode) stringResource(R.string.home_section_recent)
                 else stringResource(R.string.home_section_available),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
+            Box {
+                androidx.compose.material3.TextButton({ choosingSort = true }) { Text(stringResource(R.string.sort_label, stringResource(sort.labelRes))) }
+                DropdownMenu(choosingSort, { choosingSort = false }) {
+                    listOf(BookSort.NEWEST, BookSort.TITLE_ASC, BookSort.AUTHOR_ASC).forEach { value ->
+                        DropdownMenuItem(text = { Text(stringResource(value.labelRes)) }, onClick = { choosingSort = false; onSort(value) })
+                    }
+                }
+            }
             Text(
                 text = if (catalogueMode) stringResource(R.string.home_section_recent_subtitle)
                 else stringResource(R.string.home_section_available_subtitle),
@@ -209,5 +275,16 @@ private fun SectionHeader(showSeeAll: Boolean, catalogueMode: Boolean, onSeeAll:
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CollectionDestinations(periodicals: (() -> Unit)?, desiderata: (() -> Unit)?, archives: (() -> Unit)?, articles: (() -> Unit)?) {
+    FlowRow(Modifier.fillMaxWidth().padding(horizontal = Spacing.lg), horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        articles?.let { androidx.compose.material3.TextButton(it) { Text(stringResource(R.string.standalone_articles_title)) } }
+        periodicals?.let { androidx.compose.material3.TextButton(it) { Text(stringResource(R.string.periodicals_title)) } }
+        desiderata?.let { androidx.compose.material3.TextButton(it) { Text(stringResource(R.string.desiderata_title)) } }
+        archives?.let { androidx.compose.material3.TextButton(it) { Text(stringResource(R.string.archives_title)) } }
     }
 }

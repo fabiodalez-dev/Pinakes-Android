@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
+import com.pinakes.app.ui.theme.LocalPinakesColors
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -20,10 +22,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.pinakes.app.ui.theme.Spacing
 
-private val StadiumShape = RoundedCornerShape(50)
 
 /**
- * Primary filled button (stadium shape, 48dp min height).
+ * Primary filled button (12dp radius, 48dp minimum height).
  *
  * Shows a spinner and disables interaction while [loading] is true.
  */
@@ -35,22 +36,28 @@ fun PrimaryButton(
     loading: Boolean = false,
     enabled: Boolean = true,
     leadingIcon: ImageVector? = null,
+    dark: Boolean = false,
 ) {
+    val tokens = LocalPinakesColors.current
+    val fill = if (dark) tokens.dark else tokens.button
+    val text = if (dark) androidx.compose.ui.graphics.Color.White else tokens.buttonText
     Button(
         onClick = onClick,
         modifier = modifier.defaultMinSize(minHeight = 48.dp),
         enabled = enabled && !loading,
-        shape = StadiumShape,
+        shape = RoundedCornerShape(12.dp),
         contentPadding = PaddingValues(horizontal = Spacing.xl, vertical = 12.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
+            containerColor = fill,
+            contentColor = text,
+            disabledContainerColor = if (loading) fill else MaterialTheme.colorScheme.surfaceVariant,
+            disabledContentColor = if (loading) text else MaterialTheme.colorScheme.onSurfaceVariant,
         ),
     ) {
         if (loading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(18.dp),
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = LocalContentColor.current,
                 strokeWidth = 2.dp,
             )
         } else {
@@ -80,10 +87,11 @@ fun SecondaryButton(
         onClick = onClick,
         modifier = modifier.defaultMinSize(minHeight = 48.dp),
         enabled = enabled,
-        shape = StadiumShape,
+        shape = RoundedCornerShape(12.dp),
         contentPadding = PaddingValues(horizontal = Spacing.xl, vertical = 12.dp),
         colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.primary,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ),
     ) {
         if (leadingIcon != null) {

@@ -23,6 +23,7 @@ class StandaloneArticleViewModel @Inject constructor(
     private val id = savedStateHandle.get<Int>(Routes.ARG_ARTICLE_ID) ?: 0
     private val mutableState = MutableStateFlow<UiState<StandaloneArticle>>(UiState.Loading)
     val state = mutableState.asStateFlow()
+    val webUrl: String? get() = source.articleWebUrl(id)
     private var generation = 0
 
     init { refresh() }

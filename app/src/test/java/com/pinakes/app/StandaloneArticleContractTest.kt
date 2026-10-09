@@ -52,4 +52,31 @@ class StandaloneArticleContractTest {
         assertFalse(article.copy(pdfUrl = "javascript:alert(1)").canOpenPdf)
         assertFalse(article.copy(pdfUrl = "/storage/private.pdf").canOpenPdf)
     }
+
+    @Test fun currentArticleFieldsIncludeTheCoverSubtitleAndPublishedResource() {
+        val article = json.decodeFromString<StandaloneArticle>("""
+            {"id":42,"titolo":"Article","sottotitolo":"Subtitle",
+             "cover_url":"https://library.example/covers/article.jpg",
+             "has_public_resource":true,"risorsa_url":"https://archive.example/42",
+             "risorsa_testo":"Archive copy","risorsa_accesso":"Reading room use"}
+        """.trimIndent())
+        assertEquals("Subtitle", article.subtitle)
+        assertEquals("https://library.example/covers/article.jpg", article.coverUrl)
+        assertEquals("https://archive.example/42", article.publicResourceUrl)
+        assertEquals("Archive copy", article.resourceLabel)
+        assertEquals("Reading room use", article.resourceAccess)
+    }
+
+    @Test fun unpublishedResourcesAndNonWebReferencesCannotBeOpened() {
+        val article = StandaloneArticle(hasPublicResource = true, resourceAddress = "https://archive.example/42")
+        assertEquals(article.resourceAddress, article.publicResourceUrl)
+        assertNull(article.copy(hasPublicResource = false).publicResourceAddress)
+        assertNull(article.copy(hasPublicResource = false).publicResourceUrl)
+        for (address in listOf("archive/42.pdf", "file:///archive/42.pdf", "javascript:alert(1)", "https:///42", "")) {
+            val reference = article.copy(resourceAddress = address)
+            assertNull(reference.publicResourceUrl)
+            if (address.isNotBlank()) assertEquals(address, reference.publicResourceAddress)
+        }
+        assertNull(StandaloneArticle(resourceAddress = "https://archive.example/42").publicResourceUrl)
+    }
 }

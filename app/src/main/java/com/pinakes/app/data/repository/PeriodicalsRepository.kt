@@ -110,6 +110,25 @@ class PeriodicalsRepository(
             is ApiResult.Failure -> result
         }
 
+    override suspend fun searchArticles(filters: ArticleFilters, cursor: String?): ApiResult<StandaloneArticlesPage> {
+        val advanced = filters.authorId != null || filters.issueId != null || filters.genreId != null || filters.language != null || filters.author != null || filters.publisher != null || filters.container != null || filters.keyword != null
+        if (advanced) {
+            val capability = apiCall { network.periodicalsApi().health() }
+            if (capability is ApiResult.Failure) return capability
+            if (capability is ApiResult.Success && !capability.data.capabilities.articleFilters) return ApiResult.Failure("upgrade_required", "", 422)
+        }
+        return when (val result = apiCall { network.periodicalsApi().articles(filters.query, filters.mastheadId, cursor,
+            filters.issueId, filters.genreId, filters.language, filters.author, filters.publisher, filters.container, filters.keyword, filters.authorId) }) {
+            is ApiResult.Success -> ApiResult.Success(StandaloneArticlesPage(result.data, result.meta?.nextCursor), result.meta)
+            is ApiResult.Failure -> result
+        }
+
+    }
+
     override suspend fun article(id: Int): ApiResult<StandaloneArticle> =
         apiCall { network.periodicalsApi().article(id) }
+
+    override fun articleWebUrl(id: Int): String? = session.instanceOrigin
+        ?.trimEnd('/')?.takeIf { id > 0 && it.isNotBlank() }
+        ?.let { "$it/emeroteca/articolo/$id" }
 }

@@ -7,6 +7,8 @@ import com.pinakes.app.data.network.NetworkModule
 import com.pinakes.app.data.repository.AuthRepository
 import com.pinakes.app.data.repository.BookClubRepository
 import com.pinakes.app.data.repository.CatalogRepository
+import com.pinakes.app.data.repository.CollectionsSource
+import com.pinakes.app.data.repository.CollectionsRepository
 import com.pinakes.app.data.repository.LibraryRepository
 import com.pinakes.app.data.repository.MessagesRepository
 import com.pinakes.app.data.repository.NotificationsRepository
@@ -65,6 +67,9 @@ object AppModule {
     @Provides @Singleton
     fun periodicalsRepository(network: NetworkModule, features: FeatureStore, session: SessionStore): PeriodicalsRepository =
         PeriodicalsRepository(network, features, session)
+
+    @Provides @Singleton
+    fun collectionsRepository(network: NetworkModule): CollectionsSource = CollectionsRepository(network)
 
     @Provides @Singleton
     fun authRepository(

@@ -28,7 +28,7 @@ import com.pinakes.app.ui.screens.search.SearchScreen
 import com.pinakes.app.ui.screens.wishlist.WishlistScreen
 
 /**
- * Hosts the four bottom-nav destinations. Each tab keeps its own composable; switching tabs is
+ * Hosts the five bottom-nav destinations. Each tab keeps its own composable; switching tabs is
  * a simple state change (the per-tab ViewModels are scoped to their composable instances).
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,10 +41,17 @@ fun MainScaffold(
     onOpenMyReviews: () -> Unit,
     onOpenBookClub: () -> Unit,
     onOpenPeriodicals: () -> Unit,
+    onOpenArticles: () -> Unit,
+    onOpenDesiderata: () -> Unit,
+    onOpenArchives: () -> Unit,
+    onOpenArticle: (Int) -> Unit,
+    onOpenWanted: (Int) -> Unit,
+    onOpenArchive: (Int) -> Unit,
 ) {
     val app: AppViewModel = hiltViewModel()
     val features by app.features.collectAsStateWithLifecycle()
 
+    var pendingCatalogQuery by rememberSaveable { mutableStateOf<String?>(null) }
     var tab by rememberSaveable { mutableStateOf(PinakesTab.Home) }
 
     // If the active tab is gated off (e.g. server switched to CATALOGUE-ONLY MODE while the
@@ -87,9 +94,14 @@ fun MainScaffold(
             when (tab) {
                 PinakesTab.Home -> HomeScreen(
                     onBookClick = onOpenBook,
+                    onOpenArticles = if (features.periodicalsAvailable) onOpenArticles else null,
+                    onOpenPeriodicals = if (features.periodicalsAvailable) onOpenPeriodicals else null,
+                    onOpenDesiderata = if (features.desiderataAvailable) onOpenDesiderata else null,
+                    onOpenArchives = if (features.archivesAvailable) onOpenArchives else null,
                     onBrowseCatalog = { tab = PinakesTab.Catalog },
+                    onSearch = { query -> pendingCatalogQuery = query; tab = PinakesTab.Catalog },
                 )
-                PinakesTab.Catalog -> SearchScreen(onBookClick = onOpenBook)
+                PinakesTab.Catalog -> SearchScreen(onBookClick = onOpenBook, onArticleClick = onOpenArticle, onWantedClick = onOpenWanted, onArchiveClick = onOpenArchive, initialQuery = pendingCatalogQuery, onQueryConsumed = { pendingCatalogQuery = null })
                 PinakesTab.Library -> LibraryScreen(onBookClick = onOpenBook)
                 PinakesTab.Wishlist -> WishlistScreen(onBookClick = onOpenBook)
                 PinakesTab.Profile -> ProfileScreen(
@@ -99,6 +111,9 @@ fun MainScaffold(
                     onOpenMyReviews = onOpenMyReviews,
                     onOpenBookClub = onOpenBookClub,
                     onOpenPeriodicals = onOpenPeriodicals,
+                    onOpenArticles = onOpenArticles,
+                    onOpenDesiderata = onOpenDesiderata,
+                    onOpenArchives = onOpenArchives,
                 )
             }
         }

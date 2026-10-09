@@ -21,6 +21,15 @@ installation subdirectory. Servers implementing the original capability without
 the server is updated. Refreshing an article that became private or was deleted
 removes its previously displayed content and PDF action.
 
+Covers use the server-resolved `cover_url` (including issue/masthead fallbacks).
+Subtitles are displayed in both the list and the detail. Published resources are
+shown only with `has_public_resource`: HTTP(S) addresses open in the browser;
+archive/local references remain selectable text. Access conditions accompany the
+resource. The website action preserves installation subdirectories and opens the
+article page, where staff with a browser session can edit it or read private PDFs
+through the existing administration permissions. The mobile bearer token is never
+put in a browser URL.
+
 ## Wire contract
 
 - `GET periodicals/articles?q=&testata_id=&cursor=` → core envelope with an array.

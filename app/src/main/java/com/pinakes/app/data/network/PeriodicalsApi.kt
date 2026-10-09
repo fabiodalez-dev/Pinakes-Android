@@ -52,6 +52,14 @@ interface PeriodicalsApi {
         @Query("q") query: String? = null,
         @Query("testata_id") mastheadId: Int? = null,
         @Query("cursor") cursor: String? = null,
+        @Query("fascicolo_id") issueId: Int? = null,
+        @Query("genre") genreId: Int? = null,
+        @Query("language") language: String? = null,
+        @Query("author") author: String? = null,
+        @Query("publisher") publisher: String? = null,
+        @Query("container") container: String? = null,
+        @Query("keyword") keyword: String? = null,
+        @Query("author_id") authorId: Int? = null,
     ): Envelope<List<StandaloneArticle>>
 
     @GET("periodicals/articles/{id}")

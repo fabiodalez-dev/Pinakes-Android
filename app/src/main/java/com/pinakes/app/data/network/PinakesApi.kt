@@ -99,6 +99,7 @@ interface PinakesApi {
     suspend fun search(
         @Query("q") q: String? = null,
         @Query("author") author: String? = null,
+        @Query("author_id") authorId: Int? = null,
         @Query("publisher") publisher: String? = null,
         @Query("genre") genre: Int? = null,
         @Query("language") language: String? = null,

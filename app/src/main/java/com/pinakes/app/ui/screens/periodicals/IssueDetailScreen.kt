@@ -1,5 +1,6 @@
 package com.pinakes.app.ui.screens.periodicals
 
+import com.pinakes.app.ui.theme.PublicationTitleStyle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +19,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -52,7 +54,7 @@ import com.pinakes.app.ui.theme.Spacing
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun IssueDetailScreen(onNavigateUp: () -> Unit) {
+fun IssueDetailScreen(onNavigateUp: () -> Unit, onOpenArticle: (Int) -> Unit = {}, onFindArticles: (Int) -> Unit = {}) {
     val vm: IssueDetailViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -97,10 +99,18 @@ fun IssueDetailScreen(onNavigateUp: () -> Unit) {
                                 )
                             }
                         }
+                        item { TextButton({ onFindArticles(issue.id) }) { Text(stringResource(if (issue.cataloguedArticlesTruncated) R.string.collection_more else R.string.article_issue_search)) } }
+                        if (issue.cataloguedArticles.isNotEmpty()) {
+                            item { Text(stringResource(R.string.article_catalogued), style = MaterialTheme.typography.titleMedium) }
+                            items(issue.cataloguedArticles.size) { index ->
+                                val article = issue.cataloguedArticles[index]
+                                StandaloneArticleRow(article) { onOpenArticle(article.id) }
+                            }
+                        }
                         if (issue.articles.isNotEmpty()) {
                             item {
                                 Text(
-                                    stringResource(R.string.periodicals_articles_section),
+                                    stringResource(R.string.article_toc),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.padding(top = Spacing.sm),
@@ -135,7 +145,7 @@ private fun IssueHeader(issue: PeriodicalIssueDetail) {
             Spacer(Modifier.height(Spacing.md))
             Text(
                 issueHeading(issue.number, issue.title),
-                style = MaterialTheme.typography.titleMedium,
+                style = PublicationTitleStyle,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             val yearLine = issue.year?.let { y ->
@@ -191,7 +201,7 @@ private fun ArticleRow(article: IssueArticle) {
             Column(Modifier.weight(1f)) {
                 Text(
                     article.title,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = PublicationTitleStyle,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 article.authors?.takeIf { it.isNotBlank() }?.let {

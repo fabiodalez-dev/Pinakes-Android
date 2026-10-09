@@ -123,6 +123,8 @@ data class PeriodicalIssueDetail(
     val masthead: IssueMasthead? = null,
     val year: IssueYear? = null,
     val articles: List<IssueArticle> = emptyList(),
+    @SerialName("catalogued_articles") val cataloguedArticles: List<StandaloneArticle> = emptyList(),
+    @SerialName("catalogued_articles_truncated") val cataloguedArticlesTruncated: Boolean = false,
 ) {
     /** The PDF action is offered ONLY for a non-blank public URL (server-authoritative). */
     val canOpenPdf: Boolean get() = !pdfUrl.isNullOrBlank()
@@ -154,6 +156,7 @@ data class IssueArticle(
 @Serializable
 data class PeriodicalsCapabilities(
     @SerialName("standalone_articles") val standaloneArticles: Boolean = false,
+    @SerialName("article_filters") val articleFilters: Boolean = false,
 )
 
 /** Standalone contributions use the server's Italian column names, unlike issue indexes. */
@@ -161,6 +164,8 @@ data class PeriodicalsCapabilities(
 data class StandaloneArticle(
     val id: Int = 0,
     @SerialName("titolo") val title: String = "",
+    @SerialName("sottotitolo") val subtitle: String? = null,
+    @SerialName("cover_url") val coverUrl: String? = null,
     @SerialName("autori") val authors: String? = null,
     @SerialName("tipo_contributo") val contributionType: String? = null,
     @SerialName("contenitore_tipo") val containerType: String? = null,
@@ -179,6 +184,25 @@ data class StandaloneArticle(
     @SerialName("fascicolo_id") val issueId: Int? = null,
     @SerialName("has_public_pdf") val hasPublicPdf: Boolean = false,
     @SerialName("pdf_url") val pdfUrl: String? = null,
+    @SerialName("has_public_resource") val hasPublicResource: Boolean = false,
+    @SerialName("risorsa_url") val resourceAddress: String? = null,
+    @SerialName("risorsa_testo") val resourceLabel: String? = null,
+    @SerialName("risorsa_accesso") val resourceAccess: String? = null,
+    @SerialName("lingua") val language: String? = null,
+    @SerialName("paese") val country: String? = null,
+    @SerialName("classificazione_schema") val classificationScheme: String? = null,
+    @SerialName("classificazione") val classification: String? = null,
+    @SerialName("nota_possesso") val holdingsNote: String? = null,
+    @SerialName("contenitore_curatori") val editors: String? = null,
+    @SerialName("contenitore_editore") val publisher: String? = null,
+    @SerialName("contenitore_luogo") val publicationPlace: String? = null,
+    val isbn: String? = null,
+    @SerialName("genre_path") val genrePath: List<GenreRef> = emptyList(),
+    @SerialName("manage_url") val manageUrl: String? = null,
+    @SerialName("marcxml_url") val marcXmlUrl: String? = null,
+    val citations: List<ArticleCitation> = emptyList(),
+    @SerialName("ris_url") val risUrl: String? = null,
+    @SerialName("author_credits") val authorCredits: List<ArticleCredit> = emptyList(),
 ) {
     // Date text and page spans are citations, not ISO dates or page counts.
     val dateLabel: String? get() = publicationDate?.takeIf { it.isNotBlank() }
@@ -188,4 +212,17 @@ data class StandaloneArticle(
         val uri = runCatching { java.net.URI(it) }.getOrNull()
         uri?.scheme?.lowercase() in listOf("https", "http") && !uri?.host.isNullOrBlank()
     }
+    // Published archive references are readable text; only HTTP(S) addresses
+    // become actions. Old servers omit the flag, so they expose no resource.
+    val publicResourceAddress: String? get() = resourceAddress?.trim()?.takeIf { hasPublicResource && it.isNotEmpty() }
+    val publicResourceUrl: String? get() = publicResourceAddress?.takeIf {
+        val uri = runCatching { java.net.URI(it) }.getOrNull()
+        uri?.scheme?.lowercase() in listOf("https", "http") && !uri?.host.isNullOrBlank()
+    }
 }
+
+@Serializable
+data class ArticleCitation(val key: String = "", val label: String = "", val text: String = "", val html: String? = null)
+
+@Serializable
+data class ArticleCredit(val id: Int? = null, val name: String = "", val role: String = "", val identifiers: List<String> = emptyList())

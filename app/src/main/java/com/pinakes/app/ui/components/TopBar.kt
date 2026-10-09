@@ -77,7 +77,7 @@ fun PinakesListTopBar(
         title = {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.headlineMedium,
             )
         },
         actions = {
@@ -98,7 +98,7 @@ fun PinakesListTopBar(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.background,
             titleContentColor = MaterialTheme.colorScheme.onSurface,
             actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),

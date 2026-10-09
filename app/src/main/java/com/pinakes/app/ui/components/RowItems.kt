@@ -58,43 +58,12 @@ fun MediaRow(
                 .padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                Modifier
-                    .width(48.dp)
-                    .height(72.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (coverUrl != null) {
-                    SubcomposeAsyncImage(
-                        model = coverUrl,
-                        contentDescription = title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(width = 48.dp, height = 72.dp),
-                        error = {
-                            Icon(
-                                Icons.AutoMirrored.Outlined.MenuBook,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outlineVariant,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        },
-                    )
-                } else {
-                    Icon(
-                        Icons.AutoMirrored.Outlined.MenuBook,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.outlineVariant,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
+            BookCover(title, coverUrl, Modifier.width(48.dp).height(72.dp), compact = true)
             Spacer(Modifier.width(Spacing.md))
             Column(Modifier.weight(1f)) {
                 Text(
                     title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleSmall.copy(fontFamily = com.pinakes.app.ui.theme.Fraunces),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

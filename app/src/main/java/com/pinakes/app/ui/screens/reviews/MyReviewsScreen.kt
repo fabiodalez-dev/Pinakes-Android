@@ -1,5 +1,6 @@
 package com.pinakes.app.ui.screens.reviews
 
+import com.pinakes.app.ui.theme.PublicationTitleStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -171,7 +172,7 @@ private fun MyReviewRow(
             Column(Modifier.weight(1f)) {
                 Text(
                     review.bookTitle,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = PublicationTitleStyle,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

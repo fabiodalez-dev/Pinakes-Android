@@ -1,5 +1,6 @@
 package com.pinakes.app.ui.screens.periodicals
 
+import com.pinakes.app.ui.theme.PublicationTitleStyle
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -43,6 +44,7 @@ fun StandaloneArticlesScreen(
                 placeholder = stringResource(R.string.standalone_articles_search),
                 modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
             )
+            vm.activeFilters.forEach { Text(it, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = Spacing.lg)) }
             when {
                 state.loading -> LoadingState(label = stringResource(R.string.standalone_articles_loading))
                 state.unavailable -> EmptyState(
@@ -83,25 +85,34 @@ fun StandaloneArticlesScreen(
 }
 
 @Composable
-private fun StandaloneArticleRow(article: StandaloneArticle, onClick: () -> Unit) {
-    Column(
+internal fun StandaloneArticleRow(article: StandaloneArticle, onClick: () -> Unit) {
+    Row(
         Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick).padding(vertical = Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Text(article.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-        article.authors?.takeIf { it.isNotBlank() }?.let {
-            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+        BookCover(article.title, article.coverUrl, Modifier.width(64.dp).height(96.dp), compact = true, author = article.authors, publisher = article.containerTitle)
+        Column(
+            Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            Text(article.title, style = PublicationTitleStyle, color = MaterialTheme.colorScheme.onSurface)
+            article.subtitle?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            article.authors?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+            }
+            article.containerTitle?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            val citation = listOfNotNull(
+                article.dateLabel,
+                article.volume?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.standalone_article_volume, it) },
+                article.number?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.standalone_article_number, it) },
+                article.pages?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.standalone_article_pages, it) },
+            ).joinToString(" · ")
+            if (citation.isNotBlank()) Text(citation, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        article.containerTitle?.takeIf { it.isNotBlank() }?.let {
-            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        val citation = listOfNotNull(
-            article.dateLabel,
-            article.volume?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.standalone_article_volume, it) },
-            article.number?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.standalone_article_number, it) },
-            article.pages?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.standalone_article_pages, it) },
-        ).joinToString(" · ")
-        if (citation.isNotBlank()) Text(citation, style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

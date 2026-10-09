@@ -3,7 +3,8 @@
 Native Android client for a [Pinakes](https://github.com/fabiodalez-dev/Pinakes)
 library instance. Browse the catalog, check real availability, borrow and reserve
 books, read ebooks and listen to audiobooks, and manage your loans, all from your
-phone.
+phone. Optional Archives, Desiderata and analytic articles are available when the
+server advertises their APIs. The five bottom navigation destinations are retained.
 
 ![Platform](https://img.shields.io/badge/platform-Android-3DDC84)
 ![minSdk](https://img.shields.io/badge/minSdk-26-blue)
@@ -30,7 +31,13 @@ The app is server-agnostic: it works against any Pinakes instance that has the
 Mobile API enabled, and it adapts to that instance's settings (language,
 catalogue-only mode, push availability).
 
+## 2026 interface
+
+The Android interface follows the public Pinakes 2026 restyle: shared theme tokens, Geist for controls, Fraunces for titles, fitted book artwork and a quiet warm background. `ThemePalette` accepts library colours and hero/card styles; Classic / Covers are the built-in defaults until the Mobile API exposes theme settings. Existing circulation, account and plugin flows remain available. See [DESIGN.md](DESIGN.md) for the component contract and API limitations.
+
 ## Screenshots
+
+Login, home, catalog, book detail and calendar captures use the 2026 interface on Android 15 at 360 dp, with fixture data. The remaining account captures document the earlier flow layout.
 
 <table>
   <tr>
@@ -53,10 +60,10 @@ catalogue-only mode, push availability).
 |------|--------------|
 | **Onboarding** | Enter the instance URL, `/health` discovery card (library name, logo, HTTPS check, mobile-access check) |
 | **Sign in & sign up** | Email/password login, **in-app registration** and **password recovery**, mapped error messages, secure token storage |
-| **Home** | An "Available now" landing showing what you can borrow today |
-| **Catalog** | The full catalog with infinite scroll, search, and a filter sheet (availability, genre, author, publisher, language) |
-| **Book detail** | HTML-rendered description, tap-to-zoom cover, full metadata block (ISBN, year, pages …), genre chip |
-| **Availability** | Colour-coded state: green available, red on loan, amber reserved |
+| **Home** | Searchable library hero, a fan of real shelf covers, and an "Available now" / recent shelf |
+| **Catalog** | Two-column book grid or compact list, infinite scroll, search, sort and a filter sheet (availability, genre, author, publisher, language) |
+| **Book detail** | HTML-rendered description, tap-to-zoom cover, full metadata block (ISBN, year, pages …), genre hierarchy |
+| **Availability** | Neutral status pills with a coloured dot: green available, red on loan, amber reserved |
 | **Loan calendar** | Pick a start date on a calendar that paints already-booked days and pre-selects the first free day |
 | **Audiobooks** | In-app player (Media3 ExoPlayer) when the title has an audio file |
 | **Ebooks** | In-app PDF reader (PdfRenderer); other formats open externally |
@@ -65,13 +72,13 @@ catalogue-only mode, push availability).
 | **Book Club** | When the instance runs the **Book Club** plugin: browse your clubs and the directory, open a club's reading list / polls / meetings, join, vote in-app (simple / multi / weighted ballots), RSVP to meetings and track your reading progress — advanced poll modes and proposing a title deep-link to the web |
 | **Profile** | Edit profile, change password, device list, theme switcher, language switcher, logout |
 | **Notifications** | Loan due/overdue, reservation ready, book available |
-| **Themes** | Material 3 light and dark, light by default; pick light/dark/system in Profile |
+| **Themes** | 2026 warm neutrals, Geist + Fraunces, complete 3D covers and paired theme colours. Light by default; pick light/dark/system in Profile |
 | **Languages** | Italian, English, French, German, following the device locale or an in-app choice |
 
 ## Tech stack
 
 - **Kotlin 2.0** + **Jetpack Compose** (Material 3), single-module app
-- **Navigation-Compose** + `ViewModel`/`StateFlow`, manual DI via a `ServiceLocator`
+- **Navigation-Compose** + `ViewModel`/`StateFlow` + Hilt
 - **Retrofit + OkHttp + kotlinx.serialization** for the `/api/v1` client (`{data, meta, error}` envelope)
 - **Coil** for cover images, **Media3 ExoPlayer** for audio, platform `PdfRenderer` for PDFs
 - **AndroidX Security** (`EncryptedSharedPreferences`) for the bearer token and instance URL
@@ -89,6 +96,9 @@ catalogue-only mode, push availability).
 ```bash
 ./gradlew assembleDebug   # debug APK → app/build/outputs/apk/debug/app-debug.apk
 ./gradlew lintDebug       # static analysis
+./gradlew testDebugUnitTest
+./gradlew connectedDebugAndroidTest  # UI regression tests, with a running emulator
+./gradlew assembleRelease # R8 + resource shrinking, unsigned without release credentials
 ```
 
 Create a `local.properties` with `sdk.dir=/path/to/android-sdk` (or set `ANDROID_HOME`).
@@ -101,6 +111,29 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 A prebuilt debug APK is published on the [Releases](../../releases) page.
+
+### Standalone emulator on macOS
+
+```bash
+./tools/run-emulator.sh my_avd -no-snapshot-load -gpu auto
+```
+
+The launcher forwards the remaining options to the Android SDK emulator. On macOS,
+it holds a `caffeinate` assertion for that emulator PID, then releases it when the
+emulator exits; Ctrl+C stops both. This reduces host power throttling during local
+testing. It does not change global power
+settings or Android crash reporting.
+
+An Android 15 startup ANR was reproduced before application initialization, along
+with system/launcher stalls. With the same debug APK, host priority dropped to 4
+without the assertion and startup exceeded 21 seconds; with the assertion, three
+cold starts completed in 2.3–3.1 seconds. After restarting the VM through this
+launcher, five more cold starts completed in 1.66–1.80 seconds with no ANR events.
+An older AVD still stalled after a cold boot, and a restored snapshot retained a
+system-not-responding dialog. The assertion alone does not repair an unhealthy
+AVD; use a fresh development AVD without deleting needed user data. This is a
+development-emulator mitigation;
+device ANRs still require their own [trace diagnosis](https://developer.android.com/topic/performance/anrs/diagnose-and-fix-anrs).
 
 ## Point it at a Pinakes instance
 
@@ -188,6 +221,27 @@ Released under the same license as Pinakes: **AGPL-3.0**.
 
 On compatible servers, **Emeroteca → Articles** searches and displays standalone
 newspaper and magazine articles, without requiring ownership of their issues.
-Publication screens also link to their associated articles. Public PDFs use the
-URL supplied by the server. Older servers retain the existing periodicals browser.
+Publication screens also link to their associated articles. Article covers, subtitles
+and published online resources follow the server data. Public PDFs use the
+URL supplied by the server; the website action opens the article’s full page. Older servers retain the existing periodicals browser.
 See [the article integration notes](docs/emeroteca-standalone-articles.md).
+
+## Android 1.6 / current server parity
+
+The updated client reads Mobile API 1.5.0, Desiderata 1.2.0, Emeroteca 1.13.0 and
+Archives 1.5.1. Update the server/plugins before expecting the new optional
+collection screens. Older instances remain usable; unsupported article facets
+show an upgrade message rather than silently returning unfiltered results.
+
+Desiderata is the library's wanted collection, separate from a member's wishlist.
+Donation contact details come from the verified account. Proposals require
+consent and survive transport retries/process death without creating inventory.
+Archives supports paged hierarchy, text/level/year search, authorities, all
+public documents and export links. Article/book citations are formatted by the
+server, with five styles and text/HTML clipboard copies. Every digital book
+attachment is shown; audio switches one native player at a time.
+
+Administrative cataloguing and uploads open the protected PHP website, including
+the existing article form. No native administrative CRUD API is invented.
+
+See [the request-by-request Uwe verification](docs/UWE-PARITY.md).
