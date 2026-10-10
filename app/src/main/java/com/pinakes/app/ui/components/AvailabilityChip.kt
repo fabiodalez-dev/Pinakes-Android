@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,10 @@ fun AvailabilityChip(
     status: AvailabilityStatus,
     label: String? = null,
     modifier: Modifier = Modifier,
+    // A pill in a row of pills keeps its inset; a status that heads a block
+    // (the book's availability) passes no horizontal inset, so its dot starts
+    // where the text and buttons under it start.
+    contentPadding: PaddingValues = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
 ) {
     val colors = LocalPinakesColors.current
     val dot = when (status) {
@@ -63,10 +68,11 @@ fun AvailabilityChip(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            modifier = Modifier.padding(contentPadding),
         ) {
             Spacer(
                 modifier = Modifier
+                    .testTag("availability-dot")
                     .size(8.dp)
                     .clip(CircleShape)
                     .background(dot),
