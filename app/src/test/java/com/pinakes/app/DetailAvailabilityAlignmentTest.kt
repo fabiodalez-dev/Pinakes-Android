@@ -1,5 +1,8 @@
 package com.pinakes.app
 
+import android.app.Application
+import android.content.ComponentName
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -13,6 +16,11 @@ import com.pinakes.app.ui.screens.detail.DetailContent
 import com.pinakes.app.ui.theme.PinakesTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
+import org.junit.rules.RuleChain
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
+import androidx.test.core.app.ApplicationProvider
+import org.robolectric.Shadows.shadowOf
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -28,7 +36,17 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], application = android.app.Application::class, qualifiers = "w411dp-h891dp-xxhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DetailAvailabilityAlignmentTest {
-    @get:Rule val compose = createComposeRule()
+    // createComposeRule() hosts the content in a ComponentActivity that only the debug
+    // manifest declares (ui-test-manifest is a debug dependency). Registering it with
+    // Robolectric's package manager first lets the test run in the release unit tests too,
+    // without shipping a test activity in the release APK.
+    private val compose = createComposeRule()
+    @get:Rule val rules: RuleChain = RuleChain.outerRule(object : TestWatcher() {
+        override fun starting(description: Description) {
+            val app = ApplicationProvider.getApplicationContext<Application>()
+            shadowOf(app.packageManager).addActivityIfNotPresent(ComponentName(app.packageName, ComponentActivity::class.java.name))
+        }
+    }).around(compose)
 
     @Test fun availabilityLinesUpWithTheCopiesAndTheLoanButton() {
         var available by mutableStateOf(true)
