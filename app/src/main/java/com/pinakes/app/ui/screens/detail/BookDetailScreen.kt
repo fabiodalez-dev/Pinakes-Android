@@ -64,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -409,8 +410,12 @@ internal fun DetailContent(
                 else -> if (book.available) AvailabilityStatus.Available to stringResource(R.string.availability_available)
                     else AvailabilityStatus.Unavailable to stringResource(R.string.book_on_loan)
             }
-            AvailabilityChip(availStatus, availLabel)
-            Text(availableLabel, style = MaterialTheme.typography.bodyMedium, color = colors.muted)
+            // No side inset: "Available" / "On loan" lines up with the copies line and the
+            // buttons below it, as on the web book page.
+            AvailabilityChip(availStatus, availLabel, Modifier.testTag("detail-availability"),
+                contentPadding = PaddingValues(vertical = 4.dp))
+            Text(availableLabel, style = MaterialTheme.typography.bodyMedium, color = colors.muted,
+                modifier = Modifier.testTag("detail-copies"))
             Spacer(Modifier.height(16.dp))
 
         // Personal-status banner: makes the user's own relationship to this book explicit,
@@ -450,7 +455,7 @@ internal fun DetailContent(
                         label = if (book.available) stringResource(R.string.book_request_loan) else stringResource(R.string.book_reserve),
                         onClick = onReserve,
                         loading = reserveBusy,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testTag("detail-loan"),
                     )
                 }
                 if (showWishlist) {

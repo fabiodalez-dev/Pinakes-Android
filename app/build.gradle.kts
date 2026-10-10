@@ -166,8 +166,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 26
         targetSdk = 35
-        versionCode = 17
-        versionName = "1.6.0"
+        versionCode = 18
+        versionName = "1.6.1"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -327,4 +327,7 @@ dependencies {
     testImplementation(libs.androidx.room.testing)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.work.testing)
+    // Compose layout checks on the JVM (Robolectric), so the CI runs them without an emulator.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.ui.test.junit4)
 }
