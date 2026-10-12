@@ -1,3 +1,5 @@
+@file:androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+
 package com.pinakes.app.ui.components
 
 import androidx.compose.foundation.clickable
@@ -37,6 +39,10 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import com.pinakes.app.data.network.audioDataSourceFactory
+import com.pinakes.app.data.network.NetworkEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 import com.pinakes.app.R
 import com.pinakes.app.ui.theme.Spacing
 import kotlinx.coroutines.delay
@@ -55,7 +61,10 @@ fun AudioPlayer(
     val context = LocalContext.current
 
     val player = remember(audioUrl) {
-        ExoPlayer.Builder(context).build().apply {
+        val session = EntryPointAccessors.fromApplication(context.applicationContext, NetworkEntryPoint::class.java).sessionStore()
+        val sources = DefaultMediaSourceFactory(context)
+            .setDataSourceFactory(audioDataSourceFactory(context) { session.allowInsecureHttp })
+        ExoPlayer.Builder(context).setMediaSourceFactory(sources).build().apply {
             setMediaItem(MediaItem.fromUri(audioUrl))
             prepare()
         }

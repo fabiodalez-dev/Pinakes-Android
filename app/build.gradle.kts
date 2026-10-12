@@ -286,6 +286,7 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.okhttp.mockwebserver)
 
     implementation(libs.androidx.navigation.compose)
 
@@ -300,6 +301,7 @@ dependencies {
     // AndroidX Media3 ExoPlayer for streaming audiobooks (in-page player).
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
+    implementation(libs.androidx.media3.datasource.okhttp)
 
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.datastore.preferences)
@@ -322,6 +324,8 @@ dependencies {
 
     // Unit tests (JVM + Robolectric for Room DAO).
     testImplementation(libs.junit)
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.okhttp.tls)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.room.testing)

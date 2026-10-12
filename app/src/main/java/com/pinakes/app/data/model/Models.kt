@@ -276,6 +276,7 @@ data class BookDetail(
     val copiesAvailable: Int get() = availability.copiesAvailable
     val loanableNow: Boolean get() = availability.loanableNow
     val available: Boolean get() = availability.loanableNow || availability.copiesAvailable > 0
+    val digitalOnly: Boolean get() = copiesTotal == 0 && digitalFiles.isNotEmpty()
 
     /** Old servers still advertise one audio and one ebook; list-aware servers own the list. */
     val digitalFiles: List<DigitalAttachment> get() = digitalAttachments.ifEmpty {

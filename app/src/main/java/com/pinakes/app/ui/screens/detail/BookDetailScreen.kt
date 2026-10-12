@@ -382,7 +382,8 @@ internal fun DetailContent(
                             Text(initials, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.accentStrong)
                         }
                         Spacer(Modifier.width(8.dp))
-                        Text(author.name + (author.role?.takeIf { it.isNotBlank() && it != "autore" && it != "author" }?.let { " · $it" } ?: ""),
+                        val roleLabel = author.role?.takeIf(String::isNotBlank)?.let { com.pinakes.app.ui.common.contributorRoleLabel(it) }
+                        Text(author.name + (roleLabel?.let { " · $it" } ?: ""),
                             style = MaterialTheme.typography.bodyMedium)
                     }
                 }
@@ -402,7 +403,9 @@ internal fun DetailContent(
             shadowElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(22.dp)) {
             val availableLabel = stringResource(R.string.book_copies_available_of, book.copiesAvailable, book.copiesTotal)
-            val (availStatus, availLabel) = when (book.availability.state) {
+            val (availStatus, availLabel) = if (book.digitalOnly) {
+                AvailabilityStatus.Digital to stringResource(R.string.restyle_digital_edition)
+            } else when (book.availability.state) {
                 "available" -> AvailabilityStatus.Available to stringResource(R.string.availability_available)
                 "on_loan" -> AvailabilityStatus.Unavailable to stringResource(R.string.book_on_loan)
                 "reserved" -> AvailabilityStatus.DueSoon to stringResource(R.string.availability_reserved)
@@ -414,7 +417,7 @@ internal fun DetailContent(
             // buttons below it, as on the web book page.
             AvailabilityChip(availStatus, availLabel, Modifier.testTag("detail-availability"),
                 contentPadding = PaddingValues(vertical = 4.dp))
-            Text(availableLabel, style = MaterialTheme.typography.bodyMedium, color = colors.muted,
+            if (!book.digitalOnly) Text(availableLabel, style = MaterialTheme.typography.bodyMedium, color = colors.muted,
                 modifier = Modifier.testTag("detail-copies"))
             Spacer(Modifier.height(16.dp))
 
@@ -447,7 +450,7 @@ internal fun DetailContent(
         // this button) is the gate — it paints already-borrowed/reserved days red and pre-selects
         // the first free day, so a request can only target a date when the title is actually free.
         // The label adapts: "Request loan" when a copy is free now, "Reserve" when it isn't.
-        val showLoanButton = canBorrow
+        val showLoanButton = canBorrow && book.copiesTotal > 0
         if (showLoanButton || showWishlist) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (showLoanButton) {
