@@ -382,7 +382,8 @@ internal fun DetailContent(
                             Text(initials, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.accentStrong)
                         }
                         Spacer(Modifier.width(8.dp))
-                        val roleLabel = author.role?.takeIf(String::isNotBlank)?.let { com.pinakes.app.ui.common.contributorRoleLabel(it) }
+                        val roleLabel = author.role?.takeIf { it.isNotBlank() && !com.pinakes.app.ui.common.isPrincipalAuthorRole(it) }
+                            ?.let { com.pinakes.app.ui.common.contributorRoleLabel(it) }
                         Text(author.name + (roleLabel?.let { " · $it" } ?: ""),
                             style = MaterialTheme.typography.bodyMedium)
                     }

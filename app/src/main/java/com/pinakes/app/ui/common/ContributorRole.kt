@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.pinakes.app.R
 
+internal fun isPrincipalAuthorRole(role: String?): Boolean = role in setOf("principale", "autore", "author")
+
 /** Contributor entities share the author registry, but keep their bibliographic role (#237). */
 @Composable
 fun contributorRoleLabel(role: String?): String = when (role) {

@@ -67,6 +67,28 @@ class DigitalAvailabilityTest {
         compose.onNodeWithText("Unavailable").performScrollTo().assertIsDisplayed()
     }
 
+    @Test fun supplementaryPdfDoesNotAdvertiseACompleteDigitalEdition() {
+        val book = BookDetail(title = "Errata only", availability = Availability(state = "unavailable"),
+            digitalAttachments = listOf(pdf.copy(kind = "supplement")))
+        show(book)
+        compose.onNodeWithText("Digital edition").assertDoesNotExist()
+        compose.onNodeWithText("Unavailable").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("detail-loan").assertDoesNotExist()
+        org.junit.Assert.assertTrue(book.copy(digitalAttachments = book.digitalAttachments
+            + pdf.copy(url = "https://library.example/full-book.pdf")).digitalOnly)
+    }
+
+    @Test fun principalAuthorAliasesDoNotAddARedundantAuthorSuffix() {
+        show(BookDetail(title = "Credits", authors = listOf(
+            AuthorRef(1, "Principal", "principale"), AuthorRef(2, "Italian alias", "autore"),
+            AuthorRef(3, "English alias", "author"), AuthorRef(4, "Translator name", "traduttore"))))
+        for (name in listOf("Principal", "Italian alias", "English alias")) {
+            compose.onNodeWithText(name).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("$name · Author").assertDoesNotExist()
+        }
+        compose.onNodeWithText("Translator name · Translator").performScrollTo().assertIsDisplayed()
+    }
+
     @Test fun oldServerSingleEbookStillCountsAsDigitalAccess() {
         val old = BookDetail(hasEbook = true, ebookUrl = "https://library.example/book.pdf")
         org.junit.Assert.assertTrue(old.digitalOnly)
@@ -75,10 +97,13 @@ class DigitalAvailabilityTest {
 
     @Test fun wantedCreditsKeepTranslatorSeparateAndSupportOlderServers() {
         val book = Json.decodeFromString<WantedBook>("""{"id":133,"title":"Wanted","author":"Tomás Ibáñez","contributors":[{"id":1,"name":"Tomás Ibáñez","role":"principale"},{"id":2,"name":"Alice Zaffaroni","role":"traduttore"}]}""")
-        compose.setContent { PinakesTheme { WantedContributorCredits(book.contributors) } }
+        val aliases = listOf(AuthorRef(3, "Italian alias", "autore"), AuthorRef(4, "English alias", "author"),
+            AuthorRef(5, "Coauthor", "co-autore"))
+        compose.setContent { PinakesTheme { WantedContributorCredits(book.contributors + aliases) } }
         compose.onNodeWithText("Translator").assertIsDisplayed()
         compose.onNodeWithText("Alice Zaffaroni").assertIsDisplayed()
         compose.onNodeWithText("Tomás Ibáñez").assertDoesNotExist()
+        for (alias in aliases) compose.onNodeWithText(alias.name).assertDoesNotExist()
         assertEquals(emptyList<AuthorRef>(), Json.decodeFromString<WantedBook>("""{"id":1,"title":"Old server"}""").contributors)
     }
 }

@@ -75,7 +75,7 @@ fun WantedBookScreen(onNavigateUp: () -> Unit, onDonate: (Int) -> Unit, vm: Want
 
 @Composable
 internal fun WantedContributorCredits(contributors: List<AuthorRef>) {
-    contributors.filter { it.role !in listOf("principale", "co-autore") }.forEach { credit ->
+    contributors.filterNot { com.pinakes.app.ui.common.isPrincipalAuthorRole(it.role) || it.role == "co-autore" }.forEach { credit ->
         Metadata(com.pinakes.app.ui.common.contributorRoleLabel(credit.role), credit.name)
     }
 }
