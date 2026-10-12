@@ -25,6 +25,7 @@ data class WantedBook(
     @SerialName("cover_url") val coverUrl: String? = null,
     @SerialName("web_url") val webUrl: String? = null,
     val wanted: Boolean = true,
+    val contributors: List<AuthorRef> = emptyList(),
 )
 
 @Serializable

@@ -62,6 +62,7 @@ fun WantedBookScreen(onNavigateUp: () -> Unit, onDonate: (Int) -> Unit, vm: Want
             Text(book.title, style = PublicationTitleStyle)
             book.subtitle?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
             Metadata(stringResource(R.string.donation_author), book.author)
+            WantedContributorCredits(book.contributors)
             Metadata(stringResource(R.string.book_meta_publisher), book.publisher)
             Metadata(stringResource(R.string.book_meta_year), book.year?.toString())
             Metadata("ISBN", book.isbn)
@@ -69,6 +70,13 @@ fun WantedBookScreen(onNavigateUp: () -> Unit, onDonate: (Int) -> Unit, vm: Want
             PrimaryButton(stringResource(R.string.desiderata_offer), { onDonate(book.id) }, Modifier.fillMaxWidth())
             book.webUrl?.let { url -> SecondaryButton(stringResource(R.string.collection_web), { openWeb(context, url) }, Modifier.fillMaxWidth()) }
         }
+    }
+}
+
+@Composable
+internal fun WantedContributorCredits(contributors: List<AuthorRef>) {
+    contributors.filterNot { com.pinakes.app.ui.common.isPrincipalAuthorRole(it.role) || it.role == "co-autore" }.forEach { credit ->
+        Metadata(com.pinakes.app.ui.common.contributorRoleLabel(credit.role), credit.name)
     }
 }
 

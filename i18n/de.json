@@ -620,5 +620,12 @@
   "archives_dimensions": "Abmessungen",
   "archives_color": "Farbe",
   "archives_predominant_dates": "Überwiegende Daten",
-  "archives_date_gaps": "Zeitliche Lücken"
+  "archives_date_gaps": "Zeitliche Lücken",
+  "credit_author": "Autor",
+  "credit_coauthor": "Mitautor",
+  "credit_translator": "Übersetzer",
+  "credit_illustrator": "Illustrator",
+  "credit_editor": "Herausgeber",
+  "credit_colorist": "Kolorist",
+  "credit_contributor": "Mitwirkender"
 }

@@ -620,5 +620,12 @@
   "archives_dimensions": "Dimensioni",
   "archives_color": "Colore",
   "archives_predominant_dates": "Date prevalenti",
-  "archives_date_gaps": "Lacune cronologiche"
+  "archives_date_gaps": "Lacune cronologiche",
+  "credit_author": "Autore",
+  "credit_coauthor": "Coautore",
+  "credit_translator": "Traduttore",
+  "credit_illustrator": "Illustratore",
+  "credit_editor": "Curatore",
+  "credit_colorist": "Colorista",
+  "credit_contributor": "Contributore"
 }

@@ -13,6 +13,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.pinakes.app.data.model.BookDetail
+import com.pinakes.app.data.model.Availability
 import com.pinakes.app.ui.components.*
 import com.pinakes.app.ui.screens.detail.DetailContent
 import com.pinakes.app.ui.screens.home.HomeContent
@@ -104,7 +105,8 @@ class RestylingUiTest {
 
     @Test fun detailWithNoDigitalFilesOmitsTheDigitalSectionAndRetainsActions() {
         var borrowed = false
-        compose.setContent { PinakesTheme { DetailContent(BookDetail(title = "Blank book"), false, false,
+        compose.setContent { PinakesTheme { DetailContent(BookDetail(title = "Blank book",
+            availability = Availability(copiesTotal = 1, copiesAvailable = 0, loanableNow = false, state = "on_loan")), false, false,
             canBorrow = true, showWishlist = true, showReviews = false,
             onReserve = { borrowed = true }, onToggleWishlist = {}, onShowMessage = {}) } }
         compose.onNodeWithText(text(R.string.restyle_digital)).assertDoesNotExist()

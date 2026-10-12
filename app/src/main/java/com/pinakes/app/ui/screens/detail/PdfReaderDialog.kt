@@ -38,18 +38,27 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.pinakes.app.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import android.content.Context
-import com.pinakes.app.data.network.CleartextGuardInterceptor
+import com.pinakes.app.data.network.guardedMediaHttpClient
 import com.pinakes.app.data.network.NetworkEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Response
 import java.io.File
+import java.io.IOException
+import kotlin.coroutines.resumeWithException
 
 private sealed interface PdfState {
     data object Loading : PdfState
-    data class Ready(val pageCount: Int, val renderer: PdfRenderer, val pfd: ParcelFileDescriptor) : PdfState
+    data class Ready(val document: CachedPdfDocument) : PdfState
     data object Error : PdfState
 }
 
@@ -68,24 +77,15 @@ fun PdfReaderDialog(
     var state by remember { mutableStateOf<PdfState>(PdfState.Loading) }
 
     LaunchedEffect(pdfUrl) {
-        state = withContext(Dispatchers.IO) {
-            runCatching {
-                val file = downloadToCache(pdfUrl, context.cacheDir, guardedHttpClient(context))
-                val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-                val renderer = PdfRenderer(pfd)
-                PdfState.Ready(renderer.pageCount, renderer, pfd) as PdfState
-            }.getOrElse { PdfState.Error }
-        }
-    }
-
-    // Hold the resources to release on dispose.
-    val current = state
-    androidx.compose.runtime.DisposableEffect(current) {
-        onDispose {
-            if (current is PdfState.Ready) {
-                runCatching { current.renderer.close() }
-                runCatching { current.pfd.close() }
+        state = PdfState.Loading
+        try {
+            holdPdfDocument(pdfUrl, context.cacheDir, guardedHttpClient(context)) {
+                state = PdfState.Ready(it)
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            state = PdfState.Error
         }
     }
 
@@ -121,8 +121,8 @@ fun PdfReaderDialog(
                         .background(MaterialTheme.colorScheme.surface),
                     contentPadding = PaddingValues(vertical = 8.dp),
                 ) {
-                    items((0 until s.pageCount).toList()) { index ->
-                        PdfPage(renderer = s.renderer, index = index, pageCount = s.pageCount)
+                    items((0 until s.document.pageCount).toList()) { index ->
+                        PdfPage(document = s.document, index = index)
                     }
                 }
             }
@@ -145,25 +145,14 @@ fun PdfReaderDialog(
 }
 
 @Composable
-private fun PdfPage(renderer: PdfRenderer, index: Int, pageCount: Int) {
+private fun PdfPage(document: CachedPdfDocument, index: Int) {
     val context = LocalContext.current
-    var bitmap by remember(index) { mutableStateOf<Bitmap?>(null) }
+    var bitmap by remember(document, index) { mutableStateOf<Bitmap?>(null) }
 
-    LaunchedEffect(index) {
+    LaunchedEffect(document, index) {
         bitmap = withContext(Dispatchers.IO) {
             runCatching {
-                // PdfRenderer is single-threaded: serialize page access.
-                synchronized(renderer) {
-                    val page = renderer.openPage(index)
-                    val targetWidth = context.resources.displayMetrics.widthPixels
-                    val scale = targetWidth.toFloat() / page.width.toFloat()
-                    val targetHeight = (page.height * scale).toInt().coerceAtLeast(1)
-                    val bmp = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
-                    bmp.eraseColor(AndroidColor.WHITE)
-                    page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    page.close()
-                    bmp
-                }
+                document.renderPage(index, context.resources.displayMetrics.widthPixels)
             }.getOrNull()
         }
     }
@@ -178,7 +167,7 @@ private fun PdfPage(renderer: PdfRenderer, index: Int, pageCount: Int) {
         if (bmp != null) {
             Image(
                 bitmap = bmp.asImageBitmap(),
-                contentDescription = stringResource(R.string.ebook_page_of, index + 1, pageCount),
+                contentDescription = stringResource(R.string.ebook_page_of, index + 1, document.pageCount),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -198,22 +187,105 @@ private fun guardedHttpClient(context: Context): OkHttpClient {
     val session = EntryPointAccessors
         .fromApplication(context.applicationContext, NetworkEntryPoint::class.java)
         .sessionStore()
-    return OkHttpClient.Builder()
-        .addInterceptor(CleartextGuardInterceptor { session.allowInsecureHttp })
-        .build()
+    return guardedMediaHttpClient { session.allowInsecureHttp }
 }
 
-/** Streams [url] into a temp file under [cacheDir] and returns it. Throws on a non-2xx response. */
-private fun downloadToCache(url: String, cacheDir: File, client: OkHttpClient): File {
-    val out = File.createTempFile("pinakes-ebook-", ".pdf", cacheDir)
-    val request = Request.Builder().url(url).build()
-    client.newCall(request).execute().use { response ->
-        if (!response.isSuccessful) {
-            out.delete()
-            error("HTTP ${response.code}")
+/** Owns the renderer and file until the dialog's effect is cancelled, including during setup. */
+internal suspend fun holdPdfDocument(url: String, cacheDir: File, client: OkHttpClient, onReady: (CachedPdfDocument) -> Unit): Nothing {
+    var document: CachedPdfDocument? = null
+    try {
+        withContext(Dispatchers.IO) {
+            document = CachedPdfDocument.open(downloadToCache(url, cacheDir, client))
         }
-        val body = response.body ?: run { out.delete(); error("Empty body") }
-        out.outputStream().use { sink -> body.byteStream().copyTo(sink) }
+        onReady(checkNotNull(document))
+        awaitCancellation()
+    } finally {
+        withContext(NonCancellable + Dispatchers.IO) { document?.close() }
     }
-    return out
+}
+
+/** Page rendering and close share one lock: dismissal cannot close an active page. */
+internal class CachedPdfDocument private constructor(
+    private val file: File,
+    private val descriptor: ParcelFileDescriptor,
+    private val renderer: PdfRenderer,
+) : AutoCloseable {
+    val pageCount: Int = renderer.pageCount
+    private var closed = false
+
+    @Synchronized fun renderPage(index: Int, targetWidth: Int): Bitmap {
+        check(!closed) { "PDF is closed" }
+        return renderer.openPage(index).use { page ->
+            val scale = targetWidth.toFloat() / page.width.toFloat()
+            val bitmap = Bitmap.createBitmap(targetWidth, (page.height * scale).toInt().coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+            try {
+                bitmap.eraseColor(AndroidColor.WHITE)
+                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                bitmap
+            } catch (failure: Throwable) {
+                bitmap.recycle()
+                throw failure
+            }
+        }
+    }
+
+    @Synchronized override fun close() {
+        if (closed) return
+        closed = true
+        try { renderer.close() } finally {
+            try { descriptor.close() } finally { file.delete() }
+        }
+    }
+
+    companion object {
+        fun open(file: File): CachedPdfDocument {
+            var descriptor: ParcelFileDescriptor? = null
+            try {
+                descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                return CachedPdfDocument(file, descriptor, PdfRenderer(descriptor))
+            } catch (failure: Throwable) {
+                try { descriptor?.close() } finally { file.delete() }
+                throw failure
+            }
+        }
+    }
+}
+
+/** Cancel the HTTP call and remove partial files; undelivered results are removed too. */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+internal suspend fun downloadToCache(url: String, cacheDir: File, client: OkHttpClient): File = suspendCancellableCoroutine { continuation ->
+    val request = Request.Builder().url(url).build()
+    val call = client.newCall(request)
+    val out = File.createTempFile("pinakes-ebook-", ".pdf", cacheDir)
+    continuation.invokeOnCancellation { call.cancel(); out.delete() }
+    call.enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            out.delete()
+            if (continuation.isActive) continuation.resumeWithException(e)
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            try {
+                response.use {
+                    check(response.isSuccessful) { "HTTP ${response.code}" }
+                    val body = response.body ?: error("Empty body")
+                    out.outputStream().use { sink ->
+                        body.byteStream().use { source ->
+                            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                            while (true) {
+                                if (!continuation.isActive) throw CancellationException()
+                                val count = source.read(buffer)
+                                if (count < 0) break
+                                sink.write(buffer, 0, count)
+                            }
+                        }
+                    }
+                }
+                continuation.resume(out, onCancellation = { out.delete() })
+            } catch (failure: Throwable) {
+                out.delete()
+                if (continuation.isActive) continuation.resumeWithException(failure)
+            }
+        }
+    })
 }
