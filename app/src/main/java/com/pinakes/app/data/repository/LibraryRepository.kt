@@ -69,16 +69,24 @@ class LibraryRepository(
         desiredDate: String? = null,
     ): ApiResult<CirculationRequestResult> {
         val api = network.api()
-        return apiCall { api.createReservation(ReservationRequest(bookId = bookId, desiredDate = desiredDate)) }
+        val res = apiCall { api.createReservation(ReservationRequest(bookId = bookId, desiredDate = desiredDate)) }
+        // The request lands in pending loans or in reservations: refresh the offline copy.
+        if (res is ApiResult.Success) runCatching { refreshCache() }
+        return res
     }
 
     suspend fun cancelReservation(reservationId: Int): ApiResult<Unit> {
         val api = network.api()
-        return apiCall { api.cancelReservation(reservationId) }
+        val res = apiCall { api.cancelReservation(reservationId) }
+        if (res is ApiResult.Success) runCatching { cache?.deleteLoan(reservationId, listOf(CachedLoan.RESERVATION)) }
+        return res
     }
 
     suspend fun cancelLoan(loanId: Int): ApiResult<Unit> {
         val api = network.api()
-        return apiCall { api.cancelLoan(loanId) }
+        val res = apiCall { api.cancelLoan(loanId) }
+        // A cancelled request leaves the current lists (the next fetch files it in history).
+        if (res is ApiResult.Success) runCatching { cache?.deleteLoan(loanId, listOf(CachedLoan.PENDING, CachedLoan.ACTIVE)) }
+        return res
     }
 }

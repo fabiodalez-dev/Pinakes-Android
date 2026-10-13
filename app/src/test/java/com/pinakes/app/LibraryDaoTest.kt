@@ -100,4 +100,20 @@ class LibraryDaoTest {
         meta.clear()
         assertNull(meta.get(SyncMeta.CATALOG_SERVER_TIME))
     }
+
+    @Test fun cancelAndRemoveUpdateTheOfflineCopyWithoutAFullFetch() = runBlocking {
+        dao.replaceLoans(CachedLoan.LOAN_BUCKETS, loans.toCached())
+        dao.replaceLoans(listOf(CachedLoan.RESERVATION), listOf(ReservationItem(id = 9, bookId = 90, title = "R").toCached(0)))
+        dao.deleteLoan(3, listOf(CachedLoan.PENDING, CachedLoan.ACTIVE))
+        dao.deleteLoan(9, listOf(CachedLoan.RESERVATION))
+        val back = dao.loans(CachedLoan.LOAN_BUCKETS).toLoansData()
+        assertTrue(back.pending.isEmpty())
+        assertEquals(2, back.active.size)
+        assertEquals(1, back.history.size)   // other buckets untouched
+        assertTrue(dao.loans(listOf(CachedLoan.RESERVATION)).isEmpty())
+
+        dao.replaceWishlist(listOf(WishlistItem(bookId = 5, title = "B").toCached(0), WishlistItem(bookId = 2, title = "A").toCached(1)))
+        dao.deleteWishlistItem(5)
+        assertEquals(listOf(2), dao.wishlist().map { it.bookId })
+    }
 }

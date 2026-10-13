@@ -35,13 +35,19 @@ class WishlistRepository(
         wishlist()
     }
 
+    /** Adds, then re-reads the list so the offline copy includes the new title. */
     suspend fun add(bookId: Int): ApiResult<Unit> {
         val api = network.api()
-        return apiCall { api.addWishlist(WishlistAddRequest(bookId)) }
+        val res = apiCall { api.addWishlist(WishlistAddRequest(bookId)) }
+        if (res is ApiResult.Success) runCatching { wishlist() }
+        return res
     }
 
+    /** Removes, and drops the title from the offline copy at once. */
     suspend fun remove(bookId: Int): ApiResult<Unit> {
         val api = network.api()
-        return apiCall { api.removeWishlist(bookId) }
+        val res = apiCall { api.removeWishlist(bookId) }
+        if (res is ApiResult.Success) runCatching { cache?.deleteWishlistItem(bookId) }
+        return res
     }
 }

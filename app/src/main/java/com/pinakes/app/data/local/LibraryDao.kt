@@ -30,6 +30,13 @@ interface LibraryDao {
         insertLoans(rows)
     }
 
+    /** Drop one loan/reservation from the given buckets (after a successful cancel). */
+    @Query("DELETE FROM cached_loans WHERE id = :id AND bucket IN (:buckets)")
+    suspend fun deleteLoan(id: Int, buckets: List<String>)
+
+    @Query("DELETE FROM cached_wishlist WHERE bookId = :bookId")
+    suspend fun deleteWishlistItem(bookId: Int)
+
     @Query("SELECT * FROM cached_wishlist ORDER BY position ASC")
     fun observeWishlist(): Flow<List<CachedWishlistItem>>
 
