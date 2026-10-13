@@ -1023,5 +1023,7 @@
   "staff_reservations_cancelled": "Storniert",
   "staff_reservations_all": "Alle",
   "staff_reservations_empty": "Keine Vormerkungen",
-  "staff_reservations_search": "Titel oder Nutzer"
+  "staff_reservations_search": "Titel oder Nutzer",
+  "staff_return_title": "Rücknahme erfassen",
+  "staff_err_idempotency_conflict": "Der Server hat diese Anfrage schon mit anderen Daten erhalten. Formular prüfen und erneut senden."
 }

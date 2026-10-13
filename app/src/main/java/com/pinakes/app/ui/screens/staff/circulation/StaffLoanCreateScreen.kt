@@ -37,7 +37,9 @@ import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.StaffCirculationRepository
 import com.pinakes.app.data.repository.StaffRepository
 import com.pinakes.app.data.repository.isForbidden
+import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.staff.CopyCodeCodec
+import com.pinakes.app.data.staff.SubmissionKeys
 import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.common.DateFormat
 import com.pinakes.app.ui.components.InlineErrorBanner
@@ -114,6 +116,7 @@ class StaffLoanCreateViewModel @Inject constructor(
         ),
     )
     val state: StateFlow<LoanCreateUiState> = _state.asStateFlow()
+    private val keys = SubmissionKeys()
 
     val users = SearchController(viewModelScope, minLength = 2) { q ->
         when (val res = circulation.users(q)) {
@@ -195,9 +198,8 @@ class StaffLoanCreateViewModel @Inject constructor(
         _state.update { it.copy(saving = true, error = null) }
         viewModelScope.launch {
             if (s.reservation) {
-                val res = circulation.createReservation(
-                    ReservationWrite(userId = user.id, bookId = book.id, requestedFrom = s.start, requestedTo = s.end),
-                )
+                val body = ReservationWrite(userId = user.id, bookId = book.id, requestedFrom = s.start, requestedTo = s.end)
+                val res = withIdempotency(body) { key -> circulation.createReservation(body, key) }
                 _state.update {
                     when (res) {
                         is ApiResult.Success -> it.copy(saving = false, createdLoanId = -1)
@@ -206,14 +208,13 @@ class StaffLoanCreateViewModel @Inject constructor(
                 }
                 return@launch
             }
-            val res = circulation.createLoan(
-                LoanCreateRequest(
-                    userId = user.id, bookId = book.id,
-                    copyCode = s.copyCode.takeIf { CopyCodeCodec.isValid(it) },
-                    loanedAt = s.start, dueAt = s.end, notes = s.notes,
-                    immediate = s.handOverNow && s.canHandOver,
-                ),
+            val request = LoanCreateRequest(
+                userId = user.id, bookId = book.id,
+                copyCode = s.copyCode.takeIf { CopyCodeCodec.isValid(it) },
+                loanedAt = s.start, dueAt = s.end, notes = s.notes,
+                immediate = s.handOverNow && s.canHandOver,
             )
+            val res = withIdempotency(request) { key -> circulation.createLoan(request, key) }
             _state.update {
                 when (res) {
                     is ApiResult.Success -> it.copy(saving = false, createdLoanId = res.data.id)
@@ -221,6 +222,19 @@ class StaffLoanCreateViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * Send [payload] under its submission key: one automatic retry with the same key when the
+     * connection dropped (the server may already have created it: the replay returns it), a
+     * fresh key after a success or a key conflict.
+     */
+    private suspend fun <T> withIdempotency(payload: Any, call: suspend (String) -> ApiResult<T>): ApiResult<T> {
+        val key = keys.keyFor(payload)
+        var res = call(key)
+        if (res is ApiResult.Failure && res.code == ErrorCodes.NETWORK) res = call(key)
+        if (res is ApiResult.Success || (res as? ApiResult.Failure)?.code == SubmissionKeys.CONFLICT) keys.reset()
+        return res
     }
 }
 

@@ -1023,5 +1023,7 @@
   "staff_reservations_cancelled": "Annulées",
   "staff_reservations_all": "Toutes",
   "staff_reservations_empty": "Aucune réservation",
-  "staff_reservations_search": "Titre ou lecteur"
+  "staff_reservations_search": "Titre ou lecteur",
+  "staff_return_title": "Enregistrer le retour",
+  "staff_err_idempotency_conflict": "Le serveur a déjà reçu cette demande avec d’autres données. Vérifiez le formulaire et renvoyez-le."
 }

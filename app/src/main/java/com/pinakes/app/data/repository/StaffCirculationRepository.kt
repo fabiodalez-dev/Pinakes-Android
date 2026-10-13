@@ -59,8 +59,14 @@ class StaffCirculationRepository(
 
     suspend fun loan(id: Int): ApiResult<StaffLoan> = session.staffCall { api.loan(id) }
 
-    suspend fun createLoan(request: LoanCreateRequest): ApiResult<StaffLoan> =
-        session.staffCall { api.createLoan(request.copy(copyCode = request.copyCode?.let(CopyCodeCodec::normalize), notes = request.notes.blankToNull())) }
+    /**
+     * [idempotencyKey] identifies this submission: the same key on every retry of it, so a
+     * request that reached the server before the connection dropped is not created twice.
+     */
+    suspend fun createLoan(request: LoanCreateRequest, idempotencyKey: String? = null): ApiResult<StaffLoan> =
+        session.staffCall {
+            api.createLoan(request.copy(copyCode = request.copyCode?.let(CopyCodeCodec::normalize), notes = request.notes.blankToNull()), idempotencyKey)
+        }
 
     suspend fun updateLoan(id: Int, request: LoanEditRequest): ApiResult<StaffLoan> = session.staffCall { api.updateLoan(id, request) }
 
@@ -102,7 +108,8 @@ class StaffCirculationRepository(
         api.reservations(status = status, q = query.blankToNull(), bookId = bookId, userId = userId, cursor = cursor, limit = limit)
     }.toPage()
 
-    suspend fun createReservation(body: ReservationWrite): ApiResult<StaffReservation> = session.staffCall { api.createReservation(body) }
+    suspend fun createReservation(body: ReservationWrite, idempotencyKey: String? = null): ApiResult<StaffReservation> =
+        session.staffCall { api.createReservation(body, idempotencyKey) }
 
     suspend fun updateReservation(id: Int, body: ReservationWrite): ApiResult<StaffReservation> =
         session.staffCall { api.updateReservation(id, body) }

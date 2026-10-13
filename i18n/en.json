@@ -1023,5 +1023,7 @@
   "staff_reservations_cancelled": "Cancelled",
   "staff_reservations_all": "All",
   "staff_reservations_empty": "No reservations",
-  "staff_reservations_search": "Title or borrower"
+  "staff_reservations_search": "Title or borrower",
+  "staff_return_title": "Record the return",
+  "staff_err_idempotency_conflict": "The server saw this request with different data. Check the form and send it again."
 }

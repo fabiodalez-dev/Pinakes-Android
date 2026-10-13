@@ -35,6 +35,7 @@ object StaffErrors {
         "job_busy" -> R.string.staff_err_job_busy
         "gone" -> R.string.staff_err_gone
         "upload_rejected" -> R.string.staff_err_upload_rejected
+        SubmissionKeys.CONFLICT -> R.string.staff_err_idempotency_conflict
         "feature_disabled" -> R.string.staff_err_feature_disabled
         ErrorCodes.RATE_LIMITED -> R.string.staff_err_rate_limited
         ErrorCodes.NETWORK -> R.string.offline_generic

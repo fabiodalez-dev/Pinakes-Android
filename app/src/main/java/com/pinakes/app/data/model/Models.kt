@@ -37,6 +37,8 @@ data class Meta(
     val merged: Boolean? = null,
     val message: String? = null,
     @SerialName("retry_after") val retryAfter: Int? = null,
+    // A create replayed through its Idempotency-Key: the original resource, nothing new made.
+    val replayed: Boolean? = null,
 )
 
 @Serializable

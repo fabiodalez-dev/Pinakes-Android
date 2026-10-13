@@ -1023,5 +1023,7 @@
   "staff_reservations_cancelled": "Annullate",
   "staff_reservations_all": "Tutte",
   "staff_reservations_empty": "Nessuna prenotazione",
-  "staff_reservations_search": "Titolo o utente"
+  "staff_reservations_search": "Titolo o utente",
+  "staff_return_title": "Registra la restituzione",
+  "staff_err_idempotency_conflict": "Il server ha già ricevuto questa richiesta con dati diversi. Controlla il modulo e invialo di nuovo."
 }

@@ -22,6 +22,7 @@ import com.pinakes.app.data.model.StaffUser
 import com.pinakes.app.data.model.StaffUserDetail
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -49,8 +50,9 @@ interface StaffCirculationApi {
     @GET("staff/loans/{id}")
     suspend fun loan(@Path("id") id: Int): Envelope<StaffLoan>
 
+    /** [key] is the submission's Idempotency-Key: a replay answers 200 with the original loan. */
     @POST("staff/loans")
-    suspend fun createLoan(@Body body: LoanCreateRequest): Envelope<StaffLoan>
+    suspend fun createLoan(@Body body: LoanCreateRequest, @Header("Idempotency-Key") key: String? = null): Envelope<StaffLoan>
 
     @PUT("staff/loans/{id}")
     suspend fun updateLoan(@Path("id") id: Int, @Body body: LoanEditRequest): Envelope<StaffLoan>
@@ -102,7 +104,7 @@ interface StaffCirculationApi {
     suspend fun reservation(@Path("id") id: Int): Envelope<StaffReservation>
 
     @POST("staff/reservations")
-    suspend fun createReservation(@Body body: ReservationWrite): Envelope<StaffReservation>
+    suspend fun createReservation(@Body body: ReservationWrite, @Header("Idempotency-Key") key: String? = null): Envelope<StaffReservation>
 
     @PUT("staff/reservations/{id}")
     suspend fun updateReservation(@Path("id") id: Int, @Body body: ReservationWrite): Envelope<StaffReservation>
