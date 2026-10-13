@@ -167,7 +167,8 @@ fun StaffBookEditScreen(
             when {
                 state.loading -> LoadingState()
                 state.loadError != null -> ErrorState(
-                    message = state.loadError?.takeIf { it.isNotBlank() } ?: stringResource(R.string.staff_error_load),
+                    message = if (state.loadOffline) stringResource(R.string.offline_generic)
+                    else state.loadError?.takeIf { it.isNotBlank() } ?: stringResource(R.string.staff_error_load),
                     onRetry = vm::load,
                 )
                 else -> BookForm(state, vm)
@@ -513,7 +514,18 @@ private fun PickerSheet(state: StaffBookEditUiState, vm: StaffBookEditViewModel)
         Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.lg).navigationBarsPadding().imePadding()) {
             Text(stringResource(title), style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(Spacing.md))
-            SearchField(query = state.pickerQuery, onQueryChange = vm::onPickerQuery, modifier = Modifier.fillMaxWidth())
+            SearchField(
+                query = state.pickerQuery,
+                onQueryChange = vm::onPickerQuery,
+                placeholder = stringResource(
+                    when (kind) {
+                        PickerKind.AUTHORS -> R.string.staff_search_authors
+                        PickerKind.PUBLISHERS -> R.string.staff_search_publishers
+                        PickerKind.GENRE, PickerKind.SUBGENRE -> R.string.staff_search_genres
+                    }
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(Spacing.sm))
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
                 val query = state.pickerQuery.trim()

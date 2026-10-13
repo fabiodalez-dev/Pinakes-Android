@@ -16,6 +16,8 @@ import com.pinakes.app.data.model.StaffGenreNode
 import com.pinakes.app.data.model.StaffLookups
 import com.pinakes.app.data.model.flatten
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.ui.common.isOffline
+import com.pinakes.app.ui.common.serverMessage
 import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.repository.StaffRepository
 import com.pinakes.app.data.repository.isDuplicate
@@ -63,6 +65,7 @@ data class StaffBookEditUiState(
     val bookId: Int = 0,
     val loading: Boolean = true,
     val loadError: String? = null,
+    val loadOffline: Boolean = false,
     val original: StaffBook? = null,
     val form: StaffBookForm = StaffBookForm(),
     /** Set after the first save attempt so untouched empty fields do not start red. */
@@ -133,7 +136,7 @@ class StaffBookEditViewModel @Inject constructor(
                     }
                     is ApiResult.Failure -> {
                         _state.update {
-                            it.copy(loading = false, forbidden = res.isForbidden(), loadError = res.message.ifBlank { null } ?: "")
+                            it.copy(loading = false, forbidden = res.isForbidden(), loadError = res.serverMessage() ?: "", loadOffline = res.isOffline)
                         }
                         return@launch
                     }
@@ -372,7 +375,7 @@ class StaffBookEditViewModel @Inject constructor(
                 )
                 res.code == ErrorCodes.LOCK_ERROR -> it.copy(saving = false, errorRes = R.string.staff_error_busy)
                 res.code == ErrorCodes.NETWORK -> it.copy(saving = false, errorRes = R.string.staff_error_offline)
-                else -> it.copy(saving = false, error = res.message.ifBlank { null }, errorRes = R.string.staff_error_save)
+                else -> it.copy(saving = false, error = res.serverMessage(), errorRes = R.string.staff_error_save)
             }
         }
     }
@@ -395,7 +398,7 @@ class StaffBookEditViewModel @Inject constructor(
                     it.copy(saving = false, duplicate = null, event = StaffEditEvent.Saved(existing.id, created = false))
                 }
                 is ApiResult.Failure -> _state.update {
-                    it.copy(saving = false, forbidden = res.isForbidden(), error = res.message.ifBlank { null }, errorRes = R.string.staff_error_save)
+                    it.copy(saving = false, forbidden = res.isForbidden(), error = res.serverMessage(), errorRes = R.string.staff_error_save)
                 }
             }
         }
@@ -419,7 +422,7 @@ class StaffBookEditViewModel @Inject constructor(
                     )
                 }
                 is ApiResult.Failure -> _state.update {
-                    it.copy(addingCopies = false, forbidden = res.isForbidden(), snackbar = res.message.ifBlank { null }, snackbarRes = R.string.staff_error_save)
+                    it.copy(addingCopies = false, forbidden = res.isForbidden(), snackbar = res.serverMessage(), snackbarRes = R.string.staff_error_save)
                 }
             }
         }
@@ -436,7 +439,7 @@ class StaffBookEditViewModel @Inject constructor(
                         res.isForbidden() -> it.copy(deleting = false, forbidden = true)
                         res.httpStatus == 409 || res.code == ErrorCodes.CONFLICT ->
                             it.copy(deleting = false, snackbarRes = R.string.staff_book_delete_active_circulation)
-                        else -> it.copy(deleting = false, snackbar = res.message.ifBlank { null }, snackbarRes = R.string.staff_error_save)
+                        else -> it.copy(deleting = false, snackbar = res.serverMessage(), snackbarRes = R.string.staff_error_save)
                     }
                 }
             }

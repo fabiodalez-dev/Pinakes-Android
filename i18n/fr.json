@@ -814,5 +814,12 @@
   "staff_scrape_unavailable": "Les services de recherche sont injoignables pour le moment.",
   "staff_scan_offline_title": "Le scan nécessite une connexion",
   "staff_scan_offline_subtitle": "Chaque code est recherché sur le serveur de la bibliothèque. Reconnectez-vous et réessayez.",
-  "staff_level_required": "Choisissez une tablette pour cette étagère, ou réglez l’étagère sur aucune."
+  "staff_level_required": "Choisissez une tablette pour cette étagère, ou réglez l’étagère sur aucune.",
+  "offline_generic": "Vous êtes hors ligne. Vérifiez votre connexion et réessayez.",
+  "offline_no_copy_title": "Vous êtes hors ligne",
+  "offline_no_copy": "Aucune copie n’est encore enregistrée sur l’appareil. Ouvrez cette page une fois connecté pour la garder hors ligne.",
+  "offline_availability_hidden": "Vous êtes hors ligne : la disponibilité et les actions de prêt sont masquées jusqu’au retour de la connexion.",
+  "staff_search_authors": "Rechercher des auteurs",
+  "staff_search_publishers": "Rechercher des éditeurs",
+  "staff_search_genres": "Rechercher des genres"
 }

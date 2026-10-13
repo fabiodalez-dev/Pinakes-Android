@@ -9,6 +9,8 @@ import com.pinakes.app.data.model.ExistingBook
 import com.pinakes.app.data.model.IsbnPreview
 import com.pinakes.app.data.model.Shelf
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.ui.common.isOffline
+import com.pinakes.app.ui.common.serverMessage
 import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.repository.StaffRepository
 import com.pinakes.app.data.repository.isDuplicate
@@ -202,7 +204,7 @@ class StaffScanViewModel @Inject constructor(
                         it.copy(saving = false, phase = ScanPhase.Duplicate(phase.identifier, staff.existingBook(res) ?: ExistingBook(title = form.title)))
                     }
                     else -> _state.update {
-                        it.copy(saving = false, message = res.message.ifBlank { null }, messageRes = R.string.staff_error_save)
+                        it.copy(saving = false, message = res.serverMessage(), messageRes = R.string.staff_error_save)
                     }
                 }
             }
@@ -220,7 +222,7 @@ class StaffScanViewModel @Inject constructor(
                 is ApiResult.Success -> added(ScanAdded(phase.existing.id, phase.existing.title, null, quantity, false))
                 is ApiResult.Failure -> _state.update {
                     if (res.isForbidden()) it.copy(saving = false, forbidden = true)
-                    else it.copy(saving = false, message = res.message.ifBlank { null }, messageRes = R.string.staff_error_save)
+                    else it.copy(saving = false, message = res.serverMessage(), messageRes = R.string.staff_error_save)
                 }
             }
         }

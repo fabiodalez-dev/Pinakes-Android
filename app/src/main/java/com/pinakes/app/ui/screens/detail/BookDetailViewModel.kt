@@ -7,7 +7,10 @@ import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.CirculationRequestKind
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.connectivity.ConnectivityObserver
 import com.pinakes.app.data.network.ErrorCodes
+import com.pinakes.app.ui.common.serverMessage
+import kotlinx.coroutines.flow.drop
 import com.pinakes.app.data.repository.CatalogRepository
 import com.pinakes.app.data.repository.LibraryRepository
 import com.pinakes.app.data.repository.WishlistRepository
@@ -43,7 +46,12 @@ data class BookDetailUiState(
     val offline: Boolean = false,
     /** When the offline copy was last synced (server time), for "last known" wording. */
     val syncedAt: String? = null,
-)
+    /** Device connectivity: a page loaded online hides its loan actions when it drops. */
+    val connected: Boolean = true,
+) {
+    /** Cached page or no connection: no loan/reservation affordance, no current availability. */
+    val offlineNow: Boolean get() = offline || !connected
+}
 
 data class RequestConfirmation(
     val desiredDate: String,
@@ -56,15 +64,25 @@ class BookDetailViewModel @Inject constructor(
     private val catalog: CatalogRepository,
     private val library: LibraryRepository,
     private val wishlist: WishlistRepository,
+    private val connectivity: ConnectivityObserver,
 ) : ViewModel() {
 
     // The book id arrives as a navigation argument; Hilt populates SavedStateHandle from it.
     private val bookId: Int = savedStateHandle.get<Int>(Routes.ARG_BOOK_ID) ?: 0
 
-    private val _state = MutableStateFlow(BookDetailUiState())
+    private val _state = MutableStateFlow(BookDetailUiState(connected = connectivity.isOnline.value))
     val state: StateFlow<BookDetailUiState> = _state.asStateFlow()
 
-    init { load() }
+    init {
+        load()
+        viewModelScope.launch {
+            connectivity.isOnline.drop(1).collect { online ->
+                // Offline: close the loan sheet at once (availability can't be guaranteed).
+                _state.update { it.copy(connected = online, showLoanSheet = it.showLoanSheet && online) }
+                if (online && (_state.value.offline || _state.value.content is UiState.Error)) load()
+            }
+        }
+    }
 
     fun load() {
         _state.update { it.copy(content = UiState.Loading) }
@@ -90,7 +108,7 @@ class BookDetailViewModel @Inject constructor(
     }
 
     fun toggleWishlist() {
-        if (_state.value.wishlistBusy || _state.value.offline) return
+        if (_state.value.wishlistBusy || _state.value.offlineNow) return
         val nowWishlisted = !_state.value.wishlisted
         _state.update { it.copy(wishlistBusy = true) }
         viewModelScope.launch {
@@ -105,7 +123,7 @@ class BookDetailViewModel @Inject constructor(
                     )
                 }
                 is ApiResult.Failure -> _state.update {
-                    if (res.message.isNotBlank()) it.copy(wishlistBusy = false, snackbar = res.message, snackbarRes = null)
+                    if (res.serverMessage() != null) it.copy(wishlistBusy = false, snackbar = res.serverMessage(), snackbarRes = null)
                     else it.copy(wishlistBusy = false, snackbar = null, snackbarRes = R.string.snackbar_wishlist_update_error)
                 }
             }
@@ -118,7 +136,7 @@ class BookDetailViewModel @Inject constructor(
      * picker and flags [BookDetailUiState.availabilityFallback].
      */
     fun openLoanSheet() {
-        if (_state.value.offline) return
+        if (_state.value.offlineNow) return
         _state.update { it.copy(showLoanSheet = true, availabilityLoading = true, availabilityFallback = false, availability = null) }
         viewModelScope.launch {
             when (val res = catalog.bookAvailability(bookId)) {
@@ -166,8 +184,8 @@ class BookDetailViewModel @Inject constructor(
                     when {
                         res.code == ErrorCodes.CONFLICT ->
                             _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = null, snackbarRes = R.string.snackbar_request_conflict) }
-                        res.message.isNotBlank() ->
-                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = res.message, snackbarRes = null) }
+                        res.serverMessage() != null ->
+                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = res.serverMessage(), snackbarRes = null) }
                         else ->
                             _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = null, snackbarRes = R.string.snackbar_request_error) }
                     }

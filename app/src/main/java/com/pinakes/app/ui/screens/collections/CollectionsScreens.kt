@@ -23,6 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pinakes.app.R
 import com.pinakes.app.data.model.*
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.ui.common.uiText
 import com.pinakes.app.ui.components.*
 import com.pinakes.app.ui.screens.bookclub.openWeb
 import com.pinakes.app.ui.screens.detail.PdfReaderDialog
@@ -184,7 +185,7 @@ internal fun DonationContent(state: DonationState, padding: PaddingValues = Padd
                 Text(stringResource(R.string.donation_consent), modifier = Modifier.padding(start = Spacing.sm))
             } }
             if (state.uncertain) item { Text(stringResource(R.string.donation_uncertain), color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            state.error?.let { error -> item { Text(error.message.ifBlank { stringResource(R.string.standalone_articles_error) }, color = MaterialTheme.colorScheme.error) } }
+            state.error?.let { error -> item { Text(error.uiText(R.string.standalone_articles_error), color = MaterialTheme.colorScheme.error) } }
             if (state.bookId != null && state.error?.code in listOf("no_longer_wanted", "not_found") && !state.uncertain) item {
                 SecondaryButton(stringResource(R.string.desiderata_free_offer), onFree, Modifier.fillMaxWidth())
             }
@@ -241,7 +242,7 @@ private fun CollectionLinks(health: CollectionHealth?) {
 private fun <T> ListStatus(state: CollectionListState<T>, retry: () -> Unit, emptyLabel: Int) {
     when {
         state.loading -> LoadingState(label = stringResource(R.string.collection_loading))
-        state.error != null -> ErrorState(state.error.message.ifBlank { stringResource(R.string.standalone_articles_error) }, onRetry = retry)
+        state.error != null -> ErrorState(state.error.uiText(R.string.standalone_articles_error), onRetry = retry)
         state.items.isEmpty() -> Text(stringResource(emptyLabel), style = MaterialTheme.typography.bodyLarge)
     }
 }
@@ -249,7 +250,7 @@ private fun <T> ListStatus(state: CollectionListState<T>, retry: () -> Unit, emp
 @Composable
 private fun <T> MoreButton(state: CollectionListState<T>, more: () -> Unit) {
     if (state.nextCursor != null) {
-        state.moreError?.let { Text(it.message, color = MaterialTheme.colorScheme.error) }
+        state.moreError?.let { Text(it.uiText(R.string.standalone_articles_error), color = MaterialTheme.colorScheme.error) }
         PrimaryButton(stringResource(if (state.moreError != null) R.string.action_retry else R.string.collection_more), more, Modifier.fillMaxWidth(), loading = state.loadingMore)
     }
 }
@@ -258,7 +259,7 @@ private fun <T> MoreButton(state: CollectionListState<T>, more: () -> Unit) {
 private fun <T> DetailResult(state: ApiResult<T>?, padding: PaddingValues, retry: () -> Unit, content: @Composable ColumnScope.(T) -> Unit) {
     when (state) {
         null -> Box(Modifier.fillMaxSize().padding(padding)) { LoadingState(stringResource(R.string.collection_loading)) }
-        is ApiResult.Failure -> Box(Modifier.fillMaxSize().padding(padding)) { ErrorState(state.message, onRetry = retry) }
+        is ApiResult.Failure -> Box(Modifier.fillMaxSize().padding(padding)) { ErrorState(state.uiText(R.string.standalone_articles_error), onRetry = retry) }
         is ApiResult.Success -> LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(Spacing.lg)) {
             item { Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) { content(state.data) } }
         }

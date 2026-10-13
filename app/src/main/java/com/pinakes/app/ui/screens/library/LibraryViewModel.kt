@@ -5,7 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.LoansData
 import com.pinakes.app.data.model.ReservationItem
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.connectivity.ConnectivityObserver
 import com.pinakes.app.data.network.ErrorCodes
+import com.pinakes.app.ui.common.OfflinePolicy
+import com.pinakes.app.ui.common.isOffline
+import com.pinakes.app.ui.common.serverMessage
+import kotlinx.coroutines.flow.drop
 import com.pinakes.app.data.repository.LibraryRepository
 import com.pinakes.app.R
 import com.pinakes.app.ui.common.UiState
@@ -32,15 +37,31 @@ data class LibraryUiState(
     val snackbarRes: Int? = null,
     /** Showing the cached lists because the server is unreachable: actions are disabled. */
     val offline: Boolean = false,
-)
+    /** Device connectivity: cancel actions disappear the moment it drops. */
+    val connected: Boolean = true,
+) {
+    /** Loan/reservation actions need a live server: hidden when offline either way. */
+    val showActions: Boolean get() = OfflinePolicy.showLoanActions(canBorrow = true, offline = offline || !connected)
+}
 
 @HiltViewModel
-class LibraryViewModel @Inject constructor(private val library: LibraryRepository) : ViewModel() {
+class LibraryViewModel @Inject constructor(
+    private val library: LibraryRepository,
+    private val connectivity: ConnectivityObserver,
+) : ViewModel() {
 
-    private val _state = MutableStateFlow(LibraryUiState())
+    private val _state = MutableStateFlow(LibraryUiState(connected = connectivity.isOnline.value))
     val state: StateFlow<LibraryUiState> = _state.asStateFlow()
 
-    init { load(initial = true) }
+    init {
+        load(initial = true)
+        viewModelScope.launch {
+            connectivity.isOnline.drop(1).collect { online ->
+                _state.update { it.copy(connected = online) }
+                if (online && (_state.value.offline || _state.value.content is UiState.Error)) load(initial = false)
+            }
+        }
+    }
 
     fun refresh() = load(initial = false)
 
@@ -85,7 +106,9 @@ class LibraryViewModel @Inject constructor(private val library: LibraryRepositor
                 _state.update {
                     it.copy(
                         content = if (it.content is UiState.Success) it.content
-                        else UiState.Error(f.message, f.code, R.string.library_error_load),
+                        // Offline with nothing saved: a localized empty state, never the raw exception.
+                    else if (f.isOffline) UiState.Error("", ErrorCodes.NETWORK, R.string.offline_no_copy)
+                    else UiState.Error(f.message, f.code, R.string.library_error_load),
                         refreshing = false,
                         snackbarRes = if (it.content is UiState.Success) R.string.library_refresh_error else null,
                     )
@@ -95,7 +118,7 @@ class LibraryViewModel @Inject constructor(private val library: LibraryRepositor
     }
 
     fun cancelReservation(id: Int) {
-        if (_state.value.cancelingId != null || _state.value.offline) return
+        if (_state.value.cancelingId != null || !_state.value.showActions) return
         _state.update { it.copy(cancelingId = id) }
         viewModelScope.launch {
             when (val res = library.cancelReservation(id)) {
@@ -107,8 +130,8 @@ class LibraryViewModel @Inject constructor(private val library: LibraryRepositor
                     when {
                         res.code == ErrorCodes.CONFLICT || res.httpStatus == 409 ->
                             _state.update { it.copy(cancelingId = null, snackbar = null, snackbarRes = R.string.snackbar_reservation_cancel_conflict) }
-                        res.message.isNotBlank() ->
-                            _state.update { it.copy(cancelingId = null, snackbar = res.message, snackbarRes = null) }
+                        res.serverMessage() != null ->
+                            _state.update { it.copy(cancelingId = null, snackbar = res.serverMessage(), snackbarRes = null) }
                         else ->
                             _state.update { it.copy(cancelingId = null, snackbar = null, snackbarRes = R.string.snackbar_reservation_cancel_error) }
                     }
@@ -118,7 +141,7 @@ class LibraryViewModel @Inject constructor(private val library: LibraryRepositor
     }
 
     fun cancelLoan(id: Int) {
-        if (_state.value.cancelingId != null || _state.value.offline) return
+        if (_state.value.cancelingId != null || !_state.value.showActions) return
         _state.update { it.copy(cancelingId = id) }
         viewModelScope.launch {
             when (val res = library.cancelLoan(id)) {
@@ -130,8 +153,8 @@ class LibraryViewModel @Inject constructor(private val library: LibraryRepositor
                     when {
                         res.code == ErrorCodes.CONFLICT || res.httpStatus == 409 ->
                             _state.update { it.copy(cancelingId = null, snackbar = null, snackbarRes = R.string.snackbar_loan_cancel_conflict) }
-                        res.message.isNotBlank() ->
-                            _state.update { it.copy(cancelingId = null, snackbar = res.message, snackbarRes = null) }
+                        res.serverMessage() != null ->
+                            _state.update { it.copy(cancelingId = null, snackbar = res.serverMessage(), snackbarRes = null) }
                         else ->
                             _state.update { it.copy(cancelingId = null, snackbar = null, snackbarRes = R.string.snackbar_loan_cancel_error) }
                     }

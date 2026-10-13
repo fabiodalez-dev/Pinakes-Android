@@ -35,7 +35,8 @@ import com.pinakes.app.data.model.LoanItem
 import com.pinakes.app.data.model.ReservationItem
 import com.pinakes.app.ui.common.DateFormat
 import com.pinakes.app.ui.common.StatusMapping
-import com.pinakes.app.ui.common.OfflinePolicy
+import com.pinakes.app.data.network.ErrorCodes
+import androidx.compose.material.icons.outlined.CloudOff
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.ConfirmDialog
@@ -86,10 +87,20 @@ fun LibraryScreen(onBookClick: (Int) -> Unit) {
             ) {
                 when (val content = state.content) {
                     is UiState.Loading -> LoadingState(label = stringResource(R.string.library_loading))
-                    is UiState.Error -> ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
+                    is UiState.Error -> if (content.code == ErrorCodes.NETWORK) {
+                        EmptyState(
+                            title = stringResource(R.string.offline_no_copy_title),
+                            subtitle = stringResource(R.string.offline_no_copy),
+                            icon = Icons.Outlined.CloudOff,
+                            actionLabel = stringResource(R.string.action_retry),
+                            onAction = vm::refresh,
+                        )
+                    } else {
+                        ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
+                    }
                     is UiState.Success -> Column(Modifier.fillMaxSize()) {
                         val data = content.data
-                        if (state.offline) {
+                        if (state.offline || !state.connected) {
                             InlineErrorBanner(
                                 message = stringResource(R.string.offline_lists_cached),
                                 onRetry = vm::refresh,
@@ -104,7 +115,7 @@ fun LibraryScreen(onBookClick: (Int) -> Unit) {
                                 cancelingId = state.cancelingId,
                                 onBookClick = onBookClick,
                                 onCancel = { confirmCancel = CancelTarget(it, isLoan = true) },
-                                actionsEnabled = OfflinePolicy.showLoanActions(canBorrow = true, offline = state.offline),
+                                actionsEnabled = state.showActions,
                             )
                             1 -> LoanList(
                                 loans = data.loans.history,
@@ -117,7 +128,7 @@ fun LibraryScreen(onBookClick: (Int) -> Unit) {
                                 cancelingId = state.cancelingId,
                                 onBookClick = onBookClick,
                                 onCancel = { confirmCancel = CancelTarget(it, isLoan = false) },
-                                actionsEnabled = OfflinePolicy.showLoanActions(canBorrow = true, offline = state.offline),
+                                actionsEnabled = state.showActions,
                             )
                         }
                     }

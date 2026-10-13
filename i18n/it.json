@@ -814,5 +814,12 @@
   "staff_scrape_unavailable": "I servizi di ricerca non sono raggiungibili in questo momento.",
   "staff_scan_offline_title": "La scansione richiede una connessione",
   "staff_scan_offline_subtitle": "Ogni codice viene cercato sul server della biblioteca. Riconnettiti e riprova.",
-  "staff_level_required": "Scegli una mensola per questo scaffale, oppure imposta lo scaffale su nessuno."
+  "staff_level_required": "Scegli una mensola per questo scaffale, oppure imposta lo scaffale su nessuno.",
+  "offline_generic": "Sei offline. Controlla la connessione e riprova.",
+  "offline_no_copy_title": "Sei offline",
+  "offline_no_copy": "Sul dispositivo non c’è ancora una copia salvata. Apri questa pagina una volta con la connessione per averla anche offline.",
+  "offline_availability_hidden": "Sei offline: disponibilità e azioni di prestito sono nascoste finché la connessione non torna.",
+  "staff_search_authors": "Cerca autori",
+  "staff_search_publishers": "Cerca editori",
+  "staff_search_genres": "Cerca generi"
 }

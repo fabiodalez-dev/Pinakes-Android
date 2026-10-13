@@ -814,5 +814,12 @@
   "staff_scrape_unavailable": "Die Suchdienste sind gerade nicht erreichbar.",
   "staff_scan_offline_title": "Scannen braucht eine Verbindung",
   "staff_scan_offline_subtitle": "Jeder Code wird auf dem Bibliotheksserver gesucht. Bitte erneut verbinden und wiederholen.",
-  "staff_level_required": "Bitte einen Regalboden wählen oder das Regal auf „Keine Angabe“ setzen."
+  "staff_level_required": "Bitte einen Regalboden wählen oder das Regal auf „Keine Angabe“ setzen.",
+  "offline_generic": "Sie sind offline. Bitte die Verbindung prüfen und erneut versuchen.",
+  "offline_no_copy_title": "Sie sind offline",
+  "offline_no_copy": "Auf dem Gerät ist noch keine Kopie gespeichert. Diese Seite einmal mit Verbindung öffnen, um sie offline verfügbar zu haben.",
+  "offline_availability_hidden": "Sie sind offline: Verfügbarkeit und Ausleihaktionen sind ausgeblendet, bis die Verbindung zurück ist.",
+  "staff_search_authors": "Autoren suchen",
+  "staff_search_publishers": "Verlage suchen",
+  "staff_search_genres": "Genres suchen"
 }

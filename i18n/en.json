@@ -814,5 +814,12 @@
   "staff_scrape_unavailable": "The lookup services are not reachable right now.",
   "staff_scan_offline_title": "Scanning needs a connection",
   "staff_scan_offline_subtitle": "Each code is looked up on the library server. Reconnect and try again.",
-  "staff_level_required": "Choose a level for this shelf, or set the shelf to none."
+  "staff_level_required": "Choose a level for this shelf, or set the shelf to none.",
+  "offline_generic": "You are offline. Check your connection and try again.",
+  "offline_no_copy_title": "You are offline",
+  "offline_no_copy": "There is no copy saved on this device yet. Open this page once while connected to keep it available offline.",
+  "offline_availability_hidden": "You are offline: availability and loan actions are hidden until the connection is back.",
+  "staff_search_authors": "Search authors",
+  "staff_search_publishers": "Search publishers",
+  "staff_search_genres": "Search genres"
 }

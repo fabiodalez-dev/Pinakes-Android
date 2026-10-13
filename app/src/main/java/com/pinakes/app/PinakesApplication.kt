@@ -24,6 +24,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 
 /**
  * Application entry point (`@HiltAndroidApp`) plus the Coil image loader. All dependencies
@@ -76,6 +78,15 @@ class PinakesApplication : Application(), ImageLoaderFactory {
                 appScope.launch { deps.authRepository().refreshSession() }
             }
         })
+
+        // Back online after a disconnection: bring the offline catalogue up to date at once
+        // (screens refresh themselves from the same connectivity signal).
+        val deps = EntryPointAccessors.fromApplication(this, CatalogSyncWorker.Deps::class.java)
+        appScope.launch {
+            deps.connectivity().isOnline.drop(1).filter { it }.collect {
+                if (deps.session().isLoggedIn()) deps.catalogRepository().syncCatalog()
+            }
+        }
 
         // Keep the offline snapshot fresh even when the app isn't opened (every 6h, on a
         // connected network). Idempotent (KEEP) — safe to call on every process start.

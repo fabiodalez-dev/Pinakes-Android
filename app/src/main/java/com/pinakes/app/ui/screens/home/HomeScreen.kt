@@ -129,7 +129,8 @@ internal fun HomeContent(
             }
 
             HomePhase.Error -> ErrorState(
-                message = state.error?.takeIf(String::isNotBlank) ?: stringResource(R.string.home_error),
+                message = if (state.offlineError) stringResource(R.string.offline_no_copy)
+                else state.error?.takeIf(String::isNotBlank) ?: stringResource(R.string.home_error),
                 onRetry = onRetry,
             )
 
@@ -155,15 +156,15 @@ internal fun HomeContent(
                 item { CollectionDestinations(onOpenPeriodicals, onOpenDesiderata, onOpenArchives, onOpenArticles) }
                 item {
                     Box(Modifier.padding(horizontal = Spacing.lg)) {
-                        // A cached shelf is labelled "recently added": its availability may be stale.
-                        SectionHeader(showSeeAll = true, catalogueMode = catalogueMode || state.fromCache, onSeeAll = onBrowseCatalog, sort = state.sort, onSort = onSort)
+                        // A cached or offline shelf is labelled "recently added": its availability may be stale.
+                        SectionHeader(showSeeAll = true, catalogueMode = catalogueMode || !state.availabilityCurrent, onSeeAll = onBrowseCatalog, sort = state.sort, onSort = onSort)
                     }
                 }
                 items(state.available.chunked(2), key = { row -> row.joinToString("-") { it.id.toString() } }) { row ->
                     Row(Modifier.padding(horizontal = Spacing.lg, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         row.forEach { book ->
                             BookCardGrid(title = book.title, author = book.authorsLabel, coverUrl = book.coverUrl,
-                                status = if (state.fromCache) null else book.availabilityStatus(), subtitle = book.subtitle, publisher = book.publisher,
+                                status = if (state.availabilityCurrent) book.availabilityStatus() else null, subtitle = book.subtitle, publisher = book.publisher,
                                 year = book.year?.toString(), mediaType = book.mediaType,
                                 onClick = { onBookClick(book.id) }, modifier = Modifier.weight(1f))
                         }

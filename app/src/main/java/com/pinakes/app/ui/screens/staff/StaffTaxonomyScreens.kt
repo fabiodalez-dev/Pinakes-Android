@@ -56,6 +56,8 @@ import com.pinakes.app.R
 import com.pinakes.app.data.model.Shelf
 import com.pinakes.app.data.model.StaffGenreNode
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.ui.common.isOffline
+import com.pinakes.app.ui.common.serverMessage
 import com.pinakes.app.data.repository.StaffRepository
 import com.pinakes.app.data.repository.isDuplicate
 import com.pinakes.app.data.repository.isForbidden
@@ -88,6 +90,7 @@ data class GenresUiState(
     val loading: Boolean = true,
     val refreshing: Boolean = false,
     val error: String? = null,
+    val errorOffline: Boolean = false,
     val draft: GenreDraft? = null,
     val saving: Boolean = false,
     val formError: String? = null,
@@ -109,7 +112,7 @@ class StaffGenresViewModel @Inject constructor(private val staff: StaffRepositor
             _state.update {
                 when (val res = staff.genres()) {
                     is ApiResult.Success -> it.copy(tree = res.data, loading = false, refreshing = false)
-                    is ApiResult.Failure -> it.copy(loading = false, refreshing = false, forbidden = res.isForbidden(), error = res.message.ifBlank { null } ?: "")
+                    is ApiResult.Failure -> it.copy(loading = false, refreshing = false, forbidden = res.isForbidden(), error = res.serverMessage() ?: "", errorOffline = res.isOffline)
                 }
             }
         }
@@ -142,7 +145,7 @@ class StaffGenresViewModel @Inject constructor(private val staff: StaffRepositor
                 }
                 is ApiResult.Failure -> _state.update {
                     if (res.isForbidden()) it.copy(saving = false, forbidden = true)
-                    else it.copy(saving = false, formError = res.message.ifBlank { null }, formErrorRes = R.string.staff_error_save)
+                    else it.copy(saving = false, formError = res.serverMessage(), formErrorRes = R.string.staff_error_save)
                 }
             }
         }
@@ -170,7 +173,7 @@ fun StaffGenresScreen(onNavigateUp: () -> Unit) {
         PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = { vm.load(pull = true) }, modifier = Modifier.fillMaxSize().padding(padding)) {
             when {
                 state.loading -> LoadingState()
-                state.error != null -> ErrorState(state.error?.takeIf { it.isNotBlank() } ?: stringResource(R.string.staff_error_load), onRetry = { vm.load() })
+                state.error != null -> ErrorState(if (state.errorOffline) stringResource(R.string.offline_generic) else state.error?.takeIf { it.isNotBlank() } ?: stringResource(R.string.staff_error_load), onRetry = { vm.load() })
                 state.tree.isEmpty() -> EmptyState(
                     title = stringResource(R.string.staff_records_empty), icon = Icons.Outlined.Category,
                     actionLabel = stringResource(R.string.staff_genre_add), onAction = { vm.startDraft(null) },
@@ -251,6 +254,7 @@ data class ShelvesUiState(
     val loading: Boolean = true,
     val refreshing: Boolean = false,
     val error: String? = null,
+    val errorOffline: Boolean = false,
     val draft: ShelfDraft? = null,
     val saving: Boolean = false,
     val formError: String? = null,
@@ -272,7 +276,7 @@ class StaffShelvesViewModel @Inject constructor(private val staff: StaffReposito
             _state.update {
                 when (val res = staff.shelves()) {
                     is ApiResult.Success -> it.copy(shelves = res.data, loading = false, refreshing = false)
-                    is ApiResult.Failure -> it.copy(loading = false, refreshing = false, forbidden = res.isForbidden(), error = res.message.ifBlank { null } ?: "")
+                    is ApiResult.Failure -> it.copy(loading = false, refreshing = false, forbidden = res.isForbidden(), error = res.serverMessage() ?: "", errorOffline = res.isOffline)
                 }
             }
         }
@@ -312,7 +316,7 @@ class StaffShelvesViewModel @Inject constructor(private val staff: StaffReposito
                         res.isForbidden() -> it.copy(saving = false, forbidden = true)
                         res.isDuplicate() || res.httpStatus == 409 ->
                             it.copy(saving = false, formErrorRes = if (isLevel) R.string.staff_level_exists else R.string.staff_shelf_exists)
-                        else -> it.copy(saving = false, formError = res.message.ifBlank { null }, formErrorRes = R.string.staff_error_save)
+                        else -> it.copy(saving = false, formError = res.serverMessage(), formErrorRes = R.string.staff_error_save)
                     }
                 }
             }
@@ -340,7 +344,7 @@ fun StaffShelvesScreen(onNavigateUp: () -> Unit) {
         PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = { vm.load(pull = true) }, modifier = Modifier.fillMaxSize().padding(padding)) {
             when {
                 state.loading -> LoadingState()
-                state.error != null -> ErrorState(state.error?.takeIf { it.isNotBlank() } ?: stringResource(R.string.staff_error_load), onRetry = { vm.load() })
+                state.error != null -> ErrorState(if (state.errorOffline) stringResource(R.string.offline_generic) else state.error?.takeIf { it.isNotBlank() } ?: stringResource(R.string.staff_error_load), onRetry = { vm.load() })
                 state.shelves.isEmpty() -> EmptyState(
                     title = stringResource(R.string.staff_records_empty), icon = Icons.Outlined.Inventory2,
                     actionLabel = stringResource(R.string.staff_shelf_add), onAction = vm::startShelf,

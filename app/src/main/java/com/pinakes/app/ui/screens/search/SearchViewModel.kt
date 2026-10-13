@@ -8,7 +8,9 @@ import com.pinakes.app.data.model.BookSummary
 import com.pinakes.app.data.model.CatalogLanguage
 import com.pinakes.app.data.model.GenreNode
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.connectivity.ConnectivityObserver
 import com.pinakes.app.data.network.ErrorCodes
+import kotlinx.coroutines.flow.drop
 import com.pinakes.app.data.repository.CatalogRepository
 import com.pinakes.app.data.repository.SearchFilters
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -63,7 +65,12 @@ data class SearchUiState(
     /** Offline pagination: rows already shown and whether another page exists. */
     val offlineOffset: Int = 0,
     val offlineHasMore: Boolean = false,
+    /** Device connectivity: results loaded online lose their availability pills when it drops. */
+    val connected: Boolean = true,
 ) {
+    /** Availability shown on the results is current only online and from the server. */
+    val availabilityCurrent: Boolean get() = connected && !offline
+
     val hasMore: Boolean get() = nextCursor != null || (offline && offlineHasMore)
 
     /** How many facet filters (excluding the free-text query) are currently active. */
@@ -97,13 +104,16 @@ internal fun SearchUiState.withQuery(value: String): SearchUiState {
 }
 
 @HiltViewModel
-class SearchViewModel @Inject constructor(private val catalog: CatalogRepository) : ViewModel() {
+class SearchViewModel @Inject constructor(
+    private val catalog: CatalogRepository,
+    private val connectivity: ConnectivityObserver,
+) : ViewModel() {
 
     private companion object {
         const val OFFLINE_PAGE = 20
     }
 
-    private val _state = MutableStateFlow(SearchUiState())
+    private val _state = MutableStateFlow(SearchUiState(connected = connectivity.isOnline.value))
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
 
     private var searchJob: Job? = null
@@ -122,6 +132,13 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
         loadLanguages()
         // Catalog lands on the full listing — browse-all (empty query, no filters).
         runSearch(reset = true)
+        viewModelScope.launch {
+            connectivity.isOnline.drop(1).collect { online ->
+                _state.update { it.copy(connected = online) }
+                // Back online after answering from the cache: ask the server again.
+                if (online && _state.value.offline) runSearch(reset = true)
+            }
+        }
     }
 
     private fun loadGenres() {
@@ -162,6 +179,13 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
     fun submitSearch() {
         searchJob?.cancel()
         runSearch(reset = true)
+        viewModelScope.launch {
+            connectivity.isOnline.drop(1).collect { online ->
+                _state.update { it.copy(connected = online) }
+                // Back online after answering from the cache: ask the server again.
+                if (online && _state.value.offline) runSearch(reset = true)
+            }
+        }
     }
 
     fun toggleFilters() = _state.update { it.copy(filtersOpen = !it.filtersOpen) }
@@ -188,6 +212,13 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
         if (_state.value.sort == sort) return
         _state.update { it.copy(sort = sort) }
         runSearch(reset = true)
+        viewModelScope.launch {
+            connectivity.isOnline.drop(1).collect { online ->
+                _state.update { it.copy(connected = online) }
+                // Back online after answering from the cache: ask the server again.
+                if (online && _state.value.offline) runSearch(reset = true)
+            }
+        }
     }
 
     /** Run the search with the currently staged facet filters. */
@@ -205,6 +236,13 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
             )
         }
         runSearch(reset = true)
+        viewModelScope.launch {
+            connectivity.isOnline.drop(1).collect { online ->
+                _state.update { it.copy(connected = online) }
+                // Back online after answering from the cache: ask the server again.
+                if (online && _state.value.offline) runSearch(reset = true)
+            }
+        }
     }
 
     fun retry() = runSearch(reset = true)

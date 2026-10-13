@@ -48,6 +48,7 @@ class CatalogSyncWorker(
         fun wishlistRepository(): WishlistRepository
         fun featureStore(): FeatureStore
         fun authRepository(): AuthRepository
+        fun connectivity(): com.pinakes.app.data.connectivity.ConnectivityObserver
     }
 
     override suspend fun doWork(): Result {

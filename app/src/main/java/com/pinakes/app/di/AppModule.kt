@@ -1,6 +1,7 @@
 package com.pinakes.app.di
 
 import android.content.Context
+import com.pinakes.app.data.connectivity.ConnectivityObserver
 import com.pinakes.app.data.local.AppDatabase
 import com.pinakes.app.data.local.CatalogDao
 import com.pinakes.app.data.local.LibraryDao
@@ -53,6 +54,10 @@ object AppModule {
     @Provides @Singleton
     fun network(@ApplicationContext context: Context, session: SessionStore): NetworkModule =
         NetworkModule(session, context.cacheDir)
+
+    /** System default-network watcher: screens hide loan affordances the moment it drops. */
+    @Provides @Singleton
+    fun connectivity(@ApplicationContext context: Context): ConnectivityObserver = ConnectivityObserver(context)
 
     @Provides @Singleton
     fun database(@ApplicationContext context: Context): AppDatabase = AppDatabase.get(context)

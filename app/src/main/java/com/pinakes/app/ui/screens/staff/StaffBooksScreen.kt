@@ -46,6 +46,8 @@ import androidx.lifecycle.viewModelScope
 import com.pinakes.app.R
 import com.pinakes.app.data.model.StaffBookRow
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.ui.common.isOffline
+import com.pinakes.app.ui.common.serverMessage
 import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.repository.StaffRepository
 import com.pinakes.app.data.repository.isForbidden
@@ -76,6 +78,8 @@ data class StaffBooksUiState(
     val loadingMore: Boolean = false,
     val refreshing: Boolean = false,
     val error: String? = null,
+    /** The load failed for lack of a connection (localized offline text, never the exception). */
+    val errorOffline: Boolean = false,
     val deletingId: Int? = null,
     val snackbar: String? = null,
     val snackbarRes: Int? = null,
@@ -120,8 +124,9 @@ class StaffBooksViewModel @Inject constructor(private val staff: StaffRepository
                         loading = false,
                         refreshing = false,
                         forbidden = res.isForbidden(),
-                        error = if (it.items.isEmpty()) res.message.ifBlank { null } ?: "" else null,
-                        snackbar = if (it.items.isNotEmpty()) res.message.ifBlank { null } else null,
+                        error = if (it.items.isEmpty()) res.serverMessage() ?: "" else null,
+                        errorOffline = res.isOffline,
+                        snackbar = if (it.items.isNotEmpty()) res.serverMessage() else null,
                     )
                 }
             }
@@ -165,7 +170,7 @@ class StaffBooksViewModel @Inject constructor(private val staff: StaffRepository
                             it.copy(deletingId = null, snackbarRes = R.string.staff_book_delete_active_circulation)
                         res.code == ErrorCodes.NOT_FOUND ->
                             it.copy(deletingId = null, items = it.items.filterNot { b -> b.id == id })
-                        else -> it.copy(deletingId = null, snackbar = res.message.ifBlank { null }, snackbarRes = R.string.staff_error_save)
+                        else -> it.copy(deletingId = null, snackbar = res.serverMessage(), snackbarRes = R.string.staff_error_save)
                     }
                 }
             }
@@ -221,7 +226,8 @@ fun StaffBooksScreen(onNavigateUp: () -> Unit, onOpenBook: (Int) -> Unit, onNewB
                 when {
                     state.loading -> LoadingState()
                     state.error != null -> ErrorState(
-                        message = state.error?.takeIf { it.isNotBlank() } ?: stringResource(R.string.staff_error_load),
+                        message = if (state.errorOffline) stringResource(R.string.offline_generic)
+                        else state.error?.takeIf { it.isNotBlank() } ?: stringResource(R.string.staff_error_load),
                         onRetry = { vm.reload() },
                     )
                     state.items.isEmpty() -> EmptyState(

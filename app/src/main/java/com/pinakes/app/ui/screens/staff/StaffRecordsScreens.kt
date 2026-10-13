@@ -47,6 +47,8 @@ import com.pinakes.app.data.model.IdName
 import com.pinakes.app.data.model.StaffAuthorWrite
 import com.pinakes.app.data.model.StaffPublisherWrite
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.ui.common.isOffline
+import com.pinakes.app.ui.common.serverMessage
 import com.pinakes.app.data.repository.StaffRepository
 import com.pinakes.app.data.repository.isDuplicate
 import com.pinakes.app.data.repository.isForbidden
@@ -102,6 +104,7 @@ data class RecordsUiState(
     val loading: Boolean = true,
     val refreshing: Boolean = false,
     val error: String? = null,
+    val errorOffline: Boolean = false,
     val editing: RecordForm? = null,
     val editLoading: Boolean = false,
     val saving: Boolean = false,
@@ -164,7 +167,7 @@ abstract class RecordsViewModel(protected val staff: StaffRepository, kind: Reco
                 is ApiResult.Success -> it.copy(items = res.data, loading = false, refreshing = false)
                 is ApiResult.Failure -> it.copy(
                     loading = false, refreshing = false, forbidden = res.isForbidden(),
-                    error = res.message.ifBlank { null } ?: "",
+                    error = res.serverMessage() ?: "", errorOffline = res.isOffline,
                 )
             }
         }
@@ -180,7 +183,7 @@ abstract class RecordsViewModel(protected val staff: StaffRepository, kind: Reco
             when (val res = fetch(id)) {
                 is ApiResult.Success -> _state.update { it.copy(editing = res.data, editLoading = false) }
                 is ApiResult.Failure -> _state.update {
-                    it.copy(editLoading = false, forbidden = res.isForbidden(), formError = res.message.ifBlank { null }, formErrorRes = R.string.staff_error_load)
+                    it.copy(editLoading = false, forbidden = res.isForbidden(), formError = res.serverMessage(), formErrorRes = R.string.staff_error_load)
                 }
             }
         }
@@ -208,7 +211,7 @@ abstract class RecordsViewModel(protected val staff: StaffRepository, kind: Reco
                     when {
                         res.isForbidden() -> it.copy(saving = false, forbidden = true)
                         res.isDuplicate() -> it.copy(saving = false, duplicate = staff.existingEntity(res) ?: IdName(0, form.name))
-                        else -> it.copy(saving = false, formError = res.message.ifBlank { null }, formErrorRes = R.string.staff_error_save)
+                        else -> it.copy(saving = false, formError = res.serverMessage(), formErrorRes = R.string.staff_error_save)
                     }
                 }
             }
@@ -305,13 +308,15 @@ private fun RecordsScreen(vm: RecordsViewModel, title: String, icon: ImageVector
         Column(Modifier.fillMaxSize().padding(padding)) {
             SearchField(
                 query = state.query, onQueryChange = vm::onQueryChange,
+                placeholder = stringResource(if (state.kind == RecordKind.AUTHOR) R.string.staff_search_authors else R.string.staff_search_publishers),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             )
             PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = vm::refresh, modifier = Modifier.fillMaxSize()) {
                 when {
                     state.loading -> LoadingState()
                     state.error != null -> ErrorState(
-                        message = state.error?.takeIf { it.isNotBlank() } ?: stringResource(R.string.staff_error_load),
+                        message = if (state.errorOffline) stringResource(R.string.offline_generic)
+                        else state.error?.takeIf { it.isNotBlank() } ?: stringResource(R.string.staff_error_load),
                         onRetry = vm::refresh,
                     )
                     state.items.isEmpty() -> EmptyState(

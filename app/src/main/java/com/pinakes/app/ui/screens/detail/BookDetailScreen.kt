@@ -158,7 +158,7 @@ fun BookDetailScreen(
                 onNavigateUp = onNavigateUp,
                 actions = {
                     // Wishlist toggle is hidden when the wishlist feature is disabled, and offline.
-                    if (features.showWishlist && !state.offline) {
+                    if (features.showWishlist && !state.offlineNow) {
                         IconButton(onClick = vm::toggleWishlist, enabled = !state.wishlistBusy) {
                             Icon(
                                 imageVector = if (state.wishlisted) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
@@ -183,14 +183,14 @@ fun BookDetailScreen(
                     reserveBusy = state.reserveBusy,
                     // Offline (cached summary): no loan/reservation affordance at all (availability
                     // cannot be guaranteed), and wishlist and reviews need the server too.
-                    canBorrow = OfflinePolicy.showLoanActions(features.canBorrow, state.offline),
-                    showWishlist = features.showWishlist && !state.offline,
-                    showReviews = features.showReviews && !state.offline,
+                    canBorrow = OfflinePolicy.showLoanActions(features.canBorrow, state.offlineNow),
+                    showWishlist = features.showWishlist && !state.offlineNow,
+                    showReviews = features.showReviews && !state.offlineNow,
                     onReserve = vm::openLoanSheet,
                     onToggleWishlist = vm::toggleWishlist,
                     onFindWorks = onFindWorks,
                     onShowMessage = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } },
-                    offlineNotice = if (state.offline) stringResource(R.string.offline_actions_unavailable) else null,
+                    offlineNotice = if (state.offlineNow) stringResource(R.string.offline_actions_unavailable) else null,
                     offlineSyncedAt = state.syncedAt,
                 )
             }
@@ -198,7 +198,7 @@ fun BookDetailScreen(
     }
 
     // Loan/reservation sheet is only ever shown when borrowing is enabled.
-    if (state.showLoanSheet && OfflinePolicy.showLoanActions(features.canBorrow, state.offline)) {
+    if (state.showLoanSheet && OfflinePolicy.showLoanActions(features.canBorrow, state.offlineNow)) {
         LoanRequestSheet(
             loading = state.availabilityLoading,
             calendar = state.availability,
