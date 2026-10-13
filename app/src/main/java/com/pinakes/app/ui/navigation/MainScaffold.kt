@@ -25,6 +25,9 @@ import com.pinakes.app.ui.screens.home.HomeScreen
 import com.pinakes.app.ui.screens.library.LibraryScreen
 import com.pinakes.app.ui.screens.profile.ProfileScreen
 import com.pinakes.app.ui.screens.search.SearchScreen
+import com.pinakes.app.ui.screens.staff.StaffFab
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.QrCodeScanner
 import com.pinakes.app.ui.screens.wishlist.WishlistScreen
 
 /**
@@ -47,9 +50,12 @@ fun MainScaffold(
     onOpenArticle: (Int) -> Unit,
     onOpenWanted: (Int) -> Unit,
     onOpenArchive: (Int) -> Unit,
+    onOpenStaff: () -> Unit = {},
+    onOpenStaffScan: () -> Unit = {},
 ) {
     val app: AppViewModel = hiltViewModel()
     val features by app.features.collectAsStateWithLifecycle()
+    val isStaff by app.isStaff.collectAsStateWithLifecycle()
 
     var pendingCatalogQuery by rememberSaveable { mutableStateOf<String?>(null) }
     var tab by rememberSaveable { mutableStateOf(PinakesTab.Home) }
@@ -79,6 +85,12 @@ fun MainScaffold(
                     title = title,
                     onNotifications = if (features.notifications) onOpenNotifications else null,
                 )
+            }
+        },
+        floatingActionButton = {
+            // Staff shortcut: scan an ISBN straight from the catalogue.
+            if (tab == PinakesTab.Catalog && isStaff) {
+                StaffFab(Icons.Outlined.QrCodeScanner, stringResource(R.string.staff_scan), onOpenStaffScan)
             }
         },
         bottomBar = {
@@ -114,6 +126,7 @@ fun MainScaffold(
                     onOpenArticles = onOpenArticles,
                     onOpenDesiderata = onOpenDesiderata,
                     onOpenArchives = onOpenArchives,
+                    onOpenStaff = onOpenStaff,
                 )
             }
         }

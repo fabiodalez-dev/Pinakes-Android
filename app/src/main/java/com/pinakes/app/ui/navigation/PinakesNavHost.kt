@@ -37,6 +37,14 @@ import com.pinakes.app.ui.screens.periodicals.StandaloneArticlesScreen
 import com.pinakes.app.ui.screens.periodicals.StandaloneArticleScreen
 import com.pinakes.app.ui.screens.periodicals.PeriodicalsScreen
 import com.pinakes.app.ui.screens.reviews.MyReviewsScreen
+import com.pinakes.app.ui.screens.staff.StaffAuthorsScreen
+import com.pinakes.app.ui.screens.staff.StaffBookEditScreen
+import com.pinakes.app.ui.screens.staff.StaffBooksScreen
+import com.pinakes.app.ui.screens.staff.StaffGenresScreen
+import com.pinakes.app.ui.screens.staff.StaffHubScreen
+import com.pinakes.app.ui.screens.staff.StaffPublishersScreen
+import com.pinakes.app.ui.screens.staff.StaffShelvesScreen
+import com.pinakes.app.ui.screens.staff.scan.StaffScanScreen
 
 /**
  * Root navigation. The high-level [AuthState] decides the start destination; within the
@@ -115,6 +123,8 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onOpenArticle = { navController.navigate(Routes.standaloneArticle(it)) },
                 onOpenWanted = { navController.navigate(Routes.wantedBook(it)) },
                 onOpenArchive = { navController.navigate(Routes.archive(it)) },
+                onOpenStaff = { navController.navigate(Routes.STAFF) },
+                onOpenStaffScan = { navController.navigate(Routes.STAFF_SCAN) },
             )
         }
 
@@ -132,6 +142,72 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
             popExitTransition = slideOut,
         ) {
             BookDetailScreen(onNavigateUp = { navController.popBackStack() }, onFindWorks = { name, id -> navController.navigate(Routes.authorWorks(name, id)) })
+        }
+
+        // ---- Staff area (admin/staff + Mobile API 1.6.0) ----
+        composable(Routes.STAFF, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffHubScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onScan = { navController.navigate(Routes.STAFF_SCAN) },
+                onAddManual = { navController.navigate(Routes.staffBookNew()) },
+                onBooks = { navController.navigate(Routes.STAFF_BOOKS) },
+                onAuthors = { navController.navigate(Routes.STAFF_AUTHORS) },
+                onPublishers = { navController.navigate(Routes.STAFF_PUBLISHERS) },
+                onGenres = { navController.navigate(Routes.STAFF_GENRES) },
+                onShelves = { navController.navigate(Routes.STAFF_SHELVES) },
+            )
+        }
+        composable(Routes.STAFF_SCAN, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffScanScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onEditNew = { code -> navController.navigate(Routes.staffBookNew(code)) },
+                onOpenBook = { id -> navController.navigate(Routes.staffBookEdit(id)) },
+            )
+        }
+        composable(Routes.STAFF_BOOKS, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffBooksScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpenBook = { id -> navController.navigate(Routes.staffBookEdit(id)) },
+                onNewBook = { navController.navigate(Routes.staffBookNew()) },
+            )
+        }
+        composable(
+            Routes.STAFF_BOOK_NEW,
+            arguments = listOf(navArgument(Routes.ARG_ISBN) { type = NavType.StringType; defaultValue = "" }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StaffBookEditScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onDone = { navController.popBackStack() },
+                onOpenExisting = { id ->
+                    navController.navigate(Routes.staffBookEdit(id)) { popUpTo(Routes.STAFF_BOOK_NEW) { inclusive = true } }
+                },
+            )
+        }
+        composable(
+            Routes.STAFF_BOOK_EDIT,
+            arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.IntType }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StaffBookEditScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onDone = { navController.popBackStack() },
+                onOpenExisting = { id ->
+                    navController.navigate(Routes.staffBookEdit(id)) { popUpTo(Routes.STAFF_BOOK_EDIT) { inclusive = true } }
+                },
+            )
+        }
+        composable(Routes.STAFF_AUTHORS, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffAuthorsScreen(onNavigateUp = { navController.popBackStack() })
+        }
+        composable(Routes.STAFF_PUBLISHERS, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffPublishersScreen(onNavigateUp = { navController.popBackStack() })
+        }
+        composable(Routes.STAFF_GENRES, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffGenresScreen(onNavigateUp = { navController.popBackStack() })
+        }
+        composable(Routes.STAFF_SHELVES, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffShelvesScreen(onNavigateUp = { navController.popBackStack() })
         }
 
         composable(

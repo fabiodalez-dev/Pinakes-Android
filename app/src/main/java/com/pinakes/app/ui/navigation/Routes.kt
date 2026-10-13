@@ -57,6 +57,20 @@ object Routes {
     fun periodicalIssue(id: Int): String = "periodicals/issues/$id"
     const val ARG_PERIODICAL_ISSUE_ID = "issueId"
 
+    // Staff area (Mobile API 1.6.0, admin/staff only)
+    const val STAFF = "staff"
+    const val STAFF_SCAN = "staff/scan"
+    const val STAFF_BOOKS = "staff/books"
+    const val ARG_ISBN = "isbn"
+    const val STAFF_BOOK_NEW = "staff/books/new?isbn={isbn}"
+    fun staffBookNew(isbn: String = ""): String = "staff/books/new?isbn=${Uri.encode(isbn)}"
+    const val STAFF_BOOK_EDIT = "staff/books/{bookId}/edit"
+    fun staffBookEdit(bookId: Int): String = "staff/books/$bookId/edit"
+    const val STAFF_AUTHORS = "staff/authors"
+    const val STAFF_PUBLISHERS = "staff/publishers"
+    const val STAFF_GENRES = "staff/genres"
+    const val STAFF_SHELVES = "staff/shelves"
+
     /** Graph hosting the bottom-nav + nested authed screens. */
     const val MAIN_GRAPH = "main"
     const val DESIDERATA = "desiderata"
