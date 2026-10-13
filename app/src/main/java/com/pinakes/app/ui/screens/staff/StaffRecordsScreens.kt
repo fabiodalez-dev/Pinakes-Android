@@ -113,6 +113,8 @@ data class RecordsUiState(
     val duplicate: IdName? = null,
     val snackbarRes: Int? = null,
     val forbidden: Boolean = false,
+    /** Bumped after every successful save, so a detail page can reload its record. */
+    val savedCount: Int = 0,
 )
 
 private fun String.orNullIfBlank(): String? = trim().takeIf { it.isNotEmpty() }
@@ -204,7 +206,7 @@ abstract class RecordsViewModel(protected val staff: StaffRepository, kind: Reco
         viewModelScope.launch {
             when (val res = save(form)) {
                 is ApiResult.Success -> {
-                    _state.update { it.copy(saving = false, editing = null, snackbarRes = R.string.staff_record_saved) }
+                    _state.update { it.copy(saving = false, editing = null, snackbarRes = R.string.staff_record_saved, savedCount = it.savedCount + 1) }
                     reload()
                 }
                 is ApiResult.Failure -> _state.update {
@@ -280,20 +282,20 @@ class StaffPublishersViewModel @Inject constructor(staff: StaffRepository) : Rec
 }
 
 @Composable
-fun StaffAuthorsScreen(onNavigateUp: () -> Unit) {
+fun StaffAuthorsScreen(onNavigateUp: () -> Unit, onOpen: (Int) -> Unit) {
     val vm: StaffAuthorsViewModel = hiltViewModel()
-    RecordsScreen(vm, stringResource(R.string.staff_authors), Icons.Outlined.Person, onNavigateUp)
+    RecordsScreen(vm, stringResource(R.string.staff_authors), Icons.Outlined.Person, onNavigateUp, onOpen)
 }
 
 @Composable
-fun StaffPublishersScreen(onNavigateUp: () -> Unit) {
+fun StaffPublishersScreen(onNavigateUp: () -> Unit, onOpen: (Int) -> Unit) {
     val vm: StaffPublishersViewModel = hiltViewModel()
-    RecordsScreen(vm, stringResource(R.string.staff_publishers), Icons.Outlined.Business, onNavigateUp)
+    RecordsScreen(vm, stringResource(R.string.staff_publishers), Icons.Outlined.Business, onNavigateUp, onOpen)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RecordsScreen(vm: RecordsViewModel, title: String, icon: ImageVector, onNavigateUp: () -> Unit) {
+private fun RecordsScreen(vm: RecordsViewModel, title: String, icon: ImageVector, onNavigateUp: () -> Unit, onOpen: (Int) -> Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbarHost = remember { SnackbarHostState() }
     ForbiddenExit(state.forbidden, onNavigateUp)
@@ -328,7 +330,8 @@ private fun RecordsScreen(vm: RecordsViewModel, title: String, icon: ImageVector
                         contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, top = Spacing.sm, bottom = 96.dp),
                     ) {
                         items(state.items, key = { it.id }) { row ->
-                            StaffActionRow(icon, row.name, row.detail) { vm.startEdit(row.id) }
+                            // Opens the detail page (info card + the record's books); edit is there.
+                            StaffActionRow(icon, row.name, row.detail) { onOpen(row.id) }
                         }
                     }
                 }
@@ -336,6 +339,12 @@ private fun RecordsScreen(vm: RecordsViewModel, title: String, icon: ImageVector
         }
     }
 
+    RecordDialogs(state, vm)
+}
+
+/** The editor sheet and the duplicate-name dialog, shared by the list and the detail page. */
+@Composable
+internal fun RecordDialogs(state: RecordsUiState, vm: RecordsViewModel) {
     if (state.editing != null) RecordEditorSheet(state, vm)
     state.duplicate?.let { existing ->
         ConfirmDialog(

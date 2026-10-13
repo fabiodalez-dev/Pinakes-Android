@@ -821,5 +821,12 @@
   "offline_availability_hidden": "You are offline: availability and loan actions are hidden until the connection is back.",
   "staff_search_authors": "Search authors",
   "staff_search_publishers": "Search publishers",
-  "staff_search_genres": "Search genres"
+  "staff_search_genres": "Search genres",
+  "staff_record_author": "Author",
+  "staff_record_publisher": "Publisher",
+  "staff_record_books_count": "Books in the catalogue",
+  "staff_record_life": "Life",
+  "staff_record_created": "Created",
+  "staff_record_updated": "Updated",
+  "staff_record_no_books": "No books in the catalogue yet"
 }

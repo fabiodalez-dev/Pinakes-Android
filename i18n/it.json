@@ -821,5 +821,12 @@
   "offline_availability_hidden": "Sei offline: disponibilità e azioni di prestito sono nascoste finché la connessione non torna.",
   "staff_search_authors": "Cerca autori",
   "staff_search_publishers": "Cerca editori",
-  "staff_search_genres": "Cerca generi"
+  "staff_search_genres": "Cerca generi",
+  "staff_record_author": "Autore",
+  "staff_record_publisher": "Editore",
+  "staff_record_books_count": "Libri in catalogo",
+  "staff_record_life": "Vita",
+  "staff_record_created": "Creato",
+  "staff_record_updated": "Aggiornato",
+  "staff_record_no_books": "Ancora nessun libro in catalogo"
 }

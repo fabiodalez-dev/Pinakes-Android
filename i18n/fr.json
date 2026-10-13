@@ -821,5 +821,12 @@
   "offline_availability_hidden": "Vous êtes hors ligne : la disponibilité et les actions de prêt sont masquées jusqu’au retour de la connexion.",
   "staff_search_authors": "Rechercher des auteurs",
   "staff_search_publishers": "Rechercher des éditeurs",
-  "staff_search_genres": "Rechercher des genres"
+  "staff_search_genres": "Rechercher des genres",
+  "staff_record_author": "Auteur",
+  "staff_record_publisher": "Éditeur",
+  "staff_record_books_count": "Livres au catalogue",
+  "staff_record_life": "Vie",
+  "staff_record_created": "Créé",
+  "staff_record_updated": "Mis à jour",
+  "staff_record_no_books": "Aucun livre au catalogue pour l’instant"
 }

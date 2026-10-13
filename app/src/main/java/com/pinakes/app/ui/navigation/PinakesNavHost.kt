@@ -43,6 +43,8 @@ import com.pinakes.app.ui.screens.staff.StaffBooksScreen
 import com.pinakes.app.ui.screens.staff.StaffGenresScreen
 import com.pinakes.app.ui.screens.staff.StaffHubScreen
 import com.pinakes.app.ui.screens.staff.StaffPublishersScreen
+import com.pinakes.app.ui.screens.staff.StaffRecordDetailScreen
+import com.pinakes.app.ui.screens.staff.RecordKind
 import com.pinakes.app.ui.screens.staff.StaffShelvesScreen
 import com.pinakes.app.ui.screens.staff.scan.StaffScanScreen
 
@@ -198,10 +200,26 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
             )
         }
         composable(Routes.STAFF_AUTHORS, enterTransition = slideIn, popExitTransition = slideOut) {
-            StaffAuthorsScreen(onNavigateUp = { navController.popBackStack() })
+            StaffAuthorsScreen(onNavigateUp = { navController.popBackStack() }, onOpen = { navController.navigate(Routes.staffAuthor(it)) })
         }
         composable(Routes.STAFF_PUBLISHERS, enterTransition = slideIn, popExitTransition = slideOut) {
-            StaffPublishersScreen(onNavigateUp = { navController.popBackStack() })
+            StaffPublishersScreen(onNavigateUp = { navController.popBackStack() }, onOpen = { navController.navigate(Routes.staffPublisher(it)) })
+        }
+        composable(
+            Routes.STAFF_AUTHOR,
+            arguments = listOf(navArgument(Routes.ARG_RECORD_ID) { type = NavType.IntType }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StaffRecordDetailScreen(RecordKind.AUTHOR, onNavigateUp = { navController.popBackStack() },
+                onOpenBook = { navController.navigate(Routes.staffBookEdit(it)) })
+        }
+        composable(
+            Routes.STAFF_PUBLISHER,
+            arguments = listOf(navArgument(Routes.ARG_RECORD_ID) { type = NavType.IntType }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StaffRecordDetailScreen(RecordKind.PUBLISHER, onNavigateUp = { navController.popBackStack() },
+                onOpenBook = { navController.navigate(Routes.staffBookEdit(it)) })
         }
         composable(Routes.STAFF_GENRES, enterTransition = slideIn, popExitTransition = slideOut) {
             StaffGenresScreen(onNavigateUp = { navController.popBackStack() })
@@ -287,8 +305,10 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
         composable(Routes.AUTHOR_WORKS, arguments = listOf(navArgument("author") { defaultValue = "" }, navArgument("authorId") { type = NavType.IntType; defaultValue = 0 })) { entry ->
             androidx.compose.material3.Scaffold(topBar = { com.pinakes.app.ui.components.PinakesTopBar(entry.arguments?.getString("author").orEmpty(), onNavigateUp = { navController.popBackStack() }) }) { padding ->
                 androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.padding(padding)) {
+                    val authorName = entry.arguments?.getString("author").orEmpty()
                     com.pinakes.app.ui.screens.search.SearchScreen(onBookClick = { navController.navigate(Routes.bookDetail(it)) },
-                        onArticleClick = { navController.navigate(Routes.standaloneArticle(it)) }, initialAuthor = entry.arguments?.getString("author"), initialAuthorId = entry.arguments?.getInt("authorId"))
+                        onArticleClick = { navController.navigate(Routes.standaloneArticle(it)) }, initialAuthor = entry.arguments?.getString("author"), initialAuthorId = entry.arguments?.getInt("authorId"),
+                        header = { count, more -> com.pinakes.app.ui.screens.search.AuthorInfoCard(authorName, count, more) })
                 }
             }
         }

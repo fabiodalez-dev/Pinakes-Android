@@ -61,8 +61,16 @@ class StaffRepository(
 
     suspend fun isbnLookup(code: String): ApiResult<IsbnLookup> = staffCall { api.isbnLookup(code) }
 
-    suspend fun books(query: String?, cursor: String?, limit: Int = 30): ApiResult<StaffBooksPage> =
-        when (val res = staffCall { api.books(q = query?.takeIf { it.isNotBlank() }, cursor = cursor, limit = limit) }) {
+    suspend fun books(
+        query: String?,
+        cursor: String?,
+        limit: Int = 30,
+        authorId: Int? = null,
+        publisher: String? = null,
+    ): ApiResult<StaffBooksPage> =
+        when (val res = staffCall {
+            api.books(q = query?.takeIf { it.isNotBlank() }, cursor = cursor, limit = limit, authorId = authorId, publisher = publisher)
+        }) {
             is ApiResult.Success -> {
                 val meta = res.meta
                 val next = meta?.nextCursor?.takeIf { it.isNotBlank() && meta.hasMore != false }

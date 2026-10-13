@@ -1,5 +1,6 @@
 package com.pinakes.app.ui.screens.search
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
@@ -72,7 +73,9 @@ import com.pinakes.app.ui.theme.Spacing
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQueryConsumed: () -> Unit = {},
-    onArticleClick: (Int) -> Unit = {}, onWantedClick: (Int) -> Unit = {}, onArchiveClick: (Int) -> Unit = {}, initialAuthor: String? = null, initialAuthorId: Int? = null) {
+    onArticleClick: (Int) -> Unit = {}, onWantedClick: (Int) -> Unit = {}, onArchiveClick: (Int) -> Unit = {}, initialAuthor: String? = null, initialAuthorId: Int? = null,
+    /** Shown above the results (the author page): receives the titles loaded and whether more exist. */
+    header: (@Composable (count: Int, hasMore: Boolean) -> Unit)? = null) {
     val vm: SearchViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val app: AppViewModel = hiltViewModel()
@@ -237,6 +240,7 @@ fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQue
                             ),
                             verticalArrangement = Arrangement.spacedBy(if (gridView) 28.dp else Spacing.md),
                         ) {
+                            if (header != null) item(key = "page-header") { header(state.items.size, state.hasMore) }
                             item {
                                 val browsingAll = state.query.isBlank() && !state.hasActiveFilters
                                 val header = when {
@@ -388,6 +392,28 @@ private fun SearchCollectionRow(title: String, metadata: String, cover: String?,
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Text(title, style = MaterialTheme.typography.titleMedium)
             Text(metadata, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+/**
+ * The author page header in the catalogue: a padded card with the name and how many titles the
+ * library has (a lower bound with "+" while more pages exist). The results below use the
+ * regular cards, which always show the whole cover.
+ */
+@Composable
+fun AuthorInfoCard(name: String, count: Int, hasMore: Boolean) {
+    androidx.compose.material3.Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.sm).testTag("author-info-card"),
+    ) {
+        Column(Modifier.padding(com.pinakes.app.ui.theme.CardPadding)) {
+            Text(name, style = MaterialTheme.typography.headlineSmall.copy(fontFamily = com.pinakes.app.ui.theme.Fraunces))
+            com.pinakes.app.ui.components.MetadataRow(
+                stringResource(R.string.staff_record_books_count),
+                count.toString() + if (hasMore) "+" else "",
+            )
         }
     }
 }

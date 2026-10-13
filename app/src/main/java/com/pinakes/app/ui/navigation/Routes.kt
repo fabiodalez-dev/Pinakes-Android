@@ -68,6 +68,11 @@ object Routes {
     fun staffBookEdit(bookId: Int): String = "staff/books/$bookId/edit"
     const val STAFF_AUTHORS = "staff/authors"
     const val STAFF_PUBLISHERS = "staff/publishers"
+    const val ARG_RECORD_ID = "recordId"
+    const val STAFF_AUTHOR = "staff/authors/{recordId}"
+    fun staffAuthor(id: Int): String = "staff/authors/$id"
+    const val STAFF_PUBLISHER = "staff/publishers/{recordId}"
+    fun staffPublisher(id: Int): String = "staff/publishers/$id"
     const val STAFF_GENRES = "staff/genres"
     const val STAFF_SHELVES = "staff/shelves"
 

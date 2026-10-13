@@ -408,7 +408,7 @@ private fun CoverSection(state: StaffBookEditUiState, vm: StaffBookEditViewModel
         val coverModifier = Modifier.width(96.dp).aspectRatio(2f / 3f)
         when (pending) {
             is PendingCover.FromImage -> AsyncImage(
-                model = pending.uri, contentDescription = null, contentScale = ContentScale.Crop,
+                model = pending.uri, contentDescription = null, contentScale = ContentScale.Fit,
                 modifier = coverModifier.clip(RoundedCornerShape(4.dp)),
             )
             is PendingCover.FromUrl -> BookCover(state.form.title, pending.url, coverModifier, compact = true)

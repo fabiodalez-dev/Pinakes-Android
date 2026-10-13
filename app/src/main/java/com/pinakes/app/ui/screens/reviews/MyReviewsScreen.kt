@@ -148,7 +148,7 @@ private fun MyReviewRow(
                     SubcomposeAsyncImage(
                         model = review.coverUrl,
                         contentDescription = review.bookTitle,
-                        contentScale = ContentScale.Crop,
+                        contentScale = ContentScale.Fit,
                         modifier = Modifier.size(width = 48.dp, height = 72.dp),
                         error = {
                             Icon(

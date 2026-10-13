@@ -54,6 +54,8 @@ interface StaffApi {
         @Query("cursor") cursor: String? = null,
         @Query("limit") limit: Int? = null,
         @Query("sort") sort: String? = null,
+        @Query("author_id") authorId: Int? = null,
+        @Query("publisher") publisher: String? = null,
     ): Envelope<List<StaffBookRow>>
 
     @GET("staff/books/{id}")

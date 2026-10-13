@@ -821,5 +821,12 @@
   "offline_availability_hidden": "Sie sind offline: Verfügbarkeit und Ausleihaktionen sind ausgeblendet, bis die Verbindung zurück ist.",
   "staff_search_authors": "Autoren suchen",
   "staff_search_publishers": "Verlage suchen",
-  "staff_search_genres": "Genres suchen"
+  "staff_search_genres": "Genres suchen",
+  "staff_record_author": "Autor",
+  "staff_record_publisher": "Verlag",
+  "staff_record_books_count": "Bücher im Katalog",
+  "staff_record_life": "Lebensdaten",
+  "staff_record_created": "Erstellt",
+  "staff_record_updated": "Aktualisiert",
+  "staff_record_no_books": "Noch keine Bücher im Katalog"
 }

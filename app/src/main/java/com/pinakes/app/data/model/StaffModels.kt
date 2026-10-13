@@ -283,6 +283,10 @@ data class StaffAuthor(
     val website: String? = null,
     @SerialName("photo_url") val photoUrl: String? = null,
     @SerialName("gnd_id") val gndId: String? = null,
+    // Record facts shown on the detail card when the server sends them (additive).
+    @SerialName("books_count") val booksCount: Int? = null,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null,
 )
 
 @Serializable
@@ -305,6 +309,9 @@ data class StaffPublisher(
     val address: String? = null,
     val phone: String? = null,
     val email: String? = null,
+    @SerialName("books_count") val booksCount: Int? = null,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null,
 )
 
 @Serializable
