@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
@@ -142,6 +143,17 @@ abstract class AppFlowTest {
     protected fun openStaffHub() {
         openTab(R.string.nav_profile)
         clickUntil(text(R.string.profile_action_staff), text(R.string.staff_scan_subtitle))
+    }
+
+    /** Scroll the lazy list holding [value] until it is composed (items below the fold are not in the tree). */
+    protected fun scrollListTo(value: String) {
+        val list = compose.onAllNodes(androidx.compose.ui.test.hasScrollToNodeAction())
+        compose.waitUntil(10_000) { list.fetchSemanticsNodes().isNotEmpty() }
+        val count = list.fetchSemanticsNodes().size
+        for (i in 0 until count) {
+            val done = runCatching { list[i].performScrollToNode(hasText(value)) }.isSuccess
+            if (done) return
+        }
     }
 
     protected fun clickTag(tag: String) {

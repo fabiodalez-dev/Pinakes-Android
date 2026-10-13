@@ -56,6 +56,9 @@ import com.pinakes.app.ui.screens.staff.circulation.StaffReservationsScreen
 import com.pinakes.app.ui.screens.staff.circulation.StaffUserScreen
 import com.pinakes.app.ui.screens.staff.scan.StaffCopyScanScreen
 import com.pinakes.app.ui.screens.staff.content.StaffMergeScreen
+import com.pinakes.app.ui.screens.staff.content.StaffCoversScreen
+import com.pinakes.app.ui.screens.staff.content.StaffImportJobScreen
+import com.pinakes.app.ui.screens.staff.content.StaffImportsScreen
 import com.pinakes.app.ui.screens.staff.content.StaffSeriesDetailScreen
 import com.pinakes.app.ui.screens.staff.content.StaffSeriesScreen
 
@@ -264,6 +267,19 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
         }
         composable(Routes.STAFF_MERGES, enterTransition = slideIn, popExitTransition = slideOut) {
             StaffMergeScreen(onNavigateUp = { navController.popBackStack() })
+        }
+        composable(Routes.STAFF_IMPORTS, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffImportsScreen(onNavigateUp = { navController.popBackStack() }, onOpenJob = { navController.navigate(Routes.staffImport(it)) })
+        }
+        composable(
+            Routes.STAFF_IMPORT,
+            arguments = listOf(navArgument(Routes.ARG_JOB_ID) { type = NavType.StringType }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StaffImportJobScreen(onNavigateUp = { navController.popBackStack() })
+        }
+        composable(Routes.STAFF_COVERS, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffCoversScreen(onNavigateUp = { navController.popBackStack() })
         }
         composable(Routes.STAFF_COPY_SCAN, enterTransition = slideIn, popExitTransition = slideOut) {
             StaffCopyScanScreen(

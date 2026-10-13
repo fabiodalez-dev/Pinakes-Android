@@ -62,6 +62,15 @@ class FakePinakes {
         routes[route] = { MockResponse().setResponseCode(status).setHeader("Content-Type", "application/json").setBody(fixture(fixture)) }
     }
 
+    /** Answer [route] with each fixture in turn (status, fixture), repeating the last one. */
+    fun sequence(route: String, vararg steps: Pair<Int, String>) {
+        val calls = java.util.concurrent.atomic.AtomicInteger(0)
+        routes[route] = {
+            val (status, name) = steps[calls.getAndIncrement().coerceAtMost(steps.size - 1)]
+            MockResponse().setResponseCode(status).setHeader("Content-Type", "application/json").setBody(fixture(name))
+        }
+    }
+
     fun body(route: String, status: Int, body: String) {
         routes[route] = { MockResponse().setResponseCode(status).setHeader("Content-Type", "application/json").setBody(body) }
     }

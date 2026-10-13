@@ -226,13 +226,15 @@ class StaffLoanCreateViewModel @Inject constructor(
 
     /**
      * Send [payload] under its submission key: one automatic retry with the same key when the
-     * connection dropped (the server may already have created it: the replay returns it), a
+     * connection dropped or the server asked for a retry (it may already have created it: the
+     * replay returns it, 200 with `meta.replayed`, handled like a 201), a
      * fresh key after a success or a key conflict.
      */
     private suspend fun <T> withIdempotency(payload: Any, call: suspend (String) -> ApiResult<T>): ApiResult<T> {
         val key = keys.keyFor(payload)
         var res = call(key)
-        if (res is ApiResult.Failure && res.code == ErrorCodes.NETWORK) res = call(key)
+        // A dropped connection, or the server's 409 concurrent_retry (its lock was busy): one retry, same key.
+        if (res is ApiResult.Failure && (res.code == ErrorCodes.NETWORK || res.code == "concurrent_retry")) res = call(key)
         if (res is ApiResult.Success || (res as? ApiResult.Failure)?.code == SubmissionKeys.CONFLICT) keys.reset()
         return res
     }
