@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pinakes.app.ui.common.AppViewModel
+import com.pinakes.app.ui.common.OfflinePolicy
 import com.pinakes.app.ui.components.BookCover
 import com.pinakes.app.ui.screens.periodicals.StandaloneArticleRow
 import com.pinakes.app.R
@@ -61,6 +62,7 @@ import com.pinakes.app.ui.components.BookCard
 import com.pinakes.app.ui.components.BookCardSkeleton
 import com.pinakes.app.ui.components.EmptyState
 import com.pinakes.app.ui.components.ErrorState
+import com.pinakes.app.ui.components.InlineErrorBanner
 import com.pinakes.app.ui.components.SearchField
 import com.pinakes.app.ui.theme.Spacing
 
@@ -163,6 +165,14 @@ fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQue
             Text(stringResource(R.string.sort_label, stringResource(state.sort.labelRes)),
                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = Spacing.sm))
+        }
+
+        if (state.offline) {
+            InlineErrorBanner(
+                message = stringResource(R.string.offline_results),
+                onRetry = vm::retry,
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+            )
         }
 
         Box(Modifier.fillMaxSize()) {
@@ -274,7 +284,7 @@ fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQue
                                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                         row.forEach { book ->
                                             BookCardGrid(title = book.title, author = book.authorsLabel, coverUrl = book.coverUrl,
-                                                status = book.availabilityStatus(), subtitle = book.subtitle, publisher = book.publisher,
+                                                status = if (OfflinePolicy.showCurrentAvailability(state.offline)) book.availabilityStatus() else null, subtitle = book.subtitle, publisher = book.publisher,
                                                 year = book.year?.toString(), mediaType = book.mediaType,
                                                 onClick = { onBookClick(book.id) }, modifier = Modifier.weight(1f))
                                         }
@@ -284,7 +294,7 @@ fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQue
                             } else {
                                 items(state.items, key = { it.id }) { book ->
                                     BookCard(title = book.title, author = book.authorsLabel, coverUrl = book.coverUrl,
-                                        status = book.availabilityStatus(), year = book.year?.toString(), publisher = book.publisher,
+                                        status = if (OfflinePolicy.showCurrentAvailability(state.offline)) book.availabilityStatus() else null, year = book.year?.toString(), publisher = book.publisher,
                                         subtitle = book.subtitle, mediaType = book.mediaType,
                                         onClick = { onBookClick(book.id) }, modifier = Modifier.animateItem())
                                 }

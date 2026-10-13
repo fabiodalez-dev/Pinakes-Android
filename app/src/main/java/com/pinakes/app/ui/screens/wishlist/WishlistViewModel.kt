@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.WishlistItem
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.repository.WishlistRepository
 import com.pinakes.app.R
 import com.pinakes.app.ui.common.UiState
@@ -21,6 +22,8 @@ data class WishlistUiState(
     val removingId: Int? = null,
     val snackbar: String? = null,
     val snackbarRes: Int? = null,
+    /** Showing the cached list because the server is unreachable: removing is disabled. */
+    val offline: Boolean = false,
 )
 
 @HiltViewModel
@@ -39,21 +42,30 @@ class WishlistViewModel @Inject constructor(private val wishlist: WishlistReposi
         viewModelScope.launch {
             when (val res = wishlist.wishlist()) {
                 is ApiResult.Success -> _state.update {
-                    it.copy(content = UiState.Success(res.data), refreshing = false)
+                    it.copy(content = UiState.Success(res.data), refreshing = false, offline = false)
                 }
-                is ApiResult.Failure -> _state.update {
-                    it.copy(
-                        content = if (it.content is UiState.Success) it.content
-                        else UiState.Error(res.message, res.code, R.string.wishlist_error_load),
-                        refreshing = false,
-                    )
+                is ApiResult.Failure -> {
+                    val cached = if (res.code == ErrorCodes.NETWORK && _state.value.content !is UiState.Success) {
+                        wishlist.wishlistCached()
+                    } else null
+                    if (cached != null) {
+                        _state.update { it.copy(content = UiState.Success(cached), refreshing = false, offline = true) }
+                    } else {
+                        _state.update {
+                            it.copy(
+                                content = if (it.content is UiState.Success) it.content
+                                else UiState.Error(res.message, res.code, R.string.wishlist_error_load),
+                                refreshing = false,
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 
     fun remove(bookId: Int) {
-        if (_state.value.removingId != null) return
+        if (_state.value.removingId != null || _state.value.offline) return
         _state.update { it.copy(removingId = bookId) }
         viewModelScope.launch {
             when (val res = wishlist.remove(bookId)) {

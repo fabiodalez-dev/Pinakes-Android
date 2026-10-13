@@ -30,6 +30,8 @@ data class LibraryUiState(
     val cancelingId: Int? = null,
     val snackbar: String? = null,
     val snackbarRes: Int? = null,
+    /** Showing the cached lists because the server is unreachable: actions are disabled. */
+    val offline: Boolean = false,
 )
 
 @HiltViewModel
@@ -61,10 +63,25 @@ class LibraryViewModel @Inject constructor(private val library: LibraryRepositor
                     it.copy(
                         content = UiState.Success(LibraryData(loans.data, resv)),
                         refreshing = false,
+                        offline = false,
                     )
                 }
             } else {
                 val f = loans as ApiResult.Failure
+                // No connection and nothing on screen yet: show the last lists the server sent.
+                val cached = if (f.code == ErrorCodes.NETWORK && _state.value.content !is UiState.Success) {
+                    library.loansCached()
+                } else null
+                if (cached != null) {
+                    _state.update {
+                        it.copy(
+                            content = UiState.Success(LibraryData(cached, library.reservationsCached())),
+                            refreshing = false,
+                            offline = true,
+                        )
+                    }
+                    return@launch
+                }
                 _state.update {
                     it.copy(
                         content = if (it.content is UiState.Success) it.content
@@ -78,7 +95,7 @@ class LibraryViewModel @Inject constructor(private val library: LibraryRepositor
     }
 
     fun cancelReservation(id: Int) {
-        if (_state.value.cancelingId != null) return
+        if (_state.value.cancelingId != null || _state.value.offline) return
         _state.update { it.copy(cancelingId = id) }
         viewModelScope.launch {
             when (val res = library.cancelReservation(id)) {
@@ -101,7 +118,7 @@ class LibraryViewModel @Inject constructor(private val library: LibraryRepositor
     }
 
     fun cancelLoan(id: Int) {
-        if (_state.value.cancelingId != null) return
+        if (_state.value.cancelingId != null || _state.value.offline) return
         _state.update { it.copy(cancelingId = id) }
         viewModelScope.launch {
             when (val res = library.cancelLoan(id)) {

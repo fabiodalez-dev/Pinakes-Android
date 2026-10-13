@@ -79,12 +79,15 @@ import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.CirculationRequestKind
 import com.pinakes.app.data.model.PersonalHistory
 import com.pinakes.app.ui.common.AppViewModel
+import com.pinakes.app.ui.common.OfflinePolicy
+import com.pinakes.app.ui.common.DateFormat
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.AudioPlayer
 import com.pinakes.app.ui.components.AvailabilityChip
 import com.pinakes.app.ui.components.AvailabilityStatus
 import com.pinakes.app.ui.components.ErrorState
+import com.pinakes.app.ui.components.InlineErrorBanner
 import com.pinakes.app.ui.components.HtmlText
 import com.pinakes.app.ui.components.LoadingState
 import com.pinakes.app.ui.components.CitationButton
@@ -154,8 +157,8 @@ fun BookDetailScreen(
                 title = stringResource(R.string.title_book),
                 onNavigateUp = onNavigateUp,
                 actions = {
-                    // Wishlist toggle is hidden when the wishlist feature is disabled.
-                    if (features.showWishlist) {
+                    // Wishlist toggle is hidden when the wishlist feature is disabled, and offline.
+                    if (features.showWishlist && !state.offline) {
                         IconButton(onClick = vm::toggleWishlist, enabled = !state.wishlistBusy) {
                             Icon(
                                 imageVector = if (state.wishlisted) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
@@ -178,20 +181,24 @@ fun BookDetailScreen(
                     book = content.data,
                     wishlisted = state.wishlisted,
                     reserveBusy = state.reserveBusy,
-                    canBorrow = features.canBorrow,
-                    showWishlist = features.showWishlist,
-                    showReviews = features.showReviews,
+                    // Offline (cached summary): no loan/reservation affordance at all (availability
+                    // cannot be guaranteed), and wishlist and reviews need the server too.
+                    canBorrow = OfflinePolicy.showLoanActions(features.canBorrow, state.offline),
+                    showWishlist = features.showWishlist && !state.offline,
+                    showReviews = features.showReviews && !state.offline,
                     onReserve = vm::openLoanSheet,
                     onToggleWishlist = vm::toggleWishlist,
                     onFindWorks = onFindWorks,
                     onShowMessage = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } },
+                    offlineNotice = if (state.offline) stringResource(R.string.offline_actions_unavailable) else null,
+                    offlineSyncedAt = state.syncedAt,
                 )
             }
         }
     }
 
     // Loan/reservation sheet is only ever shown when borrowing is enabled.
-    if (state.showLoanSheet && features.canBorrow) {
+    if (state.showLoanSheet && OfflinePolicy.showLoanActions(features.canBorrow, state.offline)) {
         LoanRequestSheet(
             loading = state.availabilityLoading,
             calendar = state.availability,
@@ -335,7 +342,12 @@ internal fun DetailContent(
     onToggleWishlist: () -> Unit,
     onShowMessage: (String) -> Unit,
     onFindWorks: (String, Int?) -> Unit = { _, _ -> },
+    /** Set when the page is built from the offline cache: shown above the cover. */
+    offlineNotice: String? = null,
+    /** Last sync time of the offline copy: availability is shown as "last known", never current. */
+    offlineSyncedAt: String? = null,
 ) {
+    val offline = offlineNotice != null
     val context = LocalContext.current
     var showCover by remember { mutableStateOf(false) }
     var selectedPdf by remember(book.id) { mutableStateOf<String?>(null) }
@@ -349,6 +361,10 @@ internal fun DetailContent(
             .padding(Spacing.lg),
     ) {
         val colors = LocalPinakesColors.current
+        if (offlineNotice != null) {
+            InlineErrorBanner(message = offlineNotice)
+            Spacer(Modifier.height(Spacing.lg))
+        }
         BookCover(book.title, book.coverUrl, Modifier.widthIn(max = 340.dp).fillMaxWidth().aspectRatio(2f / 3f)
             .align(Alignment.CenterHorizontally).then(if (bookCoverImageUrl(book.coverUrl) != null)
                 Modifier.clickable(onClickLabel = stringResource(R.string.cd_cover_zoom)) { showCover = true } else Modifier),
@@ -416,10 +432,20 @@ internal fun DetailContent(
             }
             // No side inset: "Available" / "On loan" lines up with the copies line and the
             // buttons below it, as on the web book page.
-            AvailabilityChip(availStatus, availLabel, Modifier.testTag("detail-availability"),
-                contentPadding = PaddingValues(vertical = 4.dp))
-            if (!book.digitalOnly) Text(availableLabel, style = MaterialTheme.typography.bodyMedium, color = colors.muted,
-                modifier = Modifier.testTag("detail-copies"))
+            if (OfflinePolicy.showCurrentAvailability(offline)) {
+                AvailabilityChip(availStatus, availLabel, Modifier.testTag("detail-availability"),
+                    contentPadding = PaddingValues(vertical = 4.dp))
+                if (!book.digitalOnly) Text(availableLabel, style = MaterialTheme.typography.bodyMedium, color = colors.muted,
+                    modifier = Modifier.testTag("detail-copies"))
+            } else {
+                // Offline: a neutral, dated statement instead of a status pill.
+                Text(
+                    if (offlineSyncedAt.isNullOrBlank()) stringResource(R.string.offline_availability_unknown)
+                    else stringResource(R.string.offline_availability_last_known, DateFormat.dateTime(offlineSyncedAt), book.copiesAvailable, book.copiesTotal),
+                    style = MaterialTheme.typography.bodyMedium, color = colors.muted,
+                    modifier = Modifier.testTag("detail-offline-availability"),
+                )
+            }
             Spacer(Modifier.height(16.dp))
 
         // Personal-status banner: makes the user's own relationship to this book explicit,
@@ -544,7 +570,7 @@ internal fun DetailContent(
                 book.ean?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_ean), it) }
                 book.condition?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_condition), it) }
                 book.locationLabel?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_shelf), it) }
-                MetadataRow(stringResource(R.string.book_meta_copies), stringResource(R.string.book_copies_value, book.copiesAvailable, book.copiesTotal))
+                if (!offline) MetadataRow(stringResource(R.string.book_meta_copies), stringResource(R.string.book_copies_value, book.copiesAvailable, book.copiesTotal))
             }
         }
 

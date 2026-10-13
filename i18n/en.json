@@ -627,5 +627,10 @@
   "credit_illustrator": "Illustrator",
   "credit_editor": "Editor",
   "credit_colorist": "Colorist",
-  "credit_contributor": "Contributor"
+  "credit_contributor": "Contributor",
+  "offline_results": "You are offline: these results come from the copy saved on this device.",
+  "offline_lists_cached": "You are offline: this is the last list saved on this device. Actions need a connection.",
+  "offline_actions_unavailable": "Offline copy. Loans, reservations, wishlist and reviews need a connection.",
+  "offline_availability_last_known": "Last known on %1$s: %2$d of %3$d copies on the shelf. Check online before you come.",
+  "offline_availability_unknown": "Availability cannot be checked offline."
 }

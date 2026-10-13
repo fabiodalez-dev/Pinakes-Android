@@ -39,6 +39,10 @@ data class BookDetailUiState(
     val availabilityFallback: Boolean = false,
     // When true the loan-request sheet is open.
     val showLoanSheet: Boolean = false,
+    /** The page comes from the offline cache (server unreachable): actions are hidden. */
+    val offline: Boolean = false,
+    /** When the offline copy was last synced (server time), for "last known" wording. */
+    val syncedAt: String? = null,
 )
 
 data class RequestConfirmation(
@@ -70,17 +74,23 @@ class BookDetailViewModel @Inject constructor(
                     it.copy(
                         content = UiState.Success(res.data),
                         wishlisted = res.data.personalHistory?.hasWishlisted ?: it.wishlisted,
+                        offline = false,
                     )
                 }
-                is ApiResult.Failure -> _state.update {
-                    it.copy(content = UiState.Error(res.message, res.code, R.string.book_error_load))
+                is ApiResult.Failure -> {
+                    val cached = if (res.code == ErrorCodes.NETWORK) catalog.bookOffline(bookId) else null
+                    val syncedAt = if (cached != null) catalog.lastSyncedAt() else null
+                    _state.update {
+                        if (cached != null) it.copy(content = UiState.Success(cached), offline = true, syncedAt = syncedAt)
+                        else it.copy(content = UiState.Error(res.message, res.code, R.string.book_error_load))
+                    }
                 }
             }
         }
     }
 
     fun toggleWishlist() {
-        if (_state.value.wishlistBusy) return
+        if (_state.value.wishlistBusy || _state.value.offline) return
         val nowWishlisted = !_state.value.wishlisted
         _state.update { it.copy(wishlistBusy = true) }
         viewModelScope.launch {
@@ -108,6 +118,7 @@ class BookDetailViewModel @Inject constructor(
      * picker and flags [BookDetailUiState.availabilityFallback].
      */
     fun openLoanSheet() {
+        if (_state.value.offline) return
         _state.update { it.copy(showLoanSheet = true, availabilityLoading = true, availabilityFallback = false, availability = null) }
         viewModelScope.launch {
             when (val res = catalog.bookAvailability(bookId)) {

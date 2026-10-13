@@ -35,11 +35,13 @@ import com.pinakes.app.data.model.LoanItem
 import com.pinakes.app.data.model.ReservationItem
 import com.pinakes.app.ui.common.DateFormat
 import com.pinakes.app.ui.common.StatusMapping
+import com.pinakes.app.ui.common.OfflinePolicy
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.ConfirmDialog
 import com.pinakes.app.ui.components.EmptyState
 import com.pinakes.app.ui.components.ErrorState
+import com.pinakes.app.ui.components.InlineErrorBanner
 import com.pinakes.app.ui.components.LoadingState
 import com.pinakes.app.ui.components.MediaRow
 import com.pinakes.app.ui.theme.Spacing
@@ -85,8 +87,15 @@ fun LibraryScreen(onBookClick: (Int) -> Unit) {
                 when (val content = state.content) {
                     is UiState.Loading -> LoadingState(label = stringResource(R.string.library_loading))
                     is UiState.Error -> ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
-                    is UiState.Success -> {
+                    is UiState.Success -> Column(Modifier.fillMaxSize()) {
                         val data = content.data
+                        if (state.offline) {
+                            InlineErrorBanner(
+                                message = stringResource(R.string.offline_lists_cached),
+                                onRetry = vm::refresh,
+                                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                            )
+                        }
                         when (tab) {
                             0 -> ActiveLoanList(
                                 loans = data.loans.active + data.loans.pending,
@@ -95,6 +104,7 @@ fun LibraryScreen(onBookClick: (Int) -> Unit) {
                                 cancelingId = state.cancelingId,
                                 onBookClick = onBookClick,
                                 onCancel = { confirmCancel = CancelTarget(it, isLoan = true) },
+                                actionsEnabled = OfflinePolicy.showLoanActions(canBorrow = true, offline = state.offline),
                             )
                             1 -> LoanList(
                                 loans = data.loans.history,
@@ -107,6 +117,7 @@ fun LibraryScreen(onBookClick: (Int) -> Unit) {
                                 cancelingId = state.cancelingId,
                                 onBookClick = onBookClick,
                                 onCancel = { confirmCancel = CancelTarget(it, isLoan = false) },
+                                actionsEnabled = OfflinePolicy.showLoanActions(canBorrow = true, offline = state.offline),
                             )
                         }
                     }
@@ -145,6 +156,7 @@ private fun ActiveLoanList(
     cancelingId: Int?,
     onBookClick: (Int) -> Unit,
     onCancel: (Int) -> Unit,
+    actionsEnabled: Boolean = true,
 ) {
     if (loans.isEmpty()) {
         EmptyState(title = emptyTitle, subtitle = emptySubtitle, icon = Icons.AutoMirrored.Outlined.LibraryBooks)
@@ -182,7 +194,7 @@ private fun ActiveLoanList(
                     loan = loan,
                     cancelingId = cancelingId,
                     onBookClick = onBookClick,
-                    onCancel = onCancel,
+                    onCancel = if (actionsEnabled) onCancel else null,
                 )
             }
         }
@@ -269,6 +281,7 @@ private fun ReservationList(
     cancelingId: Int?,
     onBookClick: (Int) -> Unit,
     onCancel: (Int) -> Unit,
+    actionsEnabled: Boolean = true,
 ) {
     if (reservations.isEmpty()) {
         EmptyState(
@@ -303,7 +316,7 @@ private fun ReservationList(
                 status = status,
                 statusLabel = label,
                 onClick = { onBookClick(r.bookId) },
-                trailing = if (StatusMapping.isReservationCancellable(r.status)) {
+                trailing = if (actionsEnabled && StatusMapping.isReservationCancellable(r.status)) {
                     {
                         TextButton(
                             onClick = { onCancel(r.id) },
