@@ -745,7 +745,7 @@
   "staff_cover_url_label": "Bildadresse",
   "staff_cover_pending": "Neues Cover, wird beim Speichern übernommen.",
   "staff_cover_discard": "Verwerfen",
-  "staff_cover_failed": "Gespeichert, aber das Cover konnte nicht hochgeladen werden.",
+  "staff_cover_failed": "Gespeichert, aber das Cover konnte nicht hochgeladen werden. Zum erneuten Versuch noch einmal speichern.",
   "staff_camera_unavailable": "Die Kamera ist auf diesem Gerät nicht verfügbar.",
   "staff_records_empty": "Noch keine Einträge",
   "staff_record_new": "Neu",
@@ -813,5 +813,6 @@
   "staff_scan_rescan": "Erneut scannen",
   "staff_scrape_unavailable": "Die Suchdienste sind gerade nicht erreichbar.",
   "staff_scan_offline_title": "Scannen braucht eine Verbindung",
-  "staff_scan_offline_subtitle": "Jeder Code wird auf dem Bibliotheksserver gesucht. Bitte erneut verbinden und wiederholen."
+  "staff_scan_offline_subtitle": "Jeder Code wird auf dem Bibliotheksserver gesucht. Bitte erneut verbinden und wiederholen.",
+  "staff_level_required": "Bitte einen Regalboden wählen oder das Regal auf „Keine Angabe“ setzen."
 }

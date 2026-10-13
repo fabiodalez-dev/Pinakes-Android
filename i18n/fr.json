@@ -745,7 +745,7 @@
   "staff_cover_url_label": "Adresse de l’image",
   "staff_cover_pending": "Nouvelle couverture, appliquée à l’enregistrement.",
   "staff_cover_discard": "Annuler",
-  "staff_cover_failed": "Enregistré, mais la couverture n’a pas pu être envoyée.",
+  "staff_cover_failed": "Enregistré, mais la couverture n’a pas pu être envoyée. Enregistrez à nouveau pour réessayer.",
   "staff_camera_unavailable": "L’appareil photo n’est pas disponible sur cet appareil.",
   "staff_records_empty": "Rien pour l’instant",
   "staff_record_new": "Nouveau",
@@ -813,5 +813,6 @@
   "staff_scan_rescan": "Scanner à nouveau",
   "staff_scrape_unavailable": "Les services de recherche sont injoignables pour le moment.",
   "staff_scan_offline_title": "Le scan nécessite une connexion",
-  "staff_scan_offline_subtitle": "Chaque code est recherché sur le serveur de la bibliothèque. Reconnectez-vous et réessayez."
+  "staff_scan_offline_subtitle": "Chaque code est recherché sur le serveur de la bibliothèque. Reconnectez-vous et réessayez.",
+  "staff_level_required": "Choisissez une tablette pour cette étagère, ou réglez l’étagère sur aucune."
 }

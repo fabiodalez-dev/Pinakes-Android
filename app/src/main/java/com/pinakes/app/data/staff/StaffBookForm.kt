@@ -17,7 +17,7 @@ data class PickedEntity(val id: Int, val name: String) {
 }
 
 /** Form fields that can fail validation, so the screen can point at the right one. */
-enum class FormField { TITLE, ISBN13, ISBN10, EAN, ISSN, YEAR, PAGES, COPIES, PRICE, COVER_URL }
+enum class FormField { TITLE, ISBN13, ISBN10, EAN, ISSN, YEAR, PAGES, COPIES, PRICE, COVER_URL, LEVEL }
 
 /** Roles the edit form treats as "authors"; the others are preserved contributors. */
 private val AUTHOR_ROLES = setOf("principale", "co-autore", "autore", "")
@@ -77,6 +77,9 @@ data class StaffBookForm(
         if (price.isNotBlank() && !PRICE.matches(price.trim())) add(FormField.PRICE)
         if (!isEdit && copies !in COPIES_RANGE) add(FormField.COPIES)
         if (!isEdit && coverUrl.isNotBlank() && !isHttpUrl(coverUrl)) add(FormField.COVER_URL)
+        // A shelf needs a level: the server places a book on a level, and a half-filled
+        // location must never be sent (it would clear the stored one).
+        if (shelfId != null && levelId == null) add(FormField.LEVEL)
     }
 
     fun canSave(isEdit: Boolean = false): Boolean = validate(isEdit).isEmpty()
@@ -122,8 +125,10 @@ data class StaffBookForm(
             publishers = book.publishers.map { PickedEntity(it.id, it.name) },
             genre = book.genre?.takeIf { it.id > 0 },
             subgenre = book.subgenre?.takeIf { it.id > 0 },
-            shelfId = book.location?.shelfId,
-            levelId = book.location?.levelId,
+            // A location without a level cannot be edited as such: treat it as "no change"
+            // (the screen still shows the stored label) instead of an invalid form.
+            shelfId = book.location?.takeIf { it.levelId != null }?.shelfId,
+            levelId = book.location?.takeIf { it.shelfId != null }?.levelId,
         )
 
         /**
@@ -176,6 +181,8 @@ data class StaffBookForm(
  * - [update] is a true patch: only fields that differ from [StaffBookForm.from] of the
  *   original record are sent. A cleared text field is sent as `""`, a cleared number as
  *   `null`; the server merges the patch over the current record, so nothing else moves.
+ *   A location is sent whole (shelf + level + next position) or, when the user cleared the
+ *   shelf, as explicit nulls; a shelf without a level is never sent.
  *   When the authors change, the original translators/illustrators/editors/colorists are
  *   re-sent in `contributors` so the rebuild of the author links keeps them.
  */
@@ -218,13 +225,19 @@ object StaffBookWrite {
             if (form.genre?.id != before.genre?.id) put("genre_id", form.genre?.id?.let { JsonPrimitive(it) } ?: JsonNull)
             if (form.subgenre?.id != before.subgenre?.id) put("subgenre_id", form.subgenre?.id?.let { JsonPrimitive(it) } ?: JsonNull)
             if (form.shelfId != before.shelfId || form.levelId != before.levelId) {
-                if (form.shelfId != null && form.levelId != null) {
-                    put("shelf_id", form.shelfId)
-                    put("level_id", form.levelId)
-                    put("position", 0)
-                } else {
-                    put("shelf_id", JsonNull)
-                    put("level_id", JsonNull)
+                when {
+                    form.shelfId != null && form.levelId != null -> {
+                        put("shelf_id", form.shelfId)
+                        put("level_id", form.levelId)
+                        put("position", 0)
+                    }
+                    // Only an explicit clear (shelf set to none) removes the location.
+                    form.shelfId == null && form.levelId == null -> {
+                        put("shelf_id", JsonNull)
+                        put("level_id", JsonNull)
+                    }
+                    // Shelf without level: blocked by validate(); never send a partial location.
+                    else -> Unit
                 }
             }
         }

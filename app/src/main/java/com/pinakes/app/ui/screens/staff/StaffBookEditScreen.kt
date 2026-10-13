@@ -356,6 +356,9 @@ private fun ShelfFields(state: StaffBookEditUiState, vm: StaffBookEditViewModel)
             options = levelOptions, editable = false,
             onValueChange = { v -> vm.selectLevel(v.toIntOrNull()) }, modifier = Modifier.fillMaxWidth(),
         )
+        if (FormField.LEVEL in state.errors) {
+            Text(stringResource(R.string.staff_level_required), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
     }
     if (f.shelfId != null && f.levelId != null) {
         val next = state.nextPosition

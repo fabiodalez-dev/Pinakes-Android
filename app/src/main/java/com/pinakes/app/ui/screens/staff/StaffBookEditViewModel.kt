@@ -107,7 +107,8 @@ class StaffBookEditViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
-    private val bookId: Int = savedStateHandle.get<Int>(Routes.ARG_BOOK_ID) ?: 0
+    /** 0 while creating; becomes the new id when a create succeeds but the cover upload fails. */
+    private var bookId: Int = savedStateHandle.get<Int>(Routes.ARG_BOOK_ID) ?: 0
     private val isbnArg: String = savedStateHandle.get<String>(Routes.ARG_ISBN).orEmpty()
 
     private val _state = MutableStateFlow(StaffBookEditUiState(bookId = bookId))
@@ -325,13 +326,23 @@ class StaffBookEditViewModel @Inject constructor(
                 is ApiResult.Success -> {
                     val id = result.data.id.takeIf { it > 0 } ?: bookId
                     val coverOk = applyCover(id, pending, alreadySent = !s.isEdit && pending is PendingCover.FromUrl)
-                    _state.update {
-                        it.copy(
-                            saving = false,
-                            pendingCover = null,
-                            event = StaffEditEvent.Saved(id, created = !s.isEdit),
-                            snackbarRes = if (coverOk) null else R.string.staff_cover_failed,
-                        )
+                    if (coverOk) {
+                        _state.update { it.copy(saving = false, pendingCover = null, event = StaffEditEvent.Saved(id, created = !s.isEdit)) }
+                    } else {
+                        // The record is saved but the cover is not: stay here, now editing the
+                        // saved record, keep the pending cover so the next Save retries the
+                        // upload, and say so (navigating away would swallow the message).
+                        bookId = id
+                        val saved = result.data.takeIf { it.id > 0 } ?: s.original
+                        _state.update {
+                            it.copy(
+                                saving = false,
+                                bookId = id,
+                                original = saved ?: it.original,
+                                form = saved?.let { b -> StaffBookForm.from(b) } ?: it.form,
+                                snackbarRes = R.string.staff_cover_failed,
+                            )
+                        }
                     }
                 }
                 is ApiResult.Failure -> onSaveFailure(result)

@@ -745,7 +745,7 @@
   "staff_cover_url_label": "Image address",
   "staff_cover_pending": "New cover, applied when you save.",
   "staff_cover_discard": "Discard",
-  "staff_cover_failed": "Saved, but the cover could not be uploaded.",
+  "staff_cover_failed": "Saved, but the cover could not be uploaded. Save again to retry it.",
   "staff_camera_unavailable": "The camera is not available on this device.",
   "staff_records_empty": "Nothing here yet",
   "staff_record_new": "New",
@@ -813,5 +813,6 @@
   "staff_scan_rescan": "Scan again",
   "staff_scrape_unavailable": "The lookup services are not reachable right now.",
   "staff_scan_offline_title": "Scanning needs a connection",
-  "staff_scan_offline_subtitle": "Each code is looked up on the library server. Reconnect and try again."
+  "staff_scan_offline_subtitle": "Each code is looked up on the library server. Reconnect and try again.",
+  "staff_level_required": "Choose a level for this shelf, or set the shelf to none."
 }

@@ -176,4 +176,26 @@ class StaffBookFormStateTest {
     private fun JsonObject.num(k: String) = this[k]!!.jsonPrimitive.int
     private fun JsonObject.ints(k: String) = (this[k] as JsonArray).map { it.jsonPrimitive.int }
     private fun JsonObject.strs(k: String) = this[k]!!.jsonArray.map { it.jsonPrimitive.content }
+
+    @Test fun shelfWithoutLevelIsAValidationError() {
+        assertTrue(FormField.LEVEL in valid.copy(shelfId = 1, levelId = null).validate())
+        assertTrue(FormField.LEVEL in valid.copy(shelfId = 1, levelId = null).validate(isEdit = true))
+        assertTrue(valid.copy(shelfId = 1, levelId = 2).canSave())
+        assertTrue(valid.copy(shelfId = null, levelId = null).canSave())
+    }
+
+    @Test fun changingShelfWithoutLevelNeverSendsNulls() {
+        // Blocked by validate(); even if the body were built, no partial or null location goes out.
+        val patch = StaffBookWrite.update(original, StaffBookForm.from(original).copy(shelfId = 9, levelId = null))
+        assertFalse("shelf_id" in patch)
+        assertFalse("level_id" in patch)
+    }
+
+    @Test fun storedLocationWithoutLevelIsLeftAlone() {
+        val noLevel = original.copy(location = StaffLocation(shelfId = 1, levelId = null, label = "A"))
+        val form = StaffBookForm.from(noLevel)
+        assertEquals(null, form.shelfId)
+        assertTrue(form.canSave(isEdit = true))
+        assertEquals(JsonObject(emptyMap()), StaffBookWrite.update(noLevel, form))
+    }
 }

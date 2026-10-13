@@ -745,7 +745,7 @@
   "staff_cover_url_label": "Indirizzo dell’immagine",
   "staff_cover_pending": "Nuova copertina, applicata al salvataggio.",
   "staff_cover_discard": "Annulla",
-  "staff_cover_failed": "Salvato, ma non è stato possibile caricare la copertina.",
+  "staff_cover_failed": "Salvato, ma non è stato possibile caricare la copertina. Salva di nuovo per riprovare.",
   "staff_camera_unavailable": "La fotocamera non è disponibile su questo dispositivo.",
   "staff_records_empty": "Ancora nessun elemento",
   "staff_record_new": "Nuovo",
@@ -813,5 +813,6 @@
   "staff_scan_rescan": "Scansiona di nuovo",
   "staff_scrape_unavailable": "I servizi di ricerca non sono raggiungibili in questo momento.",
   "staff_scan_offline_title": "La scansione richiede una connessione",
-  "staff_scan_offline_subtitle": "Ogni codice viene cercato sul server della biblioteca. Riconnettiti e riprova."
+  "staff_scan_offline_subtitle": "Ogni codice viene cercato sul server della biblioteca. Riconnettiti e riprova.",
+  "staff_level_required": "Scegli una mensola per questo scaffale, oppure imposta lo scaffale su nessuno."
 }
