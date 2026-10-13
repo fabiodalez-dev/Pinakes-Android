@@ -1,0 +1,54 @@
+{
+  "data": {
+    "id": 7,
+    "status": "in_corso",
+    "status_label": "In corso",
+    "origin": "diretto",
+    "book": {
+      "id": 5,
+      "title": "Orlando",
+      "cover_url": null,
+      "isbn13": "9780156701600"
+    },
+    "copy": {
+      "id": 11,
+      "inventory_number": "INV-0011",
+      "status": "prestato"
+    },
+    "user": {
+      "id": 3,
+      "name": "Ada Rossi",
+      "email": "ada@example.org",
+      "card_number": "C-0012",
+      "status": "attivo"
+    },
+    "processed_by": {
+      "id": 1,
+      "name": "Admin"
+    },
+    "requested_at": "2026-09-30",
+    "loaned_at": "2026-10-01",
+    "due_at": "2026-10-31",
+    "pickup_deadline": null,
+    "returned_at": null,
+    "returned_late": false,
+    "days_overdue": 0,
+    "renewals": 0,
+    "max_renewals": 2,
+    "penalty": null,
+    "notes": null,
+    "recall_count": 0,
+    "last_recall_at": null,
+    "created_at": "2026-10-01 10:00:00",
+    "updated_at": "2026-10-01 10:00:00",
+    "actions": [
+      "return",
+      "renew",
+      "edit",
+      "receipt",
+      "email_receipt"
+    ]
+  },
+  "meta": {},
+  "error": null
+}

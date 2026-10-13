@@ -2,6 +2,8 @@ package com.pinakes.app.ui.screens.staff.circulation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,6 +18,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckBox
 import androidx.compose.material.icons.outlined.CheckBoxOutlineBlank
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -40,8 +44,6 @@ import com.pinakes.app.data.staff.ReturnOutcome
 import com.pinakes.app.ui.common.DateFormat
 import com.pinakes.app.ui.common.StatusMapping
 import com.pinakes.app.ui.components.AvailabilityStatus
-import com.pinakes.app.ui.components.FilterChipRow
-import com.pinakes.app.ui.components.FilterOption
 import com.pinakes.app.ui.components.MediaRow
 import com.pinakes.app.ui.components.PinakesTextField
 import com.pinakes.app.ui.components.PrimaryButton
@@ -133,7 +135,7 @@ internal fun StaffReservationRow(
  * The return form: the copy's outcome, notes, and a penalty for lost or damaged copies. The
  * penalty is validated before sending ([LoanActions.parsePenalty]).
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun ReturnSheet(
     title: String,
@@ -153,11 +155,20 @@ internal fun ReturnSheet(
         ) {
             Text(title, style = MaterialTheme.typography.headlineSmall)
             Text(stringResource(R.string.staff_return_outcome), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            FilterChipRow(
-                options = ReturnOutcome.entries.map { FilterOption(it, stringResource(returnOutcomeLabel(it))) },
-                selectedIds = setOf(outcome),
-                onToggle = { outcome = it; if (!it.allowsPenalty) penalty = "" },
-            )
+            // Wrapping chips: all five outcomes stay visible on a 360dp screen.
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                ReturnOutcome.entries.forEach { option ->
+                    FilterChip(
+                        selected = option == outcome,
+                        onClick = { outcome = option; if (!option.allowsPenalty) penalty = "" },
+                        label = { Text(stringResource(returnOutcomeLabel(option)), style = MaterialTheme.typography.labelMedium) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
+                    )
+                }
+            }
             PinakesTextField(
                 value = notes, onValueChange = { notes = it }, label = stringResource(R.string.staff_field_notes), singleLine = false,
                 maxLength = 1000, modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp),
@@ -173,7 +184,7 @@ internal fun ReturnSheet(
             PrimaryButton(
                 stringResource(R.string.staff_loan_action_return), loading = saving, enabled = parsed !is PenaltyInput.Invalid,
                 onClick = { onConfirm(outcome, notes, (parsed as? PenaltyInput.Amount)?.value) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("return-confirm"),
             )
             Spacer(Modifier.height(Spacing.lg))
         }

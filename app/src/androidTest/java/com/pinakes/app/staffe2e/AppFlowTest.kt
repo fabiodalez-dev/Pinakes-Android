@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
@@ -74,6 +75,11 @@ abstract class AppFlowTest {
         compose.waitUntil(timeoutMs) { compose.onAllNodes(matcher, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
     }
 
+    /** Like [waitFor] on the merged tree (a field's label or a button's text belong to the merged node). */
+    protected fun waitForMerged(matcher: androidx.compose.ui.test.SemanticsMatcher, timeoutMs: Long = 10_000) {
+        compose.waitUntil(timeoutMs) { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
+    }
+
     protected fun waitGone(matcher: androidx.compose.ui.test.SemanticsMatcher, timeoutMs: Long = 10_000) {
         compose.waitUntil(timeoutMs) { compose.onAllNodes(matcher, useUnmergedTree = true).fetchSemanticsNodes().isEmpty() }
     }
@@ -130,6 +136,48 @@ abstract class AppFlowTest {
             ?: device.wait(Until.findObject(By.res("com.android.permissioncontroller:id/permission_deny_and_dont_ask_again_button")), 500)
         deny?.click()
         device.waitForIdle()
+    }
+
+    /** Profile → Staff area (the hub). */
+    protected fun openStaffHub() {
+        openTab(R.string.nav_profile)
+        clickUntil(text(R.string.profile_action_staff), text(R.string.staff_scan_subtitle))
+    }
+
+    protected fun clickTag(tag: String) {
+        waitFor(androidx.compose.ui.test.hasTestTag(tag))
+        compose.onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).onFirst().performScrollToSafely().performClick()
+        compose.waitForIdle()
+    }
+
+    /** Click the button labelled [value] inside the open dialog (not the identical one behind it). */
+    protected fun clickInDialog(value: String) {
+        val matcher = hasText(value) and androidx.compose.ui.test.hasClickAction() and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.isDialog())
+        waitForMerged(matcher)
+        compose.onAllNodes(matcher).onFirst().performClick()
+        compose.waitForIdle()
+    }
+
+    /** Type into the text field whose label (or placeholder) is [label]. */
+    protected fun typeInto(label: String, value: String) {
+        val matcher = androidx.compose.ui.test.hasSetTextAction() and hasText(label, substring = true)
+        waitForMerged(matcher)
+        compose.onAllNodes(matcher).onFirst().performScrollToSafely().performTextInput(value)
+        compose.waitForIdle()
+    }
+
+    /** Type into the text field tagged [tag] (search fields without a label). */
+    protected fun typeIntoTag(tag: String, value: String) {
+        val matcher = androidx.compose.ui.test.hasSetTextAction() and androidx.compose.ui.test.hasTestTag(tag)
+        waitFor(matcher)
+        compose.onAllNodes(matcher).onFirst().performTextInput(value)
+        compose.waitForIdle()
+    }
+
+    /** The UTF-8 body of the last [method] [path] request. */
+    protected fun lastBody(method: String, path: String): String {
+        waitRequest(method, path)
+        return api.recorded(method, path).last().body.clone().readUtf8()
     }
 
     protected fun setAirplaneMode(on: Boolean) {

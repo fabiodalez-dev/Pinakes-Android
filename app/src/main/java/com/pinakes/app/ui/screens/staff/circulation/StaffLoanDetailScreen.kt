@@ -346,10 +346,11 @@ fun StaffLoanDetailScreen(onNavigateUp: () -> Unit, onOpenUser: (Int) -> Unit, o
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                             actions.forEachIndexed { index, action ->
                                 val label = stringResource(loanActionLabel(action))
+                                val tag = Modifier.testTag("action-${action.wire}")
                                 if (index == 0) {
-                                    PrimaryButton(label, onClick = { vm.onAction(action) }, loading = state.busy == action, enabled = state.busy == null)
+                                    PrimaryButton(label, onClick = { vm.onAction(action) }, loading = state.busy == action, enabled = state.busy == null, modifier = tag)
                                 } else {
-                                    SecondaryButton(label, onClick = { vm.onAction(action) }, enabled = state.busy == null)
+                                    SecondaryButton(label, onClick = { vm.onAction(action) }, enabled = state.busy == null, modifier = tag)
                                 }
                             }
                         }
@@ -407,7 +408,7 @@ fun StaffLoanDetailScreen(onNavigateUp: () -> Unit, onOpenUser: (Int) -> Unit, o
             onDismiss = vm::dismissPending,
         )
         LoanAction.RETURN -> ReturnSheet(
-            title = stringResource(R.string.staff_loan_action_return),
+            title = stringResource(R.string.staff_return_title),
             saving = state.busy == LoanAction.RETURN,
             onConfirm = vm::returnLoan,
             onDismiss = vm::dismissPending,

@@ -319,7 +319,7 @@ fun StaffCopyScanScreen(
     when (val phase = state.phase) {
         is CopyScanPhase.Found -> if (state.returning) {
             ReturnSheet(
-                title = stringResource(R.string.staff_loan_action_return), saving = state.saving,
+                title = stringResource(R.string.staff_return_title), saving = state.saving,
                 onConfirm = vm::returnCopy, onDismiss = vm::closeReturn,
             )
         } else {
@@ -394,7 +394,7 @@ private fun CopyResultSheet(
                 InfoLine(stringResource(R.string.staff_loan_borrower), listOfNotNull(loan.user.name, loan.user.cardNumber).joinToString(" · "))
                 InfoLine(stringResource(R.string.staff_loan_due), loan.dueAt?.let(DateFormat::date))
                 val returnable = loan.status == "in_corso" || loan.status == "in_ritardo" || "return" in loan.actions
-                if (returnable) PrimaryButton(stringResource(R.string.staff_loan_action_return), onClick = onReturn, modifier = Modifier.fillMaxWidth())
+                if (returnable) PrimaryButton(stringResource(R.string.staff_loan_action_return), onClick = onReturn, modifier = Modifier.fillMaxWidth().testTag("copy-return"))
                 SecondaryButton(stringResource(R.string.staff_loan_open), onClick = { onOpenLoan(loan.id) }, modifier = Modifier.fillMaxWidth())
             }
             if (copy.available == true) {

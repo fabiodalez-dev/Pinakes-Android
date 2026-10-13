@@ -1,0 +1,22 @@
+{
+  "data": {
+    "pending": 2,
+    "pickup_ready": 1,
+    "scheduled": 0,
+    "active": 5,
+    "overdue": 3,
+    "reservations": 4,
+    "due_today": 1,
+    "returned_today": 2,
+    "today": "2026-10-14",
+    "settings": {
+      "loan_duration_days": 30,
+      "pickup_expiry_days": 3,
+      "max_renewals": 2,
+      "max_active_loans_per_user": 5,
+      "allow_multiple_loans_same_book": false
+    }
+  },
+  "meta": {},
+  "error": null
+}
