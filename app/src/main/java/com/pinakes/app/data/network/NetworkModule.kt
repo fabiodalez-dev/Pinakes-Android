@@ -60,7 +60,10 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
             .addInterceptor(CleartextGuardInterceptor { session.allowInsecureHttp || session.pendingAllowInsecureHttp })
             .addInterceptor(AuthInterceptor(session))
             .connectTimeout(20, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            // 60 s: a staff create runs the whole admin pipeline (scraper hooks, cover download)
+            // and can exceed 30 s on a busy server; timing out after the server already saved
+            // left the user with an error for a record that exists.
+            .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
         httpCache?.let { builder.cache(it) }
         // Complete incomplete server certificate chains via AIA, like a browser does. Self-hosted
