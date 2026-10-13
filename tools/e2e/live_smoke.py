@@ -13,6 +13,11 @@ Environment (nothing is hardcoded, secrets are never printed):
   PINAKES_E2E_ISBN      ISBN to scan-add (default 9788845292613); must not be in the catalogue
   ANDROID_SERIAL        target device (adb's own variable)
 
+Optional, for the "hidden profile fields" step (skipped without them): direct access to the
+instance database, used to switch the gender / tax code visibility and restore it afterwards.
+  PINAKES_E2E_DB_NAME, PINAKES_E2E_DB_USER, PINAKES_E2E_DB_PASSWORD,
+  PINAKES_E2E_DB_SOCKET (or PINAKES_E2E_DB_HOST + PINAKES_E2E_DB_PORT)
+
 Steps: onboarding URL, login, staff hub, manual ISBN add (scraped preview), duplicate add
 copies, manual record without ISBN, shelf/level location on edit (skipped when the instance
 has no shelf with a level), airplane-mode offline search and detail, calendar link + feed.
@@ -24,6 +29,7 @@ import json
 import os
 import random
 import re
+import subprocess
 import sys
 import time
 import traceback
@@ -410,6 +416,101 @@ def calendar():
     ui.back()
 
 
+# ---------------------------------------------------------------- database (optional)
+
+DB_FLAGS = ("show_sesso", "show_cod_fiscale")
+DB_BEFORE = {}
+
+
+def db_configured():
+    return bool(os.environ.get("PINAKES_E2E_DB_NAME") and os.environ.get("PINAKES_E2E_DB_USER"))
+
+
+def sql(query):
+    """Run one statement with the mysql client; the password goes through MYSQL_PWD, never argv."""
+    cmd = ["mysql", "-N", "-B", "-u", os.environ["PINAKES_E2E_DB_USER"]]
+    if os.environ.get("PINAKES_E2E_DB_SOCKET"):
+        cmd += ["--socket", os.environ["PINAKES_E2E_DB_SOCKET"]]
+    else:
+        cmd += ["-h", os.environ.get("PINAKES_E2E_DB_HOST", "127.0.0.1"), "-P", os.environ.get("PINAKES_E2E_DB_PORT", "3306")]
+    cmd += [os.environ["PINAKES_E2E_DB_NAME"], "-e", query]
+    envp = dict(os.environ, MYSQL_PWD=os.environ.get("PINAKES_E2E_DB_PASSWORD", ""))
+    res = subprocess.run(cmd, capture_output=True, text=True, env=envp)
+    if res.returncode != 0:
+        raise RuntimeError("mysql failed: " + res.stderr.strip().splitlines()[-1] if res.stderr.strip() else "mysql failed")
+    return res.stdout
+
+
+def set_visibility(values):
+    """values: {flag: "0"/"1"/None}; None deletes the row (back to the default: shown)."""
+    for flag, value in values.items():
+        if value is None:
+            sql(f"DELETE FROM system_settings WHERE category='registration' AND setting_key='{flag}'")
+        else:
+            sql("INSERT INTO system_settings (category, setting_key, setting_value, updated_at) "
+                f"VALUES ('registration', '{flag}', '{value}', NOW()) "
+                "ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value), updated_at=NOW()")
+
+
+def wait_health_visibility(expected, timeout=120):
+    """The server caches settings for up to 60 s: wait until /health reports [expected]
+    ({flag: bool})."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        _, body, _ = API.call("GET", "health", auth=False)
+        reg = (body.get("data") or {}).get("registration") or {}
+        if all(reg.get(flag) is shown for flag, shown in expected.items()):
+            return
+        time.sleep(5)
+    raise AssertionError(f"/health never reported {expected}")
+
+
+def open_profile_editor():
+    open_tab("nav_profile")
+    ui.wait(S["profile_action_edit"], 90)
+    ui.tap(S["profile_action_edit"])
+    ui.wait(S["profile_first_name"], 30)
+
+
+def editor_has(label):
+    for _ in range(4):
+        if ui.find(label, exact=True):
+            return True
+        ui.swipe_up()
+    return False
+
+
+@step("profile: hidden gender / tax code are not shown, then shown again")
+def hidden_profile_fields():
+    if not db_configured():
+        raise SkipStep("PINAKES_E2E_DB_* not set")
+    rows = sql("SELECT setting_key, setting_value FROM system_settings WHERE category='registration' "
+               "AND setting_key IN ('show_sesso','show_cod_fiscale')")
+    DB_BEFORE.update({k: None for k in DB_FLAGS})
+    for line in rows.splitlines():
+        key, _, value = line.partition("\t")
+        DB_BEFORE[key] = value
+    try:
+        set_visibility({k: "0" for k in DB_FLAGS})
+        wait_health_visibility({k: False for k in DB_FLAGS})
+        _, me, _ = API.call("GET", "me")
+        assert set(me["data"].get("hidden_fields") or []) == {"sesso", "cod_fiscale"}, me["data"].get("hidden_fields")
+        assert "sesso" not in me["data"] and "cod_fiscale" not in me["data"], "hidden keys still in /me"
+        # Background and foreground the app: Profile re-reads /me and the field schema on resume.
+        ui.shell("input keyevent KEYCODE_HOME")
+        time.sleep(1)
+        ui.shell(f"monkey -p {PKG} -c android.intent.category.LAUNCHER 1")
+        time.sleep(4)
+        open_profile_editor()
+        assert not editor_has(S["profile_tax_code"]), "tax code shown while hidden"
+        assert not editor_has(S["profile_gender"]), "gender shown while hidden"
+        ui.back()
+    finally:
+        set_visibility(DB_BEFORE)
+    wait_health_visibility({k: DB_BEFORE.get(k) not in ("0", "false") for k in DB_FLAGS})
+    return "hidden, checked, restored"
+
+
 def cleanup():
     print("--> cleanup", flush=True)
     try:
@@ -456,7 +557,7 @@ def main():
     try:
         # Without a signed-in app the remaining steps cannot run: stop there.
         if ok and onboarding_and_login():
-            for fn in (staff_hub, scan_add, scan_duplicate, manual_record, edit_location, offline, calendar):
+            for fn in (staff_hub, scan_add, scan_duplicate, manual_record, edit_location, offline, calendar, hidden_profile_fields):
                 fn()
     finally:
         cleanup()
