@@ -169,6 +169,8 @@ fun ProfileScreen(
             dataNascita = state.editDataNascita,
             codFiscale = state.editCodFiscale,
             sesso = state.editSesso,
+            showTaxCode = state.showTaxCode,
+            showGender = state.showGender,
             telefonoRequired = vm.builtinRequired("telefono"),
             indirizzoRequired = vm.builtinRequired("indirizzo"),
             customFields = editingProfile?.customFields.orEmpty(),
@@ -576,6 +578,8 @@ private fun EditProfileDialog(
     dataNascita: String,
     codFiscale: String,
     sesso: String,
+    showTaxCode: Boolean,
+    showGender: Boolean,
     telefonoRequired: Boolean,
     indirizzoRequired: Boolean,
     customFields: List<CustomFieldValue>,
@@ -623,8 +627,11 @@ private fun EditProfileDialog(
                     label = stringResource(R.string.profile_birth_date),
                     onValueChange = onDataNascita,
                 )
-                PinakesTextField(value = codFiscale, onValueChange = onCodFiscale, label = stringResource(R.string.profile_tax_code), modifier = Modifier.fillMaxWidth())
-                GenderField(value = sesso, onValueChange = onSesso)
+                // Hidden by the library: not rendered (and not sent, see ProfileViewModel.saveEdit).
+                if (showTaxCode) {
+                    PinakesTextField(value = codFiscale, onValueChange = onCodFiscale, label = stringResource(R.string.profile_tax_code), modifier = Modifier.fillMaxWidth())
+                }
+                if (showGender) GenderField(value = sesso, onValueChange = onSesso)
                 // Instance-defined custom fields, pre-filled from the user's current values.
                 // Rendered with required=false on purpose: the server accepts blank custom
                 // values on PATCH /me for existing members (see ProfileUiState

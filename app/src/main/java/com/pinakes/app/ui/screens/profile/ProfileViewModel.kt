@@ -3,6 +3,7 @@ package com.pinakes.app.ui.screens.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.BuiltinFieldRule
+import com.pinakes.app.data.model.ProfileFieldRule
 import com.pinakes.app.data.model.CalendarStatus
 import com.pinakes.app.data.repository.CalendarRepository
 import com.pinakes.app.data.model.DeviceItem
@@ -39,6 +40,8 @@ data class ProfileUiState(
     val editCustomValues: Map<Int, String> = emptyMap(),
     // Required-ness for telefono/indirizzo comes from the registration schema.
     val builtinFields: Map<String, BuiltinFieldRule> = emptyMap(),
+    // Profile-only field visibility from the registration schema (gender, tax code).
+    val profileFields: Map<String, ProfileFieldRule> = emptyMap(),
     // Inline validation error shown in the edit dialog (e.g. a required field
     // left blank) — surfaced client-side instead of relying on a server 422.
     val editErrorRes: Int? = null,
@@ -59,6 +62,14 @@ data class ProfileUiState(
     val calendar: UiState<CalendarStatus> = UiState.Loading,
     val calendarBusy: Boolean = false,
 ) {
+    private val hiddenFields: List<String> get() = (profile as? UiState.Success)?.data?.hiddenFields.orEmpty()
+
+    /** Gender is shown unless the library hides it (`hidden_fields` or the schema). */
+    val showGender: Boolean get() = ProfileFieldVisibility.isVisible(ProfileFieldVisibility.GENDER, hiddenFields, profileFields)
+
+    /** Tax code is shown unless the library hides it. */
+    val showTaxCode: Boolean get() = ProfileFieldVisibility.isVisible(ProfileFieldVisibility.TAX_CODE, hiddenFields, profileFields)
+
     /** Profile-side required-ness defaults to false until discovery succeeds. */
     fun builtinRequired(key: String): Boolean = builtinFields[key]?.required ?: false
 
@@ -95,7 +106,9 @@ class ProfileViewModel @Inject constructor(
     fun loadSchema() {
         viewModelScope.launch {
             when (val res = auth.registrationFields()) {
-                is ApiResult.Success -> _state.update { it.copy(builtinFields = res.data.builtinFields) }
+                is ApiResult.Success -> _state.update {
+                    it.copy(builtinFields = res.data.builtinFields, profileFields = res.data.profileFields)
+                }
                 is ApiResult.Failure -> { /* keep defaults */ }
             }
         }
@@ -129,6 +142,8 @@ class ProfileViewModel @Inject constructor(
 
     /** Re-read the profile without the loading state (on resume); failures keep what is shown. */
     fun refreshQuietly() {
+        // The field-visibility settings may have changed on the server too.
+        loadSchema()
         viewModelScope.launch {
             when (val res = profile.me()) {
                 is ApiResult.Success -> {
@@ -211,8 +226,9 @@ class ProfileViewModel @Inject constructor(
             telefono = changed(s.editTelefono, original?.telefono),
             indirizzo = changed(s.editIndirizzo, original?.indirizzo),
             dataNascita = changed(s.editDataNascita, original?.dataNascita),
-            codFiscale = changed(s.editCodFiscale, original?.codFiscale),
-            sesso = changed(s.editSesso, original?.sesso),
+            // A field the library hides is never sent (the server would ignore it anyway).
+            codFiscale = if (s.showTaxCode) changed(s.editCodFiscale, original?.codFiscale) else null,
+            sesso = if (s.showGender) changed(s.editSesso, original?.sesso) else null,
             customFields = customPatch.takeIf { it.isNotEmpty() },
         )
 

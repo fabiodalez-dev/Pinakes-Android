@@ -54,6 +54,15 @@ data class HealthPayload(
     @SerialName("registration_enabled") val registrationEnabled: Boolean = false,
     @SerialName("private_mode") val privateMode: Boolean = false,
     @SerialName("vapid_public_key") val vapidPublicKey: String? = null,
+    /** Registration settings mirror (server 0.8.5+); absent on older servers. */
+    val registration: HealthRegistration? = null,
+)
+
+/** `data.registration` of `/health`: which optional profile fields the library shows. */
+@Serializable
+data class HealthRegistration(
+    @SerialName("show_sesso") val showSesso: Boolean? = null,
+    @SerialName("show_cod_fiscale") val showCodFiscale: Boolean? = null,
 )
 
 @Serializable
@@ -119,6 +128,17 @@ data class RegistrationFieldsPayload(
     // Config-driven built-ins only: keys are "cognome" | "telefono" | "indirizzo".
     @SerialName("builtin_fields") val builtinFields: Map<String, BuiltinFieldRule> = emptyMap(),
     @SerialName("custom_fields") val customFields: List<CustomFieldDef> = emptyList(),
+    /**
+     * Profile-only fields (`data_nascita`, `sesso`, `cod_fiscale`) and whether the library shows
+     * them. Absent on servers before 0.8.5: every field stays visible there.
+     */
+    @SerialName("profile_fields") val profileFields: Map<String, ProfileFieldRule> = emptyMap(),
+)
+
+@Serializable
+data class ProfileFieldRule(
+    val visible: Boolean = true,
+    val configurable: Boolean = false,
 )
 
 @Serializable
@@ -175,6 +195,8 @@ data class UserProfile(
     val locale: String? = null,
     // Instance-defined custom fields with the user's current values.
     @SerialName("custom_fields") val customFields: List<CustomFieldValue> = emptyList(),
+    /** Fields the library hides (`sesso`, `cod_fiscale`); their keys are omitted from `/me`. */
+    @SerialName("hidden_fields") val hiddenFields: List<String> = emptyList(),
 ) {
     val fullName: String get() = listOf(nome, cognome).filter { it.isNotBlank() }.joinToString(" ")
 }
