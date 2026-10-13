@@ -689,8 +689,8 @@ private fun SectionTitle(text: String) {
 private fun digitalFilename(url: String, fallback: String): String =
     Uri.parse(url).lastPathSegment?.takeIf { it.isNotBlank() } ?: fallback
 
-private val displayDateFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())
+private val displayDateFormatter: DateTimeFormatter
+    get() = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(com.pinakes.app.ui.common.AppLocale.current())
 
 /** "2026-06-20" (yyyy-MM-dd) → locale-formatted date for display. Falls back to the raw input. */
 private fun formatDisplayDate(iso: String): String =

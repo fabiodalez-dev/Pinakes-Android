@@ -200,7 +200,7 @@ private fun MonthHeader(month: YearMonth, onPrev: () -> Unit, onNext: () -> Unit
 
 @Composable
 private fun WeekdayHeader() {
-    val locale = Locale.getDefault()
+    val locale = com.pinakes.app.ui.common.AppLocale.current()
     // Mon-first week order.
     val days = listOf(
         DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY,
@@ -348,7 +348,7 @@ private fun LegendItem(color: Color, label: String) {
 
 /** "June 2026" style month + year title, localized. */
 private fun monthTitle(month: YearMonth): String {
-    val locale = Locale.getDefault()
+    val locale = com.pinakes.app.ui.common.AppLocale.current()
     val name = month.month.getDisplayName(TextStyle.FULL, locale)
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }
     return "$name ${month.year}"
