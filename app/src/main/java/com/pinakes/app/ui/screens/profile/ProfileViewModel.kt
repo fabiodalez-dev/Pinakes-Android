@@ -3,6 +3,8 @@ package com.pinakes.app.ui.screens.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.BuiltinFieldRule
+import com.pinakes.app.data.model.CalendarStatus
+import com.pinakes.app.data.repository.CalendarRepository
 import com.pinakes.app.data.model.DeviceItem
 import com.pinakes.app.data.model.UpdateProfileRequest
 import com.pinakes.app.data.model.UserProfile
@@ -52,6 +54,10 @@ data class ProfileUiState(
     val loggingOut: Boolean = false,
     val snackbar: String? = null,
     val snackbarRes: Int? = null,
+    // Personal loans calendar feed sheet (Mobile API 1.6.0).
+    val calendarOpen: Boolean = false,
+    val calendar: UiState<CalendarStatus> = UiState.Loading,
+    val calendarBusy: Boolean = false,
 ) {
     /** Profile-side required-ness defaults to false until discovery succeeds. */
     fun builtinRequired(key: String): Boolean = builtinFields[key]?.required ?: false
@@ -77,6 +83,7 @@ internal fun isCanonicalProfileGender(value: String): Boolean = value in PROFILE
 class ProfileViewModel @Inject constructor(
     private val profile: ProfileRepository,
     private val auth: AuthRepository,
+    private val calendarRepo: CalendarRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProfileUiState())
@@ -108,7 +115,11 @@ class ProfileViewModel @Inject constructor(
         _state.update { it.copy(profile = UiState.Loading) }
         viewModelScope.launch {
             when (val res = profile.me()) {
-                is ApiResult.Success -> _state.update { it.copy(profile = UiState.Success(res.data)) }
+                is ApiResult.Success -> {
+                    // GET /me is authoritative for the role: keep the staff area in step.
+                    auth.rememberRole(res.data.tipoUtente)
+                    _state.update { it.copy(profile = UiState.Success(res.data)) }
+                }
                 is ApiResult.Failure -> _state.update {
                     it.copy(profile = UiState.Error(res.message, res.code, R.string.profile_error_load))
                 }
@@ -260,4 +271,41 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun consumeSnackbar() = _state.update { it.copy(snackbar = null, snackbarRes = null) }
+
+    // ---- Calendar subscription ----
+
+    fun openCalendar() {
+        _state.update { it.copy(calendarOpen = true, calendar = UiState.Loading) }
+        viewModelScope.launch {
+            val res = calendarRepo.status()
+            _state.update { it.copy(calendar = res.toCalendarState()) }
+        }
+    }
+
+    fun closeCalendar() = _state.update { it.copy(calendarOpen = false) }
+
+    /** Create the feed, or rotate it: the old URL stops working immediately. */
+    fun rotateCalendar() = calendarAction(R.string.calendar_link_ready) { calendarRepo.rotate() }
+
+    fun disableCalendar() = calendarAction(R.string.calendar_disabled) { calendarRepo.revoke() }
+
+    private fun calendarAction(successRes: Int, call: suspend () -> ApiResult<CalendarStatus>) {
+        if (_state.value.calendarBusy) return
+        _state.update { it.copy(calendarBusy = true) }
+        viewModelScope.launch {
+            when (val res = call()) {
+                is ApiResult.Success -> _state.update {
+                    it.copy(calendarBusy = false, calendar = UiState.Success(res.data), snackbarRes = successRes, snackbar = null)
+                }
+                is ApiResult.Failure -> _state.update {
+                    it.copy(calendarBusy = false, snackbar = res.message.ifBlank { null }, snackbarRes = if (res.message.isBlank()) R.string.calendar_error else null)
+                }
+            }
+        }
+    }
+
+    private fun ApiResult<CalendarStatus>.toCalendarState(): UiState<CalendarStatus> = when (this) {
+        is ApiResult.Success -> UiState.Success(data)
+        is ApiResult.Failure -> UiState.Error(message, code, R.string.calendar_error)
+    }
 }

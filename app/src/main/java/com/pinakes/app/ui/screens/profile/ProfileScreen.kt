@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.LibraryAdd
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Newspaper
@@ -97,8 +98,10 @@ fun ProfileScreen(
     onOpenArticles: () -> Unit,
     onOpenDesiderata: () -> Unit,
     onOpenArchives: () -> Unit,
+    onOpenStaff: () -> Unit = {},
 ) {
     val app: AppViewModel = hiltViewModel()
+    val isStaff by app.isStaff.collectAsStateWithLifecycle()
     val vm: ProfileViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val features by app.features.collectAsStateWithLifecycle()
@@ -130,6 +133,11 @@ fun ProfileScreen(
                     onOpenArticles = onOpenArticles,
                     onOpenDesiderata = onOpenDesiderata,
                     onOpenArchives = onOpenArchives,
+                    onOpenStaff = onOpenStaff,
+                    onOpenCalendar = vm::openCalendar,
+                    showStaff = isStaff,
+                    // The feed lists loans, so it needs the loans feature (off in catalogue mode).
+                    showCalendar = features.calendarFeedAvailable && features.loans,
                     showDesiderata = features.desiderataAvailable,
                     showArchives = features.archivesAvailable,
                     showNotifications = features.notifications,
@@ -171,6 +179,18 @@ fun ProfileScreen(
         )
     }
 
+    if (state.calendarOpen) {
+        CalendarSubscribeSheet(
+            calendar = state.calendar,
+            busy = state.calendarBusy,
+            onEnable = vm::rotateCalendar,
+            onRegenerate = vm::rotateCalendar,
+            onDisable = vm::disableCalendar,
+            onRetry = vm::openCalendar,
+            onDismiss = vm::closeCalendar,
+        )
+    }
+
     if (state.changingPassword) {
         ChangePasswordDialog(
             current = state.pwCurrent,
@@ -204,6 +224,10 @@ private fun ProfileContent(
     onOpenArticles: () -> Unit,
     onOpenDesiderata: () -> Unit,
     onOpenArchives: () -> Unit,
+    onOpenStaff: () -> Unit,
+    onOpenCalendar: () -> Unit,
+    showStaff: Boolean,
+    showCalendar: Boolean,
     showNotifications: Boolean,
     showContact: Boolean,
     showReviews: Boolean,
@@ -277,6 +301,12 @@ private fun ProfileContent(
         ActionRow(Icons.Outlined.Lock, stringResource(R.string.profile_action_change_password), onClick = onChangePassword)
         if (showReviews) {
             ActionRow(Icons.Outlined.RateReview, stringResource(R.string.profile_action_my_reviews), onClick = onOpenMyReviews)
+        }
+        if (showCalendar) {
+            ActionRow(Icons.Outlined.CalendarMonth, stringResource(R.string.profile_action_calendar), onClick = onOpenCalendar)
+        }
+        if (showStaff) {
+            ActionRow(Icons.Outlined.LibraryAdd, stringResource(R.string.profile_action_staff), onClick = onOpenStaff)
         }
         if (showBookClub) {
             ActionRow(Icons.Outlined.Groups, stringResource(R.string.profile_action_book_club), onClick = onOpenBookClub)
