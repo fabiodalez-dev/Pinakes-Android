@@ -179,13 +179,6 @@ class SearchViewModel @Inject constructor(
     fun submitSearch() {
         searchJob?.cancel()
         runSearch(reset = true)
-        viewModelScope.launch {
-            connectivity.isOnline.drop(1).collect { online ->
-                _state.update { it.copy(connected = online) }
-                // Back online after answering from the cache: ask the server again.
-                if (online && _state.value.offline) runSearch(reset = true)
-            }
-        }
     }
 
     fun toggleFilters() = _state.update { it.copy(filtersOpen = !it.filtersOpen) }
@@ -212,13 +205,6 @@ class SearchViewModel @Inject constructor(
         if (_state.value.sort == sort) return
         _state.update { it.copy(sort = sort) }
         runSearch(reset = true)
-        viewModelScope.launch {
-            connectivity.isOnline.drop(1).collect { online ->
-                _state.update { it.copy(connected = online) }
-                // Back online after answering from the cache: ask the server again.
-                if (online && _state.value.offline) runSearch(reset = true)
-            }
-        }
     }
 
     /** Run the search with the currently staged facet filters. */
@@ -236,13 +222,6 @@ class SearchViewModel @Inject constructor(
             )
         }
         runSearch(reset = true)
-        viewModelScope.launch {
-            connectivity.isOnline.drop(1).collect { online ->
-                _state.update { it.copy(connected = online) }
-                // Back online after answering from the cache: ask the server again.
-                if (online && _state.value.offline) runSearch(reset = true)
-            }
-        }
     }
 
     fun retry() = runSearch(reset = true)

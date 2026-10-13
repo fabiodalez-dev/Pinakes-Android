@@ -60,5 +60,8 @@ open class ConnectivityObserver(context: Context?) {
         private val state = MutableStateFlow(online)
         override val isOnline: StateFlow<Boolean> = state.asStateFlow()
         fun set(online: Boolean) { state.value = online }
+
+        /** How many collectors listen right now (lets tests catch leaked collectors). */
+        val subscribers: Int get() = state.subscriptionCount.value
     }
 }
