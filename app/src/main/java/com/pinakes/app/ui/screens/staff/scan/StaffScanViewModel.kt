@@ -143,7 +143,7 @@ class StaffScanViewModel @Inject constructor(
                     res.code == ErrorCodes.NETWORK -> _state.update { it.copy(phase = ScanPhase.Offline) }
                     res.httpStatus == 422 || res.code == ErrorCodes.VALIDATION -> {
                         _state.update { it.copy(phase = ScanPhase.Scanning, messageRes = R.string.staff_identifier_invalid) }
-                        debouncer.resume()
+                        debouncer.resume(SystemClock.elapsedRealtime())
                     }
                     // Scrapers unreachable or failing: the record can still be created by hand.
                     else -> _state.update {
@@ -239,13 +239,13 @@ class StaffScanViewModel @Inject constructor(
                 acceptedTick = it.acceptedTick + 1,
             )
         }
-        debouncer.resume()
+        debouncer.resume(SystemClock.elapsedRealtime())
     }
 
     /** Close the sheet without changes and keep scanning ("Skip"). */
     fun skip() {
         _state.update { it.copy(phase = ScanPhase.Scanning, saving = false) }
-        debouncer.resume()
+        debouncer.resume(SystemClock.elapsedRealtime())
     }
 
     /** Scan the same code again right away ("Rescan", or retry after going offline). */
@@ -257,7 +257,7 @@ class StaffScanViewModel @Inject constructor(
     /** Pause decoding while the screen hands off to the edit form. */
     fun leaveForEdit() {
         _state.update { it.copy(phase = ScanPhase.Scanning, saving = false) }
-        debouncer.resume()
+        debouncer.resume(SystemClock.elapsedRealtime())
     }
 
     fun consumeMessage() = _state.update { it.copy(message = null, messageRes = null) }

@@ -58,4 +58,22 @@ class ScanDebouncerTest {
         assertNull(d.offer(a, 20))
         assertEquals(a, d.offer(a, 30))
     }
+
+    @Test fun resumeWithTimeRestartsTheSuppressionWindow() {
+        val d = ScanDebouncer()
+        d.offer(a, 0); assertEquals(a, d.offer(a, 10))
+        d.pause()
+        // The sheet stayed open 10 s; the book is still under the camera when it closes.
+        d.resume(nowMs = 10_000)
+        assertNull(d.offer(a, 10_100))
+        assertNull(d.offer(a, 10_200))
+        assertNull(d.offer(a, 12_900))
+        // After the restarted window it can be scanned again (two fresh reads).
+        assertNull(d.offer(a, 13_100))
+        assertEquals(a, d.offer(a, 13_200))
+        // Other codes are never held back.
+        d.pause(); d.resume(nowMs = 20_000)
+        assertNull(d.offer(b, 20_050))
+        assertEquals(b, d.offer(b, 20_100))
+    }
 }
