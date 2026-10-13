@@ -45,6 +45,7 @@ fun CameraPreview(
     onUnavailable: () -> Unit,
     accent: Color,
     modifier: Modifier = Modifier,
+    formats: List<com.google.zxing.BarcodeFormat> = BarcodeAnalyzer.ISBN_FORMATS,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -71,7 +72,7 @@ fun CameraPreview(
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                     .also { a ->
-                        a.setAnalyzer(executor, BarcodeAnalyzer { code -> mainExecutor.execute { currentOnCode(code) } })
+                        a.setAnalyzer(executor, BarcodeAnalyzer(formats) { code -> mainExecutor.execute { currentOnCode(code) } })
                     }
                 p.unbindAll()
                 val selector = if (p.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) CameraSelector.DEFAULT_BACK_CAMERA

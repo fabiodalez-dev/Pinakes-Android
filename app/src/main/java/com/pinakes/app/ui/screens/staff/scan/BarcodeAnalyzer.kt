@@ -12,7 +12,9 @@ import com.google.zxing.ReaderException
 import com.google.zxing.common.HybridBinarizer
 
 /**
- * CameraX analyzer that decodes EAN-13 barcodes with ZXing (pure Java, no Play services).
+ * CameraX analyzer that decodes barcodes with ZXing (pure Java, no Play services). [formats]
+ * defaults to EAN-13 (book ISBN/EAN); the copy scanner adds CODE 128 and CODE 39, the
+ * symbologies of the inventory labels the web prints.
  *
  * Only the luminance (Y) plane is used, copied row by row to honour `rowStride`, and cropped
  * to the centre of the frame where the viewfinder guides the user. Frames alternate between
@@ -20,12 +22,23 @@ import com.google.zxing.common.HybridBinarizer
  * horizontally or vertically. Decoded text goes to [onCode] on the analysis thread; the caller
  * validates the checksum and debounces repeated reads.
  */
-class BarcodeAnalyzer(private val onCode: (String) -> Unit) : ImageAnalysis.Analyzer {
+class BarcodeAnalyzer(
+    private val formats: List<BarcodeFormat> = ISBN_FORMATS,
+    private val onCode: (String) -> Unit,
+) : ImageAnalysis.Analyzer {
+
+    companion object {
+        /** Book identifiers (ISBN-13 / EAN-13). */
+        val ISBN_FORMATS: List<BarcodeFormat> = listOf(BarcodeFormat.EAN_13)
+
+        /** Copy inventory labels (CODE 128, CODE 39) plus EAN-13 for libraries that label with it. */
+        val COPY_FORMATS: List<BarcodeFormat> = listOf(BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.EAN_13)
+    }
 
     private val reader = MultiFormatReader().apply {
         setHints(
             mapOf(
-                DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.EAN_13),
+                DecodeHintType.POSSIBLE_FORMATS to formats,
                 DecodeHintType.TRY_HARDER to true,
             )
         )

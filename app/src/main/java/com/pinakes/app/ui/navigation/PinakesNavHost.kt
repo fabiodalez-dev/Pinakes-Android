@@ -47,6 +47,14 @@ import com.pinakes.app.ui.screens.staff.StaffRecordDetailScreen
 import com.pinakes.app.ui.screens.staff.RecordKind
 import com.pinakes.app.ui.screens.staff.StaffShelvesScreen
 import com.pinakes.app.ui.screens.staff.scan.StaffScanScreen
+import com.pinakes.app.ui.screens.staff.StaffHubPhase2
+import com.pinakes.app.ui.screens.staff.circulation.StaffCirculationHomeScreen
+import com.pinakes.app.ui.screens.staff.circulation.StaffLoanCreateScreen
+import com.pinakes.app.ui.screens.staff.circulation.StaffLoanDetailScreen
+import com.pinakes.app.ui.screens.staff.circulation.StaffLoansScreen
+import com.pinakes.app.ui.screens.staff.circulation.StaffReservationsScreen
+import com.pinakes.app.ui.screens.staff.circulation.StaffUserScreen
+import com.pinakes.app.ui.screens.staff.scan.StaffCopyScanScreen
 
 /**
  * Root navigation. The high-level [AuthState] decides the start destination; within the
@@ -157,6 +165,91 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onPublishers = { navController.navigate(Routes.STAFF_PUBLISHERS) },
                 onGenres = { navController.navigate(Routes.STAFF_GENRES) },
                 onShelves = { navController.navigate(Routes.STAFF_SHELVES) },
+                phase2 = StaffHubPhase2(
+                    onCirculation = { navController.navigate(Routes.STAFF_CIRCULATION) },
+                    onCopyScan = { navController.navigate(Routes.STAFF_COPY_SCAN) },
+                    onNewLoan = { navController.navigate(Routes.staffLoanNew()) },
+                    onReservations = { navController.navigate(Routes.STAFF_RESERVATIONS) },
+                    onSeries = { navController.navigate(Routes.STAFF_SERIES) },
+                    onMerges = { navController.navigate(Routes.STAFF_MERGES) },
+                    onImports = { navController.navigate(Routes.STAFF_IMPORTS) },
+                    onCovers = { navController.navigate(Routes.STAFF_COVERS) },
+                    onDesiderata = { navController.navigate(Routes.STAFF_DESIDERATA) },
+                    onArchives = { navController.navigate(Routes.STAFF_ARCHIVES) },
+                    onAuthorities = { navController.navigate(Routes.STAFF_AUTHORITIES) },
+                ),
+            )
+        }
+
+        // ---- Staff circulation desk (Mobile API 1.7.0) ----
+        composable(Routes.STAFF_CIRCULATION, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffCirculationHomeScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpenLoans = { navController.navigate(Routes.staffLoans(it)) },
+                onScanCopy = { navController.navigate(Routes.STAFF_COPY_SCAN) },
+                onNewLoan = { navController.navigate(Routes.staffLoanNew()) },
+                onReservations = { navController.navigate(Routes.STAFF_RESERVATIONS) },
+            )
+        }
+        composable(
+            Routes.STAFF_LOANS,
+            arguments = listOf(navArgument(Routes.ARG_BUCKET) { type = NavType.StringType; defaultValue = "all" }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StaffLoansScreen(onNavigateUp = { navController.popBackStack() }, onOpenLoan = { navController.navigate(Routes.staffLoan(it)) })
+        }
+        composable(
+            Routes.STAFF_LOAN,
+            arguments = listOf(navArgument(Routes.ARG_LOAN_ID) { type = NavType.IntType }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StaffLoanDetailScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpenUser = { navController.navigate(Routes.staffUser(it)) },
+                onOpenBook = { navController.navigate(Routes.staffBookEdit(it)) },
+            )
+        }
+        composable(
+            Routes.STAFF_LOAN_NEW,
+            arguments = listOf(
+                navArgument(Routes.ARG_USER_ID) { type = NavType.IntType; defaultValue = 0 },
+                navArgument(Routes.ARG_BOOK_ID) { type = NavType.IntType; defaultValue = 0 },
+                navArgument(Routes.ARG_COPY_CODE) { type = NavType.StringType; defaultValue = "" },
+                navArgument(Routes.ARG_RESERVATION_MODE) { type = NavType.BoolType; defaultValue = false },
+            ),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StaffLoanCreateScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onCreated = { id -> navController.navigate(Routes.staffLoan(id)) { popUpTo(Routes.STAFF_LOAN_NEW) { inclusive = true } } },
+                onReservationCreated = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.STAFF_RESERVATIONS, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffReservationsScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onNewReservation = { navController.navigate(Routes.staffLoanNew(reservation = true)) },
+                onOpenUser = { navController.navigate(Routes.staffUser(it)) },
+                onNewLoan = { user, book -> navController.navigate(Routes.staffLoanNew(userId = user, bookId = book)) },
+            )
+        }
+        composable(
+            Routes.STAFF_USER,
+            arguments = listOf(navArgument(Routes.ARG_USER_ID) { type = NavType.IntType }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StaffUserScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpenLoan = { navController.navigate(Routes.staffLoan(it)) },
+                onNewLoan = { navController.navigate(Routes.staffLoanNew(userId = it)) },
+            )
+        }
+        composable(Routes.STAFF_COPY_SCAN, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffCopyScanScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onNewLoan = { bookId, code -> navController.navigate(Routes.staffLoanNew(bookId = bookId, copyCode = code)) },
+                onOpenBook = { navController.navigate(Routes.staffBookEdit(it)) },
+                onOpenLoan = { navController.navigate(Routes.staffLoan(it)) },
             )
         }
         composable(Routes.STAFF_SCAN, enterTransition = slideIn, popExitTransition = slideOut) {
