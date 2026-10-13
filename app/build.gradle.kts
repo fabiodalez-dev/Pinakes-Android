@@ -287,6 +287,8 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.okhttp.mockwebserver)
+    // System permission dialogs (camera) and airplane mode in the staff/offline device tests.
+    androidTestImplementation(libs.androidx.test.uiautomator)
 
     implementation(libs.androidx.navigation.compose)
 

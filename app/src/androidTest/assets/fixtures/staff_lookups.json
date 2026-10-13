@@ -1,0 +1,41 @@
+{
+  "data": {
+    "languages": [
+      {
+        "code": "it",
+        "label": "Italiano"
+      }
+    ],
+    "media_types": [
+      {
+        "value": "libro",
+        "label": "Libro"
+      },
+      {
+        "value": "altro",
+        "label": "Altro"
+      }
+    ],
+    "formats": [
+      {
+        "value": "Brossura",
+        "label": "Brossura"
+      }
+    ],
+    "acquisition_types": [
+      {
+        "value": "Acquisto",
+        "label": "Acquisto"
+      }
+    ],
+    "contributor_roles": [],
+    "copy_states": [
+      {
+        "value": "disponibile",
+        "label": "Disponibile"
+      }
+    ]
+  },
+  "meta": {},
+  "error": null
+}

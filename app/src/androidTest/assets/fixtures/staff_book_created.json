@@ -1,0 +1,12 @@
+{
+  "data": {
+    "id": 42,
+    "title": "Il nome della rosa",
+    "copies_total": 1,
+    "copies_available": 1,
+    "authors": [],
+    "publishers": []
+  },
+  "meta": {},
+  "error": null
+}

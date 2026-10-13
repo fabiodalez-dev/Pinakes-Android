@@ -1,0 +1,11 @@
+{
+  "data": {
+    "enabled": false,
+    "feed_url": null,
+    "webcal_url": null,
+    "created_at": null,
+    "rotated_at": null
+  },
+  "meta": {},
+  "error": null
+}

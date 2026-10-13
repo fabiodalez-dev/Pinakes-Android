@@ -1,0 +1,11 @@
+{
+  "data": {
+    "enabled": true,
+    "feed_url": "http://localhost/api/v1/calendar/feed/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.ics",
+    "webcal_url": "webcal://localhost/api/v1/calendar/feed/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.ics",
+    "created_at": "2026-10-13 10:00:00",
+    "rotated_at": null
+  },
+  "meta": {},
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "data": {
+    "copies_total": 3,
+    "copies_available": 3,
+    "created": [
+      {
+        "id": 99,
+        "inventory_number": "LIB-42-C3"
+      }
+    ]
+  },
+  "meta": {},
+  "error": null
+}

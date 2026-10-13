@@ -1,0 +1,35 @@
+{
+  "data": {
+    "id": 1,
+    "title": "Il barone rampante",
+    "year": 1957,
+    "language": "Italiano",
+    "pages": 200,
+    "isbn13": "9788804668237",
+    "media_type": "libro",
+    "cover_url": null,
+    "publisher": "Einaudi",
+    "authors": [
+      {
+        "id": 3,
+        "name": "Italo Calvino",
+        "role": "principale"
+      }
+    ],
+    "availability": {
+      "copies_total": 2,
+      "copies_available": 1,
+      "loanable_now": true,
+      "state": "available"
+    },
+    "personal_history": {
+      "has_read": false,
+      "has_reserved": false,
+      "has_wishlisted": false,
+      "has_active_loan": false,
+      "has_pending_request": false
+    }
+  },
+  "meta": {},
+  "error": null
+}

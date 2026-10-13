@@ -1,0 +1,12 @@
+{
+  "data": {
+    "id": 1,
+    "nome": "Ugo",
+    "cognome": "Admin",
+    "email": "ada@example.org",
+    "tipo_utente": "utente",
+    "email_verificata": true
+  },
+  "meta": {},
+  "error": null
+}
