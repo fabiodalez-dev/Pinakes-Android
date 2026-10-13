@@ -15,6 +15,8 @@ import com.pinakes.app.data.repository.AuthRepository
 import com.pinakes.app.data.repository.ProfileRepository
 import com.pinakes.app.R
 import com.pinakes.app.ui.common.UiState
+import com.pinakes.app.ui.common.isOffline
+import com.pinakes.app.ui.common.serverMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -239,8 +241,8 @@ class ProfileViewModel @Inject constructor(
                     it.copy(profile = UiState.Success(res.data), savingProfile = false, editing = false, snackbar = null, snackbarRes = R.string.profile_updated)
                 }
                 is ApiResult.Failure -> _state.update {
-                    if (res.message.isNotBlank()) it.copy(savingProfile = false, snackbar = res.message, snackbarRes = null)
-                    else it.copy(savingProfile = false, snackbar = null, snackbarRes = R.string.profile_save_error)
+                    if (res.serverMessage() != null) it.copy(savingProfile = false, snackbar = res.serverMessage(), snackbarRes = null)
+                    else it.copy(savingProfile = false, snackbar = null, snackbarRes = if (res.isOffline) R.string.offline_generic else R.string.profile_save_error)
                 }
             }
         }
@@ -271,10 +273,13 @@ class ProfileViewModel @Inject constructor(
                     when {
                         res.code == ErrorCodes.INVALID_CREDENTIALS || res.code == ErrorCodes.VALIDATION ->
                             _state.update { it.copy(savingPassword = false, pwError = null, pwErrorRes = R.string.profile_current_password_incorrect) }
-                        res.message.isNotBlank() ->
-                            _state.update { it.copy(savingPassword = false, pwError = res.message, pwErrorRes = null) }
+                        res.serverMessage() != null ->
+                            _state.update { it.copy(savingPassword = false, pwError = res.serverMessage(), pwErrorRes = null) }
                         else ->
-                            _state.update { it.copy(savingPassword = false, pwError = null, pwErrorRes = R.string.profile_change_password_error) }
+                            _state.update {
+                                it.copy(savingPassword = false, pwError = null,
+                                    pwErrorRes = if (res.isOffline) R.string.offline_generic else R.string.profile_change_password_error)
+                            }
                     }
                 }
             }
@@ -327,7 +332,12 @@ class ProfileViewModel @Inject constructor(
                     it.copy(calendarBusy = false, calendar = UiState.Success(res.data), snackbarRes = successRes, snackbar = null)
                 }
                 is ApiResult.Failure -> _state.update {
-                    it.copy(calendarBusy = false, snackbar = res.message.ifBlank { null }, snackbarRes = if (res.message.isBlank()) R.string.calendar_error else null)
+                    // Never the raw IOException text: offline gets the localized wording.
+                    it.copy(
+                        calendarBusy = false,
+                        snackbar = res.serverMessage(),
+                        snackbarRes = if (res.isOffline) R.string.offline_generic else R.string.calendar_error,
+                    )
                 }
             }
         }
