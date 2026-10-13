@@ -50,4 +50,12 @@ class RecordWritesTest {
         encodeToJsonElement(serializer, form.toPublisherWrite())
 
     private fun JsonObject.str(k: String) = this[k]!!.jsonPrimitive.content
+
+    @Test fun aFormThatWasNotLoadedCanNeverBeSubmitted() {
+        // Placeholder after a failed GET /staff/authors/{id}: saving it would wipe the record.
+        assertEquals(false, RecordForm(id = 3, name = "Italo Calvino", loaded = false).canSubmit)
+        assertEquals(true, RecordForm(id = 3, name = "Italo Calvino").canSubmit)
+        assertEquals(true, RecordForm(name = "New author").canSubmit)
+        assertEquals(false, RecordForm(name = "  ").canSubmit)
+    }
 }

@@ -95,7 +95,16 @@ data class RecordForm(
     val address: String = "",
     val phone: String = "",
     val email: String = "",
-)
+    /**
+     * False while an existing record has not been read from the server (loading, or the load
+     * failed). Such a form is a placeholder: saving it would send blank fields and wipe the
+     * stored record, so it is never editable or savable.
+     */
+    val loaded: Boolean = true,
+) {
+    /** A new record, or an existing one that was loaded; and a name. */
+    val canSubmit: Boolean get() = loaded && name.isNotBlank()
+}
 
 data class RecordsUiState(
     val kind: RecordKind = RecordKind.AUTHOR,
@@ -180,10 +189,13 @@ abstract class RecordsViewModel(protected val staff: StaffRepository, kind: Reco
     }
 
     fun startEdit(id: Int) {
-        _state.update { it.copy(editing = RecordForm(id = id), editLoading = true, formError = null, formErrorRes = null) }
+        _state.update { it.copy(editing = RecordForm(id = id, loaded = false), editLoading = true, formError = null, formErrorRes = null) }
         viewModelScope.launch {
             when (val res = fetch(id)) {
-                is ApiResult.Success -> _state.update { it.copy(editing = res.data, editLoading = false) }
+                is ApiResult.Success -> _state.update {
+                    // Ignore a late answer for an editor that was closed or switched meanwhile.
+                    if (it.editing?.id == id) it.copy(editing = res.data.copy(loaded = true), editLoading = false) else it
+                }
                 is ApiResult.Failure -> _state.update {
                     it.copy(editLoading = false, forbidden = res.isForbidden(), formError = res.serverMessage(), formErrorRes = R.string.staff_error_load)
                 }
@@ -191,12 +203,18 @@ abstract class RecordsViewModel(protected val staff: StaffRepository, kind: Reco
         }
     }
 
-    fun edit(transform: (RecordForm) -> RecordForm) = _state.update { s -> s.copy(editing = s.editing?.let(transform), formError = null, formErrorRes = null) }
+    /** Edits apply only to a loaded form; the placeholder of a failed load stays untouched. */
+    fun edit(transform: (RecordForm) -> RecordForm) = _state.update { s ->
+        val form = s.editing
+        if (form == null || !form.loaded) s else s.copy(editing = transform(form), formError = null, formErrorRes = null)
+    }
 
     fun closeEditor() = _state.update { it.copy(editing = null, duplicate = null) }
 
     fun submit() {
         val form = _state.value.editing ?: return
+        // Never save a form that was not read from the server (it would wipe the record).
+        if (!form.loaded) return
         if (form.name.isBlank()) {
             _state.update { it.copy(formErrorRes = R.string.staff_field_required) }
             return
@@ -379,6 +397,15 @@ private fun RecordEditorSheet(state: RecordsUiState, vm: RecordsViewModel) {
             )
             if (state.editLoading) {
                 LoadingState(modifier = Modifier.heightIn(max = 160.dp))
+                return@Column
+            }
+            if (!form.loaded) {
+                // The record could not be read: retry only, no fields and no Save.
+                InlineErrorBanner(
+                    message = state.formError ?: stringResource(state.formErrorRes ?: R.string.staff_error_load),
+                    onRetry = { vm.startEdit(form.id) },
+                )
+                Spacer(Modifier.height(Spacing.lg))
                 return@Column
             }
             val errorText = state.formError ?: state.formErrorRes?.let { stringResource(it) }
