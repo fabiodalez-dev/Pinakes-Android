@@ -114,13 +114,17 @@ class BookDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val res = if (nowWishlisted) wishlist.add(bookId) else wishlist.remove(bookId)
             when (res) {
-                is ApiResult.Success -> _state.update {
-                    it.copy(
-                        wishlisted = nowWishlisted,
-                        wishlistBusy = false,
-                        snackbar = null,
-                        snackbarRes = if (nowWishlisted) R.string.snackbar_added_to_wishlist else R.string.snackbar_removed_from_wishlist,
-                    )
+                is ApiResult.Success -> {
+                    _state.update {
+                        it.copy(
+                            wishlisted = nowWishlisted,
+                            wishlistBusy = false,
+                            snackbar = null,
+                            snackbarRes = if (nowWishlisted) R.string.snackbar_added_to_wishlist else R.string.snackbar_removed_from_wishlist,
+                        )
+                    }
+                    // Bring the offline copy up to date after the confirmation, not before it.
+                    if (nowWishlisted) launch { runCatching { wishlist.refreshCache() } }
                 }
                 is ApiResult.Failure -> _state.update {
                     if (res.serverMessage() != null) it.copy(wishlistBusy = false, snackbar = res.serverMessage(), snackbarRes = null)
@@ -177,6 +181,9 @@ class BookDetailViewModel @Inject constructor(
                         )
                     }
                     load()
+                    // The request is now a pending loan or a reservation: refresh the offline
+                    // copy after the confirmation instead of holding it back.
+                    launch { runCatching { library.refreshCache() } }
                 }
                 is ApiResult.Failure -> {
                     // Close the calendar dialog so the error is visible: the snackbar

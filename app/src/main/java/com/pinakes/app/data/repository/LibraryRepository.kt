@@ -69,10 +69,10 @@ class LibraryRepository(
         desiredDate: String? = null,
     ): ApiResult<CirculationRequestResult> {
         val api = network.api()
-        val res = apiCall { api.createReservation(ReservationRequest(bookId = bookId, desiredDate = desiredDate)) }
-        // The request lands in pending loans or in reservations: refresh the offline copy.
-        if (res is ApiResult.Success) runCatching { refreshCache() }
-        return res
+        // The request lands in pending loans or in reservations; the caller refreshes the
+        // offline copy afterwards (refreshCache) so the confirmation is not held back by
+        // two more round trips.
+        return apiCall { api.createReservation(ReservationRequest(bookId = bookId, desiredDate = desiredDate)) }
     }
 
     suspend fun cancelReservation(reservationId: Int): ApiResult<Unit> {

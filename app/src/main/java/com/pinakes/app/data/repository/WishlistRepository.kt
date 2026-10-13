@@ -35,12 +35,13 @@ class WishlistRepository(
         wishlist()
     }
 
-    /** Adds, then re-reads the list so the offline copy includes the new title. */
+    /**
+     * Adds the title. The caller refreshes the offline copy afterwards (refreshCache), so the
+     * confirmation does not wait for a full list re-fetch.
+     */
     suspend fun add(bookId: Int): ApiResult<Unit> {
         val api = network.api()
-        val res = apiCall { api.addWishlist(WishlistAddRequest(bookId)) }
-        if (res is ApiResult.Success) runCatching { wishlist() }
-        return res
+        return apiCall { api.addWishlist(WishlistAddRequest(bookId)) }
     }
 
     /** Removes, and drops the title from the offline copy at once. */
