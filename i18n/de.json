@@ -636,7 +636,7 @@
   "profile_action_staff": "Mitarbeiterbereich",
   "profile_action_calendar": "Ausleihen im Kalender",
   "calendar_subscribe_title": "Ausleihen im Kalender",
-  "calendar_subscribe_body": "Ein privater Kalenderlink mit Ihren Ausleihen: Rückgabefristen, abholbereite Bücher und vorgemerkte Ausleihen. Kalender-Apps aktualisieren ihn selbst.",
+  "calendar_subscribe_body": "Ein privater Kalenderlink mit Ihren Ausleihen vom Beginn bis zur Rückgabefrist, abholbereiten Büchern, vorgemerkten Ausleihen und Ihren Vormerkungen. Kalender-Apps aktualisieren ihn selbst.",
   "calendar_status_disabled": "Der Kalenderlink ist ausgeschaltet.",
   "calendar_enable": "Kalenderlink erstellen",
   "calendar_created_on": "Erstellt am %1$s",

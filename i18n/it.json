@@ -636,7 +636,7 @@
   "profile_action_staff": "Area staff",
   "profile_action_calendar": "Prestiti nel calendario",
   "calendar_subscribe_title": "Prestiti nel calendario",
-  "calendar_subscribe_body": "Un link privato con i tuoi prestiti: scadenze, libri pronti per il ritiro e prestiti prenotati. Le app di calendario lo aggiornano da sole.",
+  "calendar_subscribe_body": "Un link privato con i tuoi prestiti dall'inizio alla scadenza, i libri pronti per il ritiro, i prestiti programmati e le tue prenotazioni. Le app di calendario lo aggiornano da sole.",
   "calendar_status_disabled": "Il link del calendario è disattivato.",
   "calendar_enable": "Crea link calendario",
   "calendar_created_on": "Creato il %1$s",

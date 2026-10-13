@@ -636,7 +636,7 @@
   "profile_action_staff": "Espace personnel",
   "profile_action_calendar": "Prêts dans votre agenda",
   "calendar_subscribe_title": "Prêts dans votre agenda",
-  "calendar_subscribe_body": "Un lien privé avec vos prêts : échéances, livres prêts à retirer et prêts programmés. Les applications d’agenda le mettent à jour d’elles-mêmes.",
+  "calendar_subscribe_body": "Un lien privé avec vos prêts, du début à l’échéance, les livres prêts à retirer, les prêts programmés et vos réservations. Les applications d’agenda le mettent à jour d’elles-mêmes.",
   "calendar_status_disabled": "Le lien d’agenda est désactivé.",
   "calendar_enable": "Créer le lien d’agenda",
   "calendar_created_on": "Créé le %1$s",

@@ -636,7 +636,7 @@
   "profile_action_staff": "Staff area",
   "profile_action_calendar": "Loans in your calendar",
   "calendar_subscribe_title": "Loans in your calendar",
-  "calendar_subscribe_body": "A private calendar link with your loans: due dates, books ready for pickup and booked loans. Calendar apps refresh it on their own.",
+  "calendar_subscribe_body": "A private calendar link with your loans, from start to due date, books ready for pickup, booked loans and your reservations. Calendar apps refresh it on their own.",
   "calendar_status_disabled": "The calendar link is off.",
   "calendar_enable": "Create calendar link",
   "calendar_created_on": "Created on %1$s",
