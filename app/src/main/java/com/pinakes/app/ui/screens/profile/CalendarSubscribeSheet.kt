@@ -2,10 +2,13 @@ package com.pinakes.app.ui.screens.profile
 
 import android.content.ActivityNotFoundException
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.PersistableBundle
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,7 +19,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -99,9 +101,8 @@ internal fun CalendarSubscribeSheet(
                         )
                     } else {
                         Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
-                            SelectionContainer {
-                                Text(feedUrl, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(Spacing.md))
-                            }
+                            // Masked: the URL carries the secret token. "Copy link" is the way to use it.
+                            Text(CalendarLinks.mask(feedUrl), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(Spacing.md))
                         }
                         (status.rotatedAt ?: status.createdAt)?.takeIf { it.isNotBlank() }?.let {
                             Text(stringResource(R.string.calendar_created_on, DateFormat.dateTime(it)), style = MaterialTheme.typography.labelMedium,
@@ -147,9 +148,20 @@ internal fun CalendarSubscribeSheet(
     }
 }
 
+/**
+ * The link is a bearer-equivalent secret: the clip is flagged sensitive so Android 13+ hides it
+ * in the clipboard preview and keyboards/clipboard history should not show or store it, and the
+ * label is neutral. The URL is never logged.
+ */
 private fun copyLink(context: Context, url: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-    clipboard?.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.calendar_subscribe_title), url))
+    val clip = ClipData.newPlainText("Pinakes", url)
+    clip.description.extras = PersistableBundle().apply {
+        val key = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) ClipDescription.EXTRA_IS_SENSITIVE
+        else "android.content.extra.IS_SENSITIVE"
+        putBoolean(key, true)
+    }
+    clipboard?.setPrimaryClip(clip)
     Toast.makeText(context, context.getString(R.string.calendar_link_copied), Toast.LENGTH_SHORT).show()
 }
 

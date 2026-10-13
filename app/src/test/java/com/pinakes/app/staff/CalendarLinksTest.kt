@@ -33,4 +33,15 @@ class CalendarLinksTest {
         assertEquals(CalendarLinks.toWebcal(feed), CalendarLinks.subscribeUrl(feed, " "))
         assertNull(CalendarLinks.subscribeUrl(null, null))
     }
+
+    @Test fun maskHidesTheTokenButKeepsHostAndTail() {
+        val token = "0123456789abcdef".repeat(4)
+        val masked = CalendarLinks.mask("https://lib.example.org/api/v1/calendar/feed/$token.ics")
+        assertEquals("lib.example.org/…abcdef.ics", masked)
+        assertEquals(false, masked.contains(token))
+    }
+
+    @Test fun maskOfHostOnlyUrl() {
+        assertEquals("h", CalendarLinks.mask("https://h"))
+    }
 }

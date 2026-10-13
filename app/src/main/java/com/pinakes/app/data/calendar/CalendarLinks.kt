@@ -34,4 +34,19 @@ object CalendarLinks {
         !feedUrl.isNullOrBlank() -> toWebcal(feedUrl)
         else -> null
     }
+
+    /**
+     * The feed URL embeds a secret token (anyone holding it reads the user's loans), so the
+     * sheet shows only `host/…` plus the last [visible] characters of the path.
+     */
+    fun mask(url: String, visible: Int = 6): String {
+        val trimmed = url.trim()
+        val afterScheme = trimmed.substringAfter("://", trimmed)
+        val host = afterScheme.substringBefore('/')
+        val path = afterScheme.substringAfter('/', "")
+        if (path.isEmpty()) return host
+        val tail = path.removeSuffix(".ics").takeLast(visible)
+        val ext = if (path.endsWith(".ics")) ".ics" else ""
+        return "$host/…$tail$ext"
+    }
 }
