@@ -39,7 +39,11 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,7 +54,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -210,7 +213,35 @@ fun BookDetailScreen(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LoanRequestSheet(
+internal fun LoanRequestSheet(
+    loading: Boolean,
+    calendar: AvailabilityCalendar?,
+    fallback: Boolean,
+    submitting: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (isoDate: String) -> Unit,
+) {
+    // Same sheet as the web's loan request: the card shape of the availability box (20dp), a
+    // serif title, and two buttons stacked at full width in the page's own styles — the filled
+    // confirm and the outlined cancel — instead of Material's text-button row.
+    // A plain Dialog, not DatePickerDialog: that one caps its height at 568dp, which cut the
+    // month in half and pushed the legend and the buttons below the fold. This one is as tall
+    // as its content and scrolls only on a screen too short for it.
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        LoanRequestSheetContent(loading, calendar, fallback, submitting, onDismiss, onConfirm)
+    }
+}
+
+/**
+ * The sheet itself, without its [Dialog]: a Dialog is a window of its own and takes the device
+ * density, so the tests lay this out in a fixed width to check a narrow phone on any emulator.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun LoanRequestSheetContent(
     loading: Boolean,
     calendar: AvailabilityCalendar?,
     fallback: Boolean,
@@ -224,23 +255,27 @@ private fun LoanRequestSheet(
         mutableStateOf(calendar?.earliestAvailable?.takeIf { it.isNotBlank() })
     }
 
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = { selectedIso?.let(onConfirm) },
-                enabled = selectedIso != null && !submitting,
-            ) { Text(stringResource(R.string.book_loan_confirm)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.book_loan_cancel)) }
-        },
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier
+            // 8dp from the screen edges, as the web sheet on a phone (100vw - 1rem).
+            .padding(horizontal = Spacing.sm, vertical = Spacing.lg)
+            .widthIn(max = 480.dp)
+            .fillMaxWidth()
+            .testTag("loan-sheet"),
     ) {
-        Column(Modifier.padding(horizontal = Spacing.lg).fillMaxWidth()) {
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.lg)
+                .fillMaxWidth(),
+        ) {
             Text(
                 stringResource(R.string.book_loan_dialog_title),
-                modifier = Modifier.padding(top = Spacing.lg, bottom = Spacing.sm),
-                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = Spacing.lg, bottom = Spacing.md),
+                style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             when {
@@ -274,6 +309,9 @@ private fun LoanRequestSheet(
                         today = today,
                         selectedIso = selectedIso,
                         onSelect = { selectedIso = it },
+                        // Material's picker lays out seven 48dp columns: let it use the sheet's
+                        // side padding too, so the last column is never clipped on a phone.
+                        modifier = Modifier.bleedHorizontally(Spacing.lg),
                     )
                     Text(
                         stringResource(R.string.book_loan_availability_error),
@@ -294,6 +332,24 @@ private fun LoanRequestSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = Spacing.md),
             )
+
+            Column(
+                Modifier.padding(bottom = Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                PrimaryButton(
+                    label = stringResource(R.string.book_loan_confirm),
+                    onClick = { selectedIso?.let(onConfirm) },
+                    enabled = selectedIso != null,
+                    loading = submitting,
+                    modifier = Modifier.fillMaxWidth().testTag("loan-confirm"),
+                )
+                SecondaryButton(
+                    label = stringResource(R.string.book_loan_cancel),
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().testTag("loan-cancel"),
+                )
+            }
         }
     }
 }
@@ -305,6 +361,7 @@ private fun FallbackDatePicker(
     today: LocalDate,
     selectedIso: String?,
     onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val todayUtcMillis = today.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
     val initialMillis = selectedIso?.let {
@@ -319,7 +376,19 @@ private fun FallbackDatePicker(
     LaunchedEffect(datePickerState.selectedDateMillis) {
         datePickerState.selectedDateMillis?.let { onSelect(millisToIsoDate(it)) }
     }
-    DatePicker(state = datePickerState, title = null, headline = null, showModeToggle = false)
+    DatePicker(state = datePickerState, modifier = modifier, title = null, headline = null, showModeToggle = false)
+}
+
+/** Measures the content [amount] wider on each side and centres it, over the parent's padding. */
+private fun Modifier.bleedHorizontally(amount: Dp): Modifier = layout { measurable, constraints ->
+    val extra = amount.roundToPx() * 2
+    val wide = constraints.copy(
+        minWidth = constraints.minWidth + extra,
+        maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + extra else constraints.maxWidth,
+    )
+    val placeable = measurable.measure(wide)
+    val width = (placeable.width - extra).coerceAtLeast(0)
+    layout(width, placeable.height) { placeable.place(-extra / 2, 0) }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
