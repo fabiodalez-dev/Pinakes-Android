@@ -1,5 +1,10 @@
 package com.pinakes.app.ui.screens.detail
 
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -103,8 +108,10 @@ private class CalendarModel(calendar: AvailabilityCalendar) {
         }
     }
 
-    fun isSelectable(date: LocalDate, today: LocalDate): Boolean {
+    fun isSelectable(date: LocalDate, today: LocalDate, anyFutureDay: Boolean = false): Boolean {
         if (date.isBefore(today)) return false
+        // Availability unknown (fetch failed): every future day can be requested; the server decides.
+        if (anyFutureDay) return true
         return when (kind(date, today)) {
             DayKind.Free, DayKind.Partial -> true
             else -> false
@@ -123,6 +130,8 @@ fun LoanCalendar(
     selected: String?,
     onSelect: (isoDate: String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Availability could not be loaded: every future day is selectable, no colour legend. */
+    anyFutureDay: Boolean = false,
 ) {
     val dark = com.pinakes.app.ui.theme.LocalPinakesColors.current.darkMode
     val today = remember { LocalDate.now() }
@@ -152,9 +161,12 @@ fun LoanCalendar(
             selected = selected,
             dark = dark,
             onSelect = onSelect,
+            anyFutureDay = anyFutureDay,
         )
-        Spacer(Modifier.height(Spacing.md))
-        Legend(dark = dark)
+        if (!anyFutureDay) {
+            Spacer(Modifier.height(Spacing.md))
+            Legend(dark = dark)
+        }
     }
 }
 
@@ -194,7 +206,8 @@ private fun WeekdayHeader() {
         DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY,
         DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY,
     )
-    Row(Modifier.fillMaxWidth()) {
+    // Same 7 weighted columns and gaps as the grid below, so headers sit over their days.
+    Row(Modifier.fillMaxWidth().testTag("calendar-weekdays"), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         days.forEach { dow ->
             Text(
                 text = dow.getDisplayName(TextStyle.NARROW, locale),
@@ -215,6 +228,7 @@ private fun MonthGrid(
     selected: String?,
     dark: Boolean,
     onSelect: (String) -> Unit,
+    anyFutureDay: Boolean = false,
 ) {
     val firstOfMonth = month.atDay(1)
     // Mon=1 .. Sun=7 → leading blanks before day 1.
@@ -223,7 +237,7 @@ private fun MonthGrid(
     val totalCells = leadingBlanks + daysInMonth
     val rows = (totalCells + 6) / 7
 
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+    Column(Modifier.testTag("calendar-grid"), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         for (row in 0 until rows) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -242,6 +256,7 @@ private fun MonthGrid(
                                 selected = selected == date.toString(),
                                 dark = dark,
                                 onSelect = onSelect,
+                                anyFutureDay = anyFutureDay,
                             )
                         }
                     }
@@ -259,17 +274,24 @@ private fun DayCell(
     selected: Boolean,
     dark: Boolean,
     onSelect: (String) -> Unit,
+    anyFutureDay: Boolean = false,
 ) {
     val iso = date.toString()
     val kind = model.kind(date, today)
-    val selectable = model.isSelectable(date, today)
-    val tint = tintFor(kind, dark)
+    val selectable = model.isSelectable(date, today, anyFutureDay)
+    // Unknown availability: future days look plain but selectable (no false "unavailable" tint).
+    val tint = if (anyFutureDay && selectable) DayTint(Color.Transparent, MaterialTheme.colorScheme.onSurface) else tintFor(kind, dark)
 
     val container = if (selected) MaterialTheme.colorScheme.primary else tint.container
     val onContainer = if (selected) MaterialTheme.colorScheme.onPrimary else tint.onContainer
 
+    // Fills its weighted square cell (at most 44dp) instead of a fixed 40dp: on a 320-360dp
+    // phone a dialog leaves ~38dp per column, and a fixed size overflowed into its neighbours.
     val cellModifier = Modifier
-        .size(40.dp)
+        .sizeIn(maxWidth = 44.dp, maxHeight = 44.dp)
+        .fillMaxSize()
+        .padding(1.dp)
+        .testTag("calendar-day-$iso")
         .clip(CircleShape)
         .background(container)
         .then(
@@ -291,11 +313,14 @@ private fun DayCell(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Legend(dark: Boolean) {
-    Row(
+    // Wraps on narrow screens and with long translations instead of running off the edge.
+    FlowRow(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         LegendItem(tintFor(DayKind.Free, dark).container, stringResource(R.string.book_loan_legend_available))
         LegendItem(tintFor(DayKind.Partial, dark).container, stringResource(R.string.book_loan_legend_limited))
