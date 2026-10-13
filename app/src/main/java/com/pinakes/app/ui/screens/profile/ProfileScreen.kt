@@ -99,10 +99,17 @@ fun ProfileScreen(
     onOpenDesiderata: () -> Unit,
     onOpenArchives: () -> Unit,
     onOpenStaff: () -> Unit = {},
+    app: AppViewModel = hiltViewModel(),
+    vm: ProfileViewModel = hiltViewModel(),
 ) {
-    val app: AppViewModel = hiltViewModel()
     val isStaff by app.isStaff.collectAsStateWithLifecycle()
-    val vm: ProfileViewModel = hiltViewModel()
+    val role by app.role.collectAsStateWithLifecycle()
+    // Back on Profile (e.g. after the role changed on the server): re-read GET /me quietly.
+    var resumedOnce by remember { mutableStateOf(false) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        if (resumedOnce) vm.refreshQuietly() else resumedOnce = true
+        onPauseOrDispose { }
+    }
     val state by vm.state.collectAsStateWithLifecycle()
     val features by app.features.collectAsStateWithLifecycle()
     val snackbarHost = remember { SnackbarHostState() }
@@ -118,7 +125,9 @@ fun ProfileScreen(
                 is UiState.Loading -> LoadingState(label = stringResource(R.string.profile_loading))
                 is UiState.Error -> ErrorState(message = p.resolvedMessage(), onRetry = vm::load)
                 is UiState.Success -> ProfileContent(
-                    profile = p.data,
+                    // The stored role is refreshed by every GET /me (and the foreground refresh), so
+                    // it wins over the profile snapshot loaded when the screen opened.
+                    profile = role?.let { r -> p.data.copy(tipoUtente = r) } ?: p.data,
                     devices = state.devices,
                     loggingOut = state.loggingOut,
                     onEdit = vm::startEdit,

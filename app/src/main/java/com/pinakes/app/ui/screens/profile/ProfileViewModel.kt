@@ -127,6 +127,19 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    /** Re-read the profile without the loading state (on resume); failures keep what is shown. */
+    fun refreshQuietly() {
+        viewModelScope.launch {
+            when (val res = profile.me()) {
+                is ApiResult.Success -> {
+                    auth.rememberRole(res.data.tipoUtente)
+                    _state.update { it.copy(profile = UiState.Success(res.data)) }
+                }
+                is ApiResult.Failure -> Unit
+            }
+        }
+    }
+
     fun loadDevices() {
         _state.update { it.copy(devicesLoading = true) }
         viewModelScope.launch {

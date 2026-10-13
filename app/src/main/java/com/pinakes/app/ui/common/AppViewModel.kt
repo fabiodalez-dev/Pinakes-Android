@@ -35,6 +35,9 @@ class AppViewModel @Inject constructor(
     val features = featureStore.features
     val themeMode = themeStore.mode
 
+    /** The signed-in user's role, refreshed from login and `GET /me`. */
+    val role = session.role
+
     /**
      * Staff area visibility: an `admin`/`staff` role AND a server that advertises
      * `staff_catalog`. The server re-checks the role on every staff call.
