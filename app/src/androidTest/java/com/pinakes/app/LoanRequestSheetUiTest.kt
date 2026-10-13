@@ -1,18 +1,19 @@
 package com.pinakes.app
 
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.width
-import androidx.test.platform.app.InstrumentationRegistry
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.AvailabilityDay
 import com.pinakes.app.ui.screens.detail.LoanRequestSheet
+import com.pinakes.app.ui.screens.detail.LoanRequestSheetContent
 import com.pinakes.app.ui.theme.PinakesTheme
 import org.junit.Assert.*
 import org.junit.Rule
@@ -23,7 +24,6 @@ class LoanRequestSheetUiTest {
     @get:Rule val compose = createComposeRule()
 
     private val today = LocalDate.now()
-    private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     /** Six weeks from today: mostly free, a partial day and a full one in the first week. */
     private fun calendar(earliest: String? = today.plusDays(1).toString()) = AvailabilityCalendar(
@@ -46,12 +46,8 @@ class LoanRequestSheetUiTest {
         submitting: Boolean = false,
         onDismiss: () -> Unit = {},
         onConfirm: (String) -> Unit = {},
-        widthDp: Float? = null,
     ) = compose.setContent {
-        // widthDp: lay the sheet out as on a phone that many dp wide, whatever the emulator.
-        val base = LocalDensity.current
-        val density = widthDp?.let { Density(context.resources.displayMetrics.widthPixels / it, base.fontScale) } ?: base
-        CompositionLocalProvider(LocalDensity provides density) { PinakesTheme {
+        PinakesTheme {
             LoanRequestSheet(
                 loading = false,
                 calendar = calendar,
@@ -60,7 +56,7 @@ class LoanRequestSheetUiTest {
                 onDismiss = onDismiss,
                 onConfirm = onConfirm,
             )
-        } }
+        }
     }
 
     @Test fun bothButtonsSpanTheSheetAndConfirmSendsTheEarliestDay() {
@@ -93,10 +89,16 @@ class LoanRequestSheetUiTest {
     }
 
     @Test fun fallbackPickerKeepsItsSeventhColumnInsideTheSheet() {
-        // 360dp, the narrowest common phone: Material's seven 48dp columns need the sheet's side padding.
-        sheet(calendar = null, fallback = true, widthDp = 360f)
-        // Pixels throughout: the dp helpers of the test rule use the device density, not the forced one.
-        val sheetRight = compose.onNodeWithTag("loan-sheet").fetchSemanticsNode().boundsInRoot.right
+        // The sheet's content in a 360dp column, the narrowest common phone, on any emulator:
+        // the Dialog itself is a window with the device density, so it cannot be narrowed here.
+        compose.setContent {
+            PinakesTheme {
+                Box(Modifier.width(360.dp)) {
+                    LoanRequestSheetContent(loading = false, calendar = null, fallback = true, submitting = false, onDismiss = {}, onConfirm = {})
+                }
+            }
+        }
+        val sheet = compose.onNodeWithTag("loan-sheet").getBoundsInRoot()
         val days = compose.onAllNodes(
             // Material announces each day as one button whose text is the full date.
             SemanticsMatcher("a day of the month") { node ->
@@ -108,9 +110,9 @@ class LoanRequestSheetUiTest {
         assertEquals("Every day of the month is laid out", today.lengthOfMonth(), days.size)
         // boundsInRoot is clipped by the sheet: a cut seventh column shows up as narrow days.
         // Each day must keep its 40dp circle in view (without the bleed, 24dp of it is left).
-        val px = context.resources.displayMetrics.widthPixels / 360f
-        val narrowest = days.minOf { it.boundsInRoot.width } / px
+        val density = compose.density.density
+        val narrowest = days.minOf { it.boundsInRoot.width } / density
         assertTrue("A day is cut by the sheet: ${narrowest}dp of its 40dp circle in view", narrowest >= 39.5f)
-        assertTrue("A day overflows the sheet", days.maxOf { it.boundsInRoot.right } <= sheetRight + 1f)
+        assertTrue("A day overflows the sheet", days.maxOf { it.boundsInRoot.right } / density <= sheet.right.value + .5f)
     }
 }
