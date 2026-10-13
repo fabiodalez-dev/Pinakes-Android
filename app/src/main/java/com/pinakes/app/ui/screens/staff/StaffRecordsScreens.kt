@@ -114,6 +114,22 @@ data class RecordsUiState(
 
 private fun String.orNullIfBlank(): String? = trim().takeIf { it.isNotEmpty() }
 
+/**
+ * Every editable field is always sent, trimmed, and a cleared field as `""`: the server keeps
+ * the stored value for an absent key (null keys are dropped by `explicitNulls = false`) and
+ * clears it for `""` (dates and the GND id become NULL). Without this a PUT could never empty
+ * a field.
+ */
+internal fun RecordForm.toAuthorWrite(): StaffAuthorWrite = StaffAuthorWrite(
+    name = name.trim(), pseudonym = pseudonym.trim(), born = born.trim(), died = died.trim(),
+    nationality = nationality.trim(), biography = biography.trim(), website = website.trim(), gndId = gndId.trim(),
+)
+
+/** Same contract as [toAuthorWrite]: cleared fields are sent as `""`. */
+internal fun RecordForm.toPublisherWrite(): StaffPublisherWrite = StaffPublisherWrite(
+    name = name.trim(), website = website.trim(), address = address.trim(), phone = phone.trim(), email = email.trim(),
+)
+
 /** Shared logic for the author and publisher screens. */
 abstract class RecordsViewModel(protected val staff: StaffRepository, kind: RecordKind) : ViewModel() {
     protected val _state = MutableStateFlow(RecordsUiState(kind = kind))
@@ -231,12 +247,7 @@ class StaffAuthorsViewModel @Inject constructor(staff: StaffRepository) : Record
     }
 
     override suspend fun save(form: RecordForm): ApiResult<Unit> {
-        val body = StaffAuthorWrite(
-            name = form.name.trim(), pseudonym = form.pseudonym.orNullIfBlank(), born = form.born.orNullIfBlank(),
-            died = form.died.orNullIfBlank(), nationality = form.nationality.orNullIfBlank(), biography = form.biography.orNullIfBlank(),
-            website = form.website.orNullIfBlank(), gndId = form.gndId.orNullIfBlank(),
-        )
-        return when (val res = staff.saveAuthor(form.id, body)) {
+        return when (val res = staff.saveAuthor(form.id, form.toAuthorWrite())) {
             is ApiResult.Success -> ApiResult.Success(Unit)
             is ApiResult.Failure -> res
         }
@@ -258,11 +269,7 @@ class StaffPublishersViewModel @Inject constructor(staff: StaffRepository) : Rec
     }
 
     override suspend fun save(form: RecordForm): ApiResult<Unit> {
-        val body = StaffPublisherWrite(
-            name = form.name.trim(), website = form.website.orNullIfBlank(), address = form.address.orNullIfBlank(),
-            phone = form.phone.orNullIfBlank(), email = form.email.orNullIfBlank(),
-        )
-        return when (val res = staff.savePublisher(form.id, body)) {
+        return when (val res = staff.savePublisher(form.id, form.toPublisherWrite())) {
             is ApiResult.Success -> ApiResult.Success(Unit)
             is ApiResult.Failure -> res
         }
