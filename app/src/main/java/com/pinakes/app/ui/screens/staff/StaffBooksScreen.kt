@@ -105,7 +105,9 @@ class StaffBooksViewModel @Inject constructor(private val staff: StaffRepository
 
     fun reload(pull: Boolean = false) {
         val gen = ++generation
-        _state.update { it.copy(loading = !pull && it.items.isEmpty(), refreshing = pull, error = null) }
+        // A reload supersedes any page in flight (its result is dropped by the generation
+        // check), so the pagination flag must be cleared here or loadMore() stays blocked.
+        _state.update { it.copy(loading = !pull && it.items.isEmpty(), refreshing = pull, error = null, loadingMore = false) }
         viewModelScope.launch {
             val res = staff.books(_state.value.query, cursor = null)
             if (gen != generation) return@launch
