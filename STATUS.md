@@ -1,5 +1,15 @@
 # Pinakes Android — Build Status
 
+## 1.7.0 (versionCode 20): staff catalogue, offline catalogue, loans calendar
+
+Requires Mobile API 1.6.0 (Pinakes 0.8.5). Every new entry point is gated on the matching `/health` feature, so an older server keeps showing exactly the 1.6.2 app.
+
+- **Staff area** (`staff_catalog` + role `admin`/`staff`, refreshed from login and `GET /me`; a 403 on any staff call drops the stored role and leaves the screen): Profile → Staff area, and a scan button on the Catalog tab. Books (list with search, edit, delete with the active-circulation refusal), a shared create/edit form for records with or without an ISBN (identifiers validated live, authors/publishers pickers with "add new", genre/subgenre, shelf/level with automatic position, cover from URL / photo / picked image, copies), authors, publishers, genres (tree, find-or-create) and shelves/levels. Edits are true patches: only changed fields are sent.
+- **ISBN scanner**: CameraX + ZXing EAN-13 (no Play services), checksum validation, two identical reads before a lookup, 3 s suppression, batch mode with remembered copies, shelf/level and optional auto-confirm, preview / duplicate ("add copies", "open existing") / not-found sheets. Manual ISBN/EAN entry is always visible (emulators, denied permission). CAMERA is requested only there, with rationale and a settings fallback; `camera.any` is optional.
+- **Offline catalogue**: Room v2 holds the whole catalogue, kept current by `GET /catalog/sync` (delta with a server watermark, forced full resync every 7 days or when the server asks); loans, reservations and wishlist are written through on every fetch. Without a connection, search, book pages, Library and Wishlist answer from the cache with an offline banner. Loan and reservation actions are hidden offline (never shown disabled) and cached availability is shown only as "last known on <sync time>". The cache is excluded from backups.
+- **Loans calendar**: Profile → Loans in your calendar (`calendar_feed`): create the private ICS link, copy it (primary, Google Calendar can only subscribe from its website), open it as `webcal://` with an HTTPS fallback, regenerate (old link stops) or turn it off.
+- Not verified on a device in this change: camera scanning, photo capture and the flows against a live 1.6.0 server (unit tests, lint and both builds only).
+
 ## 2026 restyle (2026-10-08)
 
 The app now uses the 2026 web design: Geist / Fraunces, warm neutrals, a server-ready `ThemePalette`, complete 3D book covers, a searchable home hero with a cover fan, catalog grid/list views, dot status pills, grouped availability/actions and one card per exposed digital asset. Shared tokens apply to all existing account and plugin screens. The five-section bottom navigation is retained. Article lists and details now show server-resolved covers, subtitles, published online resources and access conditions, with a website action for the existing staff management flows. Native collections require the additive Mobile API 1.5.0 server update; existing circulation and authentication routes are retained.
@@ -58,7 +68,7 @@ It follows the **device locale** by default and offers an **in-app language
 switcher** in Profile (System default / Italiano / English / Français / Deutsch) via
 `AppCompatDelegate.setApplicationLocales(...)`, persisted across restarts (`autoStoreLocales`).
 
-- **Single source of truth = JSON.** Translations live in `i18n/{en,it,fr,de}.json` (622 keys each,
+- **Single source of truth = JSON.** Translations live in `i18n/{en,it,fr,de}.json` (815 keys each,
   en = default/source). A Gradle task (`GenerateI18nResTask`) generates `res/values*/strings.xml` from
   those JSONs at build time, so the app uses standard Android string resources but the editable source
   stays JSON — syncable with the web app's `locale/*.json`.

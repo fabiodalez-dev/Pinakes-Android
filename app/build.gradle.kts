@@ -166,8 +166,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 26
         targetSdk = 35
-        versionCode = 19
-        versionName = "1.6.2"
+        versionCode = 20
+        versionName = "1.7.0"
 
         vectorDrawables {
             useSupportLibrary = true
