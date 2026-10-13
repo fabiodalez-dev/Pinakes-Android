@@ -102,6 +102,25 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
     private var cachedCollectionsApi: CollectionsApi? = null
     @Volatile
     private var cachedStaffApi: StaffApi? = null
+    @Volatile
+    private var cachedStaffCirculationApi: StaffCirculationApi? = null
+    @Volatile
+    private var cachedStaffContentApi: StaffContentApi? = null
+    @Volatile
+    private var cachedStaffPluginsApi: StaffPluginsApi? = null
+    @Volatile
+    private var cachedLongStaffApi: StaffContentApi? = null
+    @Volatile
+    private var cachedLongBaseUrl: String? = null
+
+    /**
+     * The same client with an 11-minute read timeout, for the synchronous server jobs that may
+     * run up to 600 s (covers sync, an enrichment batch, an import chunk with scraping). Only
+     * those calls use it; everything else keeps the normal timeouts.
+     */
+    private val longOkHttpClient: OkHttpClient by lazy {
+        okHttpClient.newBuilder().readTimeout(660, TimeUnit.SECONDS).writeTimeout(120, TimeUnit.SECONDS).build()
+    }
 
     /** Shared Retrofit for a given base URL, rebuilt only when the instance URL changes. */
     @Synchronized
@@ -125,6 +144,9 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
         cachedPeriodicalsApi = null
         cachedCollectionsApi = null
         cachedStaffApi = null
+        cachedStaffCirculationApi = null
+        cachedStaffContentApi = null
+        cachedStaffPluginsApi = null
         return retrofit
     }
 
@@ -172,6 +194,47 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
         return cachedStaffApi ?: retrofit.create(StaffApi::class.java).also { cachedStaffApi = it }
     }
 
+    /** Staff circulation desk (`/staff/circulation`, `/staff/loans`, `/staff/reservations`, ...). */
+    @Synchronized
+    fun staffCirculationApi(baseUrl: String? = null): StaffCirculationApi {
+        val retrofit = retrofit(baseUrl)
+        return cachedStaffCirculationApi ?: retrofit.create(StaffCirculationApi::class.java).also { cachedStaffCirculationApi = it }
+    }
+
+    /** Staff content: copies, series, merges, labels, imports, covers and enrichment. */
+    @Synchronized
+    fun staffContentApi(baseUrl: String? = null): StaffContentApi {
+        val retrofit = retrofit(baseUrl)
+        return cachedStaffContentApi ?: retrofit.create(StaffContentApi::class.java).also { cachedStaffContentApi = it }
+    }
+
+    /** Staff management of plugin content (Desiderata, Archives). */
+    @Synchronized
+    fun staffPluginsApi(baseUrl: String? = null): StaffPluginsApi {
+        val retrofit = retrofit(baseUrl)
+        return cachedStaffPluginsApi ?: retrofit.create(StaffPluginsApi::class.java).also { cachedStaffPluginsApi = it }
+    }
+
+    /**
+     * [StaffContentApi] on the long-timeout client. Use it only for `covers/sync`,
+     * `enrich/batch` and import chunks with scraping, which the server runs synchronously.
+     */
+    @Synchronized
+    fun longStaffContentApi(): StaffContentApi {
+        val target = requireNotNull(session.instanceUrl) { "No instance URL configured. Complete onboarding first." }
+        val normalized = if (target.endsWith("/")) target else "$target/"
+        cachedLongStaffApi?.let { if (normalized == cachedLongBaseUrl) return it }
+        val api = Retrofit.Builder()
+            .baseUrl(normalized)
+            .client(longOkHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(StaffContentApi::class.java)
+        cachedLongStaffApi = api
+        cachedLongBaseUrl = normalized
+        return api
+    }
+
     /** Drop the cached Retrofit so the next [api] call rebuilds against a new instance URL. */
     @Synchronized
     fun invalidate() {
@@ -182,6 +245,11 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
         cachedPeriodicalsApi = null
         cachedCollectionsApi = null
         cachedStaffApi = null
+        cachedStaffCirculationApi = null
+        cachedStaffContentApi = null
+        cachedStaffPluginsApi = null
+        cachedLongStaffApi = null
+        cachedLongBaseUrl = null
     }
 
     /**

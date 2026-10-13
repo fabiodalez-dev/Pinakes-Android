@@ -19,6 +19,10 @@ import com.pinakes.app.data.repository.NotificationsRepository
 import com.pinakes.app.data.repository.PeriodicalsRepository
 import com.pinakes.app.data.repository.ProfileRepository
 import com.pinakes.app.data.repository.ReviewsRepository
+import com.pinakes.app.data.repository.StaffCirculationRepository
+import com.pinakes.app.data.repository.StaffContentRepository
+import com.pinakes.app.data.repository.StaffFilesRepository
+import com.pinakes.app.data.repository.StaffPluginsRepository
 import com.pinakes.app.data.repository.StaffRepository
 import com.pinakes.app.data.repository.WishlistRepository
 import com.pinakes.app.data.store.FeatureStore
@@ -108,6 +112,23 @@ object AppModule {
     @Provides @Singleton
     fun staffRepository(network: NetworkModule, session: SessionStore): StaffRepository =
         StaffRepository(network, session)
+
+    @Provides @Singleton
+    fun staffCirculationRepository(network: NetworkModule, session: SessionStore): StaffCirculationRepository =
+        StaffCirculationRepository(network, session)
+
+    @Provides @Singleton
+    fun staffContentRepository(network: NetworkModule, session: SessionStore): StaffContentRepository =
+        StaffContentRepository(network, session)
+
+    @Provides @Singleton
+    fun staffPluginsRepository(network: NetworkModule, session: SessionStore): StaffPluginsRepository =
+        StaffPluginsRepository(network, session)
+
+    /** Staff PDFs/CSVs land in `cache/exports/`, the directory the FileProvider shares. */
+    @Provides @Singleton
+    fun staffFilesRepository(@ApplicationContext context: Context, network: NetworkModule, session: SessionStore): StaffFilesRepository =
+        StaffFilesRepository(network, session, context.cacheDir)
 
     @Provides @Singleton
     fun calendarRepository(network: NetworkModule): CalendarRepository = CalendarRepository(network)

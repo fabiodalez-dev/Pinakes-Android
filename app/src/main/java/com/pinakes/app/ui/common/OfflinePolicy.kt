@@ -14,6 +14,13 @@ object OfflinePolicy {
      */
     fun showLoanActions(canBorrow: Boolean, offline: Boolean): Boolean = canBorrow && !offline
 
+    /**
+     * Whether the staff circulation desk (loans, returns, reservations, copy scanner) is shown:
+     * only when the server offers it AND the device is online. Offline the entries are hidden,
+     * not disabled: a desk action taken on stale data could hand over a copy that is out.
+     */
+    fun showStaffCirculation(available: Boolean, online: Boolean): Boolean = available && online
+
     /** Whether an availability pill may claim the current state (never for cached rows). */
     fun showCurrentAvailability(offline: Boolean): Boolean = !offline
 }

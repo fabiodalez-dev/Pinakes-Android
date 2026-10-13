@@ -2,7 +2,9 @@ package com.pinakes.app.ui.common
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pinakes.app.data.connectivity.ConnectivityObserver
 import com.pinakes.app.data.staff.StaffAccess
+import com.pinakes.app.data.staff.StaffAreas
 import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.store.SessionStore
 import com.pinakes.app.data.store.ThemeStore
@@ -28,6 +30,7 @@ class AppViewModel @Inject constructor(
     session: SessionStore,
     featureStore: FeatureStore,
     private val themeStore: ThemeStore,
+    connectivity: ConnectivityObserver,
 ) : ViewModel() {
 
     val authState = session.authState
@@ -48,6 +51,18 @@ class AppViewModel @Inject constructor(
         viewModelScope,
         SharingStarted.Eagerly,
         StaffAccess.canManageCatalog(session.role.value, featureStore.features.value.staffCatalogAvailable),
+    )
+
+    /**
+     * The staff areas to show (Mobile API 1.7.0): role × `/health` flags × connectivity. The
+     * circulation desk disappears the moment the device goes offline and comes back with it.
+     */
+    val staffAreas: StateFlow<StaffAreas> = combine(session.role, featureStore.features, connectivity.isOnline) { role, f, online ->
+        StaffAreas.of(role, f, online)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        StaffAreas.of(session.role.value, featureStore.features.value, connectivity.isOnline.value),
     )
 
     fun setThemeMode(mode: ThemeMode) = themeStore.setMode(mode)

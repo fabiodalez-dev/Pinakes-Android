@@ -29,6 +29,14 @@ data class Meta(
     // (e.g. `active_circulation`). Kept as raw JSON so each caller decodes its own shape.
     val existing: kotlinx.serialization.json.JsonElement? = null,
     val reason: String? = null,
+    // Mobile API 1.7.0 error/result context: the offending field of a 422, the next expected
+    // chunk start of a 409 `out_of_order`, a rename that merged into an existing series, a
+    // server message accompanying a successful action, the seconds of a 429.
+    val field: String? = null,
+    val processed: Int? = null,
+    val merged: Boolean? = null,
+    val message: String? = null,
+    @SerialName("retry_after") val retryAfter: Int? = null,
 )
 
 @Serializable
@@ -83,6 +91,22 @@ data class HealthFeatures(
     @SerialName("staff_catalog") val staffCatalog: Boolean = false,
     @SerialName("catalog_sync") val catalogSync: Boolean = false,
     @SerialName("calendar_feed") val calendarFeed: Boolean = false,
+    // Mobile API 1.7.0 staff areas. Each is a server decision (plugin active, catalogue mode
+    // off, legacy schema); older servers omit them, so every area stays hidden by default.
+    @SerialName("staff_circulation") val staffCirculation: Boolean = false,
+    @SerialName("staff_copies") val staffCopies: Boolean = false,
+    @SerialName("staff_series") val staffSeries: Boolean = false,
+    @SerialName("staff_merges") val staffMerges: Boolean = false,
+    @SerialName("staff_labels") val staffLabels: Boolean = false,
+    @SerialName("staff_imports") val staffImports: Boolean = false,
+    @SerialName("staff_covers") val staffCovers: Boolean = false,
+    @SerialName("staff_desiderata") val staffDesiderata: Boolean = false,
+    @SerialName("staff_archives") val staffArchives: Boolean = false,
+    @SerialName("staff_periodicals") val staffPeriodicals: Boolean = false,
+    @SerialName("staff_bookclub") val staffBookClub: Boolean = false,
+    @SerialName("staff_frbr") val staffFrbr: Boolean = false,
+    @SerialName("staff_digital_library") val staffDigitalLibrary: Boolean = false,
+    @SerialName("staff_librarything") val staffLibraryThing: Boolean = false,
 )
 
 // ---------- Auth ----------

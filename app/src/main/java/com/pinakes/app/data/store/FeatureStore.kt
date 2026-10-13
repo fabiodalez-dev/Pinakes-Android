@@ -54,6 +54,22 @@ data class InstanceFeatures(
     val catalogSyncAvailable: Boolean = false,
     /** Personal loans ICS feed (`calendar_feed`, false in catalogue mode). */
     val calendarFeedAvailable: Boolean = false,
+    // Mobile API 1.7.0 staff areas (`staff_*` in `/health`); hidden until advertised.
+    // Circulation is also off in catalogue mode, whatever the server sends.
+    val staffCirculationAvailable: Boolean = false,
+    val staffCopiesAvailable: Boolean = false,
+    val staffSeriesAvailable: Boolean = false,
+    val staffMergesAvailable: Boolean = false,
+    val staffLabelsAvailable: Boolean = false,
+    val staffImportsAvailable: Boolean = false,
+    val staffCoversAvailable: Boolean = false,
+    val staffDesiderataAvailable: Boolean = false,
+    val staffArchivesAvailable: Boolean = false,
+    val staffPeriodicalsAvailable: Boolean = false,
+    val staffBookClubAvailable: Boolean = false,
+    val staffFrbrAvailable: Boolean = false,
+    val staffDigitalLibraryAvailable: Boolean = false,
+    val staffLibraryThingAvailable: Boolean = false,
 ) {
     /** Library tab (loans + reservations) is shown only when at least one of them is enabled. */
     val showLibrary: Boolean get() = loans || reservations
@@ -115,6 +131,20 @@ class FeatureStore(context: Context) {
             staffCatalogAvailable = f.staffCatalog && health.appAccessEnabled,
             catalogSyncAvailable = f.catalogSync && health.appAccessEnabled,
             calendarFeedAvailable = f.calendarFeed && health.appAccessEnabled && !health.catalogueMode,
+            staffCirculationAvailable = f.staffCirculation && health.appAccessEnabled && !health.catalogueMode,
+            staffCopiesAvailable = f.staffCopies && health.appAccessEnabled,
+            staffSeriesAvailable = f.staffSeries && health.appAccessEnabled,
+            staffMergesAvailable = f.staffMerges && health.appAccessEnabled,
+            staffLabelsAvailable = f.staffLabels && health.appAccessEnabled,
+            staffImportsAvailable = f.staffImports && health.appAccessEnabled,
+            staffCoversAvailable = f.staffCovers && health.appAccessEnabled,
+            staffDesiderataAvailable = f.staffDesiderata && health.appAccessEnabled,
+            staffArchivesAvailable = f.staffArchives && health.appAccessEnabled,
+            staffPeriodicalsAvailable = f.staffPeriodicals && health.appAccessEnabled,
+            staffBookClubAvailable = f.staffBookClub && health.appAccessEnabled,
+            staffFrbrAvailable = f.staffFrbr && health.appAccessEnabled,
+            staffDigitalLibraryAvailable = f.staffDigitalLibrary && health.appAccessEnabled,
+            staffLibraryThingAvailable = f.staffLibraryThing && health.appAccessEnabled,
         )
         prefs.edit()
             .putBoolean(KEY_KNOWN, true)
@@ -133,6 +163,20 @@ class FeatureStore(context: Context) {
             .putBoolean(KEY_STAFF_CATALOG, value.staffCatalogAvailable)
             .putBoolean(KEY_CATALOG_SYNC, value.catalogSyncAvailable)
             .putBoolean(KEY_CALENDAR_FEED, value.calendarFeedAvailable)
+            .putBoolean(KEY_STAFF_CIRCULATION, value.staffCirculationAvailable)
+            .putBoolean(KEY_STAFF_COPIES, value.staffCopiesAvailable)
+            .putBoolean(KEY_STAFF_SERIES, value.staffSeriesAvailable)
+            .putBoolean(KEY_STAFF_MERGES, value.staffMergesAvailable)
+            .putBoolean(KEY_STAFF_LABELS, value.staffLabelsAvailable)
+            .putBoolean(KEY_STAFF_IMPORTS, value.staffImportsAvailable)
+            .putBoolean(KEY_STAFF_COVERS, value.staffCoversAvailable)
+            .putBoolean(KEY_STAFF_DESIDERATA, value.staffDesiderataAvailable)
+            .putBoolean(KEY_STAFF_ARCHIVES, value.staffArchivesAvailable)
+            .putBoolean(KEY_STAFF_PERIODICALS, value.staffPeriodicalsAvailable)
+            .putBoolean(KEY_STAFF_BOOKCLUB, value.staffBookClubAvailable)
+            .putBoolean(KEY_STAFF_FRBR, value.staffFrbrAvailable)
+            .putBoolean(KEY_STAFF_DIGITAL, value.staffDigitalLibraryAvailable)
+            .putBoolean(KEY_STAFF_LIBRARYTHING, value.staffLibraryThingAvailable)
             .apply()
         _features.value = value
     }
@@ -178,6 +222,20 @@ class FeatureStore(context: Context) {
             staffCatalogAvailable = prefs.getBoolean(KEY_STAFF_CATALOG, false),
             catalogSyncAvailable = prefs.getBoolean(KEY_CATALOG_SYNC, false),
             calendarFeedAvailable = prefs.getBoolean(KEY_CALENDAR_FEED, false),
+            staffCirculationAvailable = prefs.getBoolean(KEY_STAFF_CIRCULATION, false),
+            staffCopiesAvailable = prefs.getBoolean(KEY_STAFF_COPIES, false),
+            staffSeriesAvailable = prefs.getBoolean(KEY_STAFF_SERIES, false),
+            staffMergesAvailable = prefs.getBoolean(KEY_STAFF_MERGES, false),
+            staffLabelsAvailable = prefs.getBoolean(KEY_STAFF_LABELS, false),
+            staffImportsAvailable = prefs.getBoolean(KEY_STAFF_IMPORTS, false),
+            staffCoversAvailable = prefs.getBoolean(KEY_STAFF_COVERS, false),
+            staffDesiderataAvailable = prefs.getBoolean(KEY_STAFF_DESIDERATA, false),
+            staffArchivesAvailable = prefs.getBoolean(KEY_STAFF_ARCHIVES, false),
+            staffPeriodicalsAvailable = prefs.getBoolean(KEY_STAFF_PERIODICALS, false),
+            staffBookClubAvailable = prefs.getBoolean(KEY_STAFF_BOOKCLUB, false),
+            staffFrbrAvailable = prefs.getBoolean(KEY_STAFF_FRBR, false),
+            staffDigitalLibraryAvailable = prefs.getBoolean(KEY_STAFF_DIGITAL, false),
+            staffLibraryThingAvailable = prefs.getBoolean(KEY_STAFF_LIBRARYTHING, false),
         )
     }
 
@@ -199,5 +257,19 @@ class FeatureStore(context: Context) {
         private const val KEY_STAFF_CATALOG = "f_staff_catalog"
         private const val KEY_CATALOG_SYNC = "f_catalog_sync"
         private const val KEY_CALENDAR_FEED = "f_calendar_feed"
+        private const val KEY_STAFF_CIRCULATION = "f_staff_circulation"
+        private const val KEY_STAFF_COPIES = "f_staff_copies"
+        private const val KEY_STAFF_SERIES = "f_staff_series"
+        private const val KEY_STAFF_MERGES = "f_staff_merges"
+        private const val KEY_STAFF_LABELS = "f_staff_labels"
+        private const val KEY_STAFF_IMPORTS = "f_staff_imports"
+        private const val KEY_STAFF_COVERS = "f_staff_covers"
+        private const val KEY_STAFF_DESIDERATA = "f_staff_desiderata"
+        private const val KEY_STAFF_ARCHIVES = "f_staff_archives"
+        private const val KEY_STAFF_PERIODICALS = "f_staff_periodicals"
+        private const val KEY_STAFF_BOOKCLUB = "f_staff_bookclub"
+        private const val KEY_STAFF_FRBR = "f_staff_frbr"
+        private const val KEY_STAFF_DIGITAL = "f_staff_digital_library"
+        private const val KEY_STAFF_LIBRARYTHING = "f_staff_librarything"
     }
 }

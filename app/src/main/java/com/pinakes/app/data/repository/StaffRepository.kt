@@ -26,7 +26,6 @@ import com.pinakes.app.data.model.StaffPublisherWrite
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.network.NetworkModule
-import com.pinakes.app.data.network.apiCall
 import com.pinakes.app.data.store.SessionStore
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -51,11 +50,8 @@ class StaffRepository(
 ) {
     private val api get() = network.staffApi()
 
-    private suspend fun <T> staffCall(block: suspend () -> com.pinakes.app.data.model.Envelope<T>): ApiResult<T> {
-        val res = apiCall(block)
-        if (res is ApiResult.Failure && res.isForbidden()) session.saveRole(null)
-        return res
-    }
+    private suspend fun <T> staffCall(block: suspend () -> com.pinakes.app.data.model.Envelope<T>): ApiResult<T> =
+        session.staffCall(block)
 
     suspend fun lookups(): ApiResult<StaffLookups> = staffCall { api.lookups() }
 
@@ -89,6 +85,15 @@ class StaffRepository(
 
     suspend fun addCopies(id: Int, quantity: Int): ApiResult<AddCopiesResult> =
         staffCall { api.addCopies(id, AddCopiesRequest(quantity = quantity.coerceIn(1, 100))) }
+
+    /**
+     * One copy with an explicit inventory code (Mobile API 1.7.0), or the next generated one
+     * when [code] is blank. A taken code answers 409 `duplicate` with `meta.existing`.
+     */
+    suspend fun addCopy(id: Int, code: String?, status: String?, notes: String?): ApiResult<AddCopiesResult> =
+        staffCall {
+            api.addCopies(id, AddCopiesRequest(quantity = 1, status = status.blankToNull(), notes = notes.blankToNull(), inventoryNumber = code.blankToNull()))
+        }
 
     /** Multipart cover upload (`cover` field, JPEG or PNG, at most 2 MB server-side). */
     suspend fun uploadCover(id: Int, bytes: ByteArray, mime: String): ApiResult<CoverResult> {

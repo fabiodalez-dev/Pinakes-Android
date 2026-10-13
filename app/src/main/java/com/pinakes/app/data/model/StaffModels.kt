@@ -36,15 +36,38 @@ data class StaffLookups(
     @SerialName("acquisition_types") val acquisitionTypes: List<JsonElement> = emptyList(),
     @SerialName("contributor_roles") val contributorRoles: List<JsonElement> = emptyList(),
     @SerialName("copy_states") val copyStates: List<JsonElement> = emptyList(),
+    // Mobile API 1.7.0 additions.
+    @SerialName("series_types") val seriesTypes: List<JsonElement> = emptyList(),
+    @SerialName("return_outcomes") val returnOutcomes: List<JsonElement> = emptyList(),
 ) {
     val languageOptions: List<LookupOption> get() = options(languages)
     val mediaTypeOptions: List<LookupOption> get() = options(mediaTypes)
     val formatOptions: List<LookupOption> get() = options(formats)
     val acquisitionTypeOptions: List<LookupOption> get() = options(acquisitionTypes)
     val copyStateOptions: List<LookupOption> get() = options(copyStates)
+    val seriesTypeOptions: List<LookupOption> get() = options(seriesTypes)
+    val returnOutcomeOptions: List<LookupOption> get() = options(returnOutcomes)
+
+    /**
+     * The copy states a staff member may set by hand. 1.7.0 marks them `editable`; an older
+     * server sends no flag, and then every state except the circulation ones qualifies.
+     */
+    val editableCopyStateOptions: List<LookupOption>
+        get() = copyStates.mapNotNull { raw ->
+            val option = raw.toLookupOption() ?: return@mapNotNull null
+            val flag = ((raw as? JsonObject)?.get("editable") as? JsonPrimitive)?.contentOrNull
+            val editable = when (flag) {
+                null -> option.value !in CIRCULATION_COPY_STATES
+                else -> flag == "true" || flag == "1"
+            }
+            option.takeIf { editable }
+        }
 
     companion object {
         fun options(raw: List<JsonElement>): List<LookupOption> = raw.mapNotNull { it.toLookupOption() }
+
+        /** Copy states set only by circulation (a loan or a hold), never by hand. */
+        val CIRCULATION_COPY_STATES = setOf("prestato", "prenotato")
     }
 }
 
@@ -160,12 +183,36 @@ data class StaffLocation(
     val label: String? = null,
 )
 
+/**
+ * One physical copy. The book editor (1.6.0) sends the first four fields; `GET /staff/copies/{id}`
+ * and the copy-code lookup (1.7.0) add the rest.
+ */
 @Serializable
 data class StaffCopy(
     val id: Int = 0,
     @SerialName("inventory_number") val inventoryNumber: String? = null,
     val status: String? = null,
     val notes: String? = null,
+    @SerialName("status_label") val statusLabel: String? = null,
+    val book: StaffLoanBook? = null,
+    /** Reserved for a borrower (a pickup or a scheduled loan holds it). */
+    val held: Boolean = false,
+    /** The server would accept a delete (no circulation, no history). */
+    val deletable: Boolean = false,
+    @SerialName("on_loan") val onLoan: CopyOnLoan? = null,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null,
+    /** Copy-code lookup only: whether a new loan can use this copy now. */
+    val available: Boolean? = null,
+    /** Copy-code lookup only: the open loan on this copy. */
+    val loan: StaffLoan? = null,
+)
+
+@Serializable
+data class CopyOnLoan(
+    @SerialName("loan_id") val loanId: Int = 0,
+    @SerialName("user_name") val userName: String? = null,
+    @SerialName("due_at") val dueAt: String? = null,
 )
 
 @Serializable
@@ -235,6 +282,8 @@ data class AddCopiesRequest(
     val quantity: Int,
     val status: String? = null,
     val notes: String? = null,
+    /** 1.7.0: an explicit inventory code, only with quantity 1. */
+    @SerialName("inventory_number") val inventoryNumber: String? = null,
 )
 
 @Serializable
