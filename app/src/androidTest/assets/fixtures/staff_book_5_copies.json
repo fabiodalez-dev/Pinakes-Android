@@ -1,0 +1,61 @@
+{
+  "data": {
+    "id": 5,
+    "title": "Orlando",
+    "subtitle": "A Biography",
+    "isbn13": "9780156701600",
+    "year": 1928,
+    "pages": 333,
+    "language": "English",
+    "media_type": "libro",
+    "copies_total": 2,
+    "copies_available": 1,
+    "genre": {
+      "id": 11,
+      "name": "Romanzo"
+    },
+    "authors": [
+      {
+        "id": 1,
+        "name": "Virginia Woolf",
+        "role": "principale"
+      },
+      {
+        "id": 7,
+        "name": "Nadia Fusini",
+        "role": "traduttore"
+      }
+    ],
+    "publishers": [
+      {
+        "id": 4,
+        "name": "Hogarth"
+      }
+    ],
+    "location": {
+      "shelf_id": 7,
+      "shelf_code": "A",
+      "level_id": 70,
+      "level_number": 1,
+      "position": 3,
+      "label": "A.1.3"
+    },
+    "copies": [
+      {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "disponibile",
+        "notes": null
+      },
+      {
+        "id": 12,
+        "inventory_number": "INV-0012",
+        "status": "prestato",
+        "notes": "Spine worn"
+      }
+    ],
+    "is_wanted": false
+  },
+  "meta": {},
+  "error": null
+}

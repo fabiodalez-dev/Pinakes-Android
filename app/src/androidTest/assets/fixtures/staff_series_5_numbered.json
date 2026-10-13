@@ -1,0 +1,39 @@
+{
+  "data": {
+    "id": 5,
+    "name": "Rincewind",
+    "type": "serie",
+    "parent_id": 4,
+    "parent_name": "Discworld",
+    "group": null,
+    "cycle": null,
+    "cycle_order": null,
+    "complete": false,
+    "book_count": 2,
+    "min_number": "1",
+    "max_number": "2",
+    "children": [],
+    "description": "The wizard.",
+    "books": [
+      {
+        "id": 5,
+        "title": "Orlando",
+        "cover_url": null,
+        "series_number": "1",
+        "is_primary": true,
+        "year": "1928"
+      },
+      {
+        "id": 7,
+        "title": "Sourcery",
+        "cover_url": null,
+        "series_number": "2",
+        "is_primary": true,
+        "year": "1988"
+      }
+    ],
+    "related": []
+  },
+  "meta": {},
+  "error": null
+}

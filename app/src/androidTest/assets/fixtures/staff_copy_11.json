@@ -1,0 +1,17 @@
+{
+  "data": {
+    "id": 11,
+    "inventory_number": "INV-0011",
+    "status": "manutenzione",
+    "status_label": "In manutenzione",
+    "notes": "Cover loose",
+    "book": {
+      "id": 5,
+      "title": "Orlando"
+    },
+    "held": false,
+    "deletable": true
+  },
+  "meta": {},
+  "error": null
+}

@@ -55,6 +55,9 @@ import com.pinakes.app.ui.screens.staff.circulation.StaffLoansScreen
 import com.pinakes.app.ui.screens.staff.circulation.StaffReservationsScreen
 import com.pinakes.app.ui.screens.staff.circulation.StaffUserScreen
 import com.pinakes.app.ui.screens.staff.scan.StaffCopyScanScreen
+import com.pinakes.app.ui.screens.staff.content.StaffMergeScreen
+import com.pinakes.app.ui.screens.staff.content.StaffSeriesDetailScreen
+import com.pinakes.app.ui.screens.staff.content.StaffSeriesScreen
 
 /**
  * Root navigation. The high-level [AuthState] decides the start destination; within the
@@ -243,6 +246,24 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onOpenLoan = { navController.navigate(Routes.staffLoan(it)) },
                 onNewLoan = { navController.navigate(Routes.staffLoanNew(userId = it)) },
             )
+        }
+        // ---- Staff book tools (Mobile API 1.7.0) ----
+        composable(Routes.STAFF_SERIES, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffSeriesScreen(onNavigateUp = { navController.popBackStack() }, onOpen = { navController.navigate(Routes.staffSeriesDetail(it)) })
+        }
+        composable(
+            Routes.STAFF_SERIES_DETAIL,
+            arguments = listOf(navArgument(Routes.ARG_SERIES_ID) { type = NavType.IntType }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StaffSeriesDetailScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpenSeries = { id -> navController.navigate(Routes.staffSeriesDetail(id)) { popUpTo(Routes.STAFF_SERIES) } },
+                onOpenBook = { navController.navigate(Routes.staffBookEdit(it)) },
+            )
+        }
+        composable(Routes.STAFF_MERGES, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffMergeScreen(onNavigateUp = { navController.popBackStack() })
         }
         composable(Routes.STAFF_COPY_SCAN, enterTransition = slideIn, popExitTransition = slideOut) {
             StaffCopyScanScreen(

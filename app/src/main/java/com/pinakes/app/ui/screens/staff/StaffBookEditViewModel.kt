@@ -435,6 +435,15 @@ class StaffBookEditViewModel @Inject constructor(
         }
     }
 
+    /** The copies section re-read the record: take its copies and counters, never the form. */
+    fun applyCopies(book: com.pinakes.app.data.model.StaffBook) = _state.update {
+        it.copy(original = it.original?.copy(copies = book.copies, copiesTotal = book.copiesTotal, copiesAvailable = book.copiesAvailable))
+    }
+
+    fun showMessage(text: String) = _state.update { it.copy(snackbar = text) }
+
+    fun markForbidden() = _state.update { it.copy(forbidden = true) }
+
     fun delete() {
         if (!_state.value.isEdit || _state.value.deleting) return
         _state.update { it.copy(deleting = true) }

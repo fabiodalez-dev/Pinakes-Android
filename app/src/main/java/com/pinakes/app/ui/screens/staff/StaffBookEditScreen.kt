@@ -297,6 +297,16 @@ private fun BookForm(state: StaffBookEditUiState, vm: StaffBookEditViewModel) {
                 label = stringResource(R.string.staff_add_copies), onClick = vm::addCopies,
                 enabled = !state.addingCopies, leadingIcon = Icons.Outlined.Add, modifier = Modifier.fillMaxWidth(),
             )
+            // Mobile API 1.7.0: one row per copy (status, notes, delete), a copy with its own
+            // code, and the label PDFs. Hidden on servers without `staff_copies`/`staff_labels`.
+            com.pinakes.app.ui.screens.staff.content.StaffCopiesSection(
+                copies = original?.copies.orEmpty(),
+                copiesTotal = original?.copiesTotal ?: 0,
+                lookups = state.lookups,
+                onBookRefreshed = vm::applyCopies,
+                onMessage = vm::showMessage,
+                onForbidden = vm::markForbidden,
+            )
         } else {
             QuantityStepper(stringResource(R.string.staff_copies), f.copies, { n -> vm.edit { it.copy(copies = n) } },
                 range = StaffBookForm.COPIES_RANGE)
