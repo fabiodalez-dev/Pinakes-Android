@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.pinakes.app.data.local.AppDatabase
 import com.pinakes.app.data.local.CachedBook
 import com.pinakes.app.data.local.CatalogDao
+import com.pinakes.app.data.local.SearchText
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -47,7 +48,10 @@ class CatalogDaoTest {
         q: String = "", author: String = "", publisher: String = "", language: String = "",
         genre: String = "", availableOnly: Boolean = false, sort: String = "title_asc",
         limit: Int = 50, offset: Int = 0,
-    ) = dao.search(q, author, publisher, language, genre, availableOnly, sort, limit, offset).map { it.id }
+    ) = dao.search(
+        SearchText.queryPattern(q), SearchText.escapeLike(author), SearchText.escapeLike(publisher),
+        language, genre, availableOnly, sort, limit, offset,
+    ).map { it.id }
 
     @Before
     fun setup() {
@@ -167,5 +171,45 @@ class CatalogDaoTest {
         dao.upsertAll(listOf(book(1)))
         dao.clear()
         assertEquals(0, dao.count())
+    }
+
+    @Test
+    fun searchIgnoresAccentsAndCaseBeyondAscii() = runBlocking {
+        dao.upsertAll(
+            listOf(
+                book(1, title = "La città invisibile"),
+                book(2, title = "Über den Fluss", author = "Kästner"),
+                book(3, title = "Ærø"),
+            )
+        )
+        assertEquals(listOf(1), search(q = "CITTA"))
+        assertEquals(listOf(1), search(q = "Città"))
+        assertEquals(listOf(2), search(q = "uber"))
+        assertEquals(listOf(2), search(q = "kastner"))
+        assertEquals(listOf(3), search(q = "ærø"))   // not decomposable: still case-folded
+        assertEquals(listOf(3), search(q = "ÆRØ"))
+    }
+
+    @Test
+    fun likeWildcardsInTheQueryMatchThemselves() = runBlocking {
+        dao.upsertAll(listOf(book(1, title = "100% Cotone"), book(2, title = "1000 Cotone"), book(3, title = "snake_case"), book(4, title = "snakeXcase")))
+        assertEquals(listOf(1), search(q = "100%"))
+        assertEquals(listOf(3), search(q = "snake_case"))
+        assertEquals(emptyList<Int>(), search(q = "\\"))
+        assertEquals(listOf(3), search(author = "", q = "e_c"))
+    }
+
+    @Test
+    fun isbnQueryWithDashesOrSpacesMatchesTheCompactIdentifier() = runBlocking {
+        dao.upsertAll(listOf(book(1, isbn13 = "9788804668237"), book(2, isbn13 = "978-0-14-018647-5")))
+        assertEquals(listOf(1), search(q = "978-88-04-66823-7"))
+        assertEquals(listOf(1), search(q = "978 88 04"))
+        assertEquals(listOf(2), search(q = "9780140186475"))   // stored with dashes, still found
+    }
+
+    @Test
+    fun authorFilterEscapesWildcards() = runBlocking {
+        dao.upsertAll(listOf(book(1, author = "A_B"), book(2, author = "AxB")))
+        assertEquals(listOf(1), search(author = "A_B"))
     }
 }

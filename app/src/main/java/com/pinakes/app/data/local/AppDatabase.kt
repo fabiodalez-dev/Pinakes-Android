@@ -8,12 +8,13 @@ import androidx.room.RoomDatabase
 /**
  * Local cache database. Everything in it can be rebuilt from the server, so schema changes use
  * destructive migration: v1 (40-row snapshot) → v2 (whole catalogue + loans + wishlist + sync
- * bookkeeping) simply starts empty and the next sync refills it. Excluded from backups
+ * bookkeeping) → v3 (folded search key) simply starts empty and the next sync refills it
+ * (the sync watermark lives in the same database, so it restarts with a full pass). Excluded from backups
  * (`backup_rules.xml`, `data_extraction_rules.xml`): it belongs to one instance and one user.
  */
 @Database(
     entities = [CachedBook::class, CachedLoan::class, CachedWishlistItem::class, SyncMeta::class],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {

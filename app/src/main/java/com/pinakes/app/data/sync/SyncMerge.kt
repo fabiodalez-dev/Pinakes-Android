@@ -21,7 +21,29 @@ data class SyncResult(
  * fails half-way therefore leaves the old watermark in place and the next run repeats it;
  * repeated upserts are harmless.
  */
+/** What to do after one page of `GET /catalog/sync`. */
+sealed interface SyncContinuation {
+    data class Next(val cursor: String) : SyncContinuation
+    data object Done : SyncContinuation
+    /** `has_more` without a usable cursor: the run cannot be completed and must not be applied. */
+    data object Broken : SyncContinuation
+}
+
 object SyncMerge {
+
+    /**
+     * Read one page's `meta`. `has_more: true` with a blank cursor is a broken run (applying
+     * it would drop the remaining pages and advance the watermark past them). Servers that omit
+     * `has_more` page as long as they send a cursor.
+     */
+    fun continuation(hasMore: Boolean?, nextCursor: String?): SyncContinuation {
+        val cursor = nextCursor?.takeIf { it.isNotBlank() }
+        return when (hasMore) {
+            true -> if (cursor != null) SyncContinuation.Next(cursor) else SyncContinuation.Broken
+            false -> SyncContinuation.Done
+            null -> if (cursor != null) SyncContinuation.Next(cursor) else SyncContinuation.Done
+        }
+    }
 
     /** The client forces an unfiltered pass at least this often (link-only edits on the server). */
     const val FULL_RESYNC_INTERVAL_MS: Long = 7L * 24 * 60 * 60 * 1000

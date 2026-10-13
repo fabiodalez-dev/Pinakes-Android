@@ -1,6 +1,7 @@
 package com.pinakes.app.data.repository
 
 import com.pinakes.app.data.local.CatalogDao
+import com.pinakes.app.data.local.SearchText
 import com.pinakes.app.data.local.SyncMeta
 import com.pinakes.app.data.local.SyncMetaDao
 import com.pinakes.app.data.local.toCached
@@ -21,6 +22,9 @@ import com.pinakes.app.data.sync.SyncMerge
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import com.pinakes.app.data.sync.SyncContinuation
+import java.util.concurrent.ConcurrentHashMap
 
 /** Filters for a catalog search; nulls are omitted from the query. */
 data class SearchFilters(
@@ -56,8 +60,19 @@ class CatalogRepository(
     /** Serialises sync runs: the foreground observer, Home and the worker may all ask at once. */
     private val syncMutex = Mutex()
 
-    // Small in-memory ETag cache for book detail: id -> (etag, payload).
-    private val detailCache = HashMap<Int, Pair<String?, BookDetail>>()
+    /**
+     * Guards every cache write and [clearCache]. A sync fetches without it, then applies its
+     * result under it only if [cacheGeneration] is unchanged, so a run that was in flight when
+     * the instance was forgotten can never write the old library's rows or watermark back.
+     */
+    private val writeMutex = Mutex()
+
+    @Volatile
+    private var cacheGeneration = 0
+
+    // Small in-memory ETag cache for book detail: id -> (etag, payload). Concurrent: detail
+    // screens, the sync and clearCache() touch it from different coroutines.
+    private val detailCache = ConcurrentHashMap<Int, Pair<String?, BookDetail>>()
 
     /**
      * Reactive cached catalog snapshot (offline-first). Emits whatever Room holds —
@@ -76,9 +91,12 @@ class CatalogRepository(
      * payloads can never surface under library B.
      */
     suspend fun clearCache() {
-        detailCache.clear()
-        catalogDao.clear()
-        syncMeta.clear()
+        writeMutex.withLock {
+            cacheGeneration++
+            detailCache.clear()
+            catalogDao.clear()
+            syncMeta.clear()
+        }
     }
 
     /** Transitional alias: every caller now gets the delta sync. */
@@ -97,6 +115,7 @@ class CatalogRepository(
     suspend fun syncCatalog(): ApiResult<Unit> {
         if (!syncMutex.tryLock()) return ApiResult.Success(Unit)
         try {
+            val generation = cacheGeneration
             val since = syncMeta.get(SyncMeta.CATALOG_SERVER_TIME)
             val lastFullAt = syncMeta.get(SyncMeta.CATALOG_LAST_FULL_AT)?.toLongOrNull()
             val requestFull = SyncMerge.shouldForceFull(since, lastFullAt, nowMs())
@@ -115,12 +134,16 @@ class CatalogRepository(
                 when (res) {
                     is ApiResult.Success -> {
                         pages += res.data
-                        val next = res.meta?.nextCursor?.takeIf { it.isNotBlank() }
-                        val more = res.meta?.hasMore ?: (next != null)
-                        cursor = if (more) next else null
+                        cursor = when (val c = SyncMerge.continuation(res.meta?.hasMore, res.meta?.nextCursor)) {
+                            is SyncContinuation.Next -> c.cursor
+                            SyncContinuation.Done -> null
+                            // Never apply a partial run nor advance the watermark past it.
+                            SyncContinuation.Broken ->
+                                return ApiResult.Failure(ErrorCodes.SERVER_ERROR, "Catalogue sync page without a cursor", 0)
+                        }
                     }
                     is ApiResult.Failure -> {
-                        return if (res.httpStatus == 404 && pages.isEmpty()) legacySnapshot() else res
+                        return if (res.httpStatus == 404 && pages.isEmpty()) legacySnapshot(generation) else res
                     }
                 }
             } while (cursor != null && ++guard < MAX_SYNC_PAGES)
@@ -130,13 +153,18 @@ class CatalogRepository(
             }
 
             val result = SyncMerge.merge(pages, requestedFull = requestFull)
-            if (result.fullResync) {
-                catalogDao.replaceAll(result.upserts.map { it.toCached() })
-                syncMeta.put(SyncMeta(SyncMeta.CATALOG_LAST_FULL_AT, nowMs().toString()))
-            } else {
-                catalogDao.applyDelta(result.upserts.map { it.toCached() }, result.deleteIds)
+            val rows = result.upserts.map { it.toCached() }
+            writeMutex.withLock {
+                // The instance was forgotten (cache cleared) while this run was fetching.
+                if (generation != cacheGeneration) return ApiResult.Success(Unit)
+                if (result.fullResync) {
+                    catalogDao.replaceAll(rows)
+                    syncMeta.put(SyncMeta(SyncMeta.CATALOG_LAST_FULL_AT, nowMs().toString()))
+                } else {
+                    catalogDao.applyDelta(rows, result.deleteIds)
+                }
+                result.serverTime?.let { syncMeta.put(SyncMeta(SyncMeta.CATALOG_SERVER_TIME, it)) }
             }
-            result.serverTime?.let { syncMeta.put(SyncMeta(SyncMeta.CATALOG_SERVER_TIME, it)) }
             // Book pages served from memory may now be stale.
             result.upserts.forEach { detailCache.remove(it.id) }
             result.deleteIds.forEach { detailCache.remove(it) }
@@ -147,10 +175,12 @@ class CatalogRepository(
     }
 
     /** Servers before Mobile API 1.6.0: cache the first unfiltered page, as 1.6.x did. */
-    private suspend fun legacySnapshot(): ApiResult<Unit> =
+    private suspend fun legacySnapshot(generation: Int): ApiResult<Unit> =
         when (val res = search(SearchFilters(), limit = HOME_SHELF_SIZE)) {
             is ApiResult.Success -> {
-                catalogDao.replaceAll(res.data.items.map { it.toCached() })
+                writeMutex.withLock {
+                    if (generation == cacheGeneration) catalogDao.replaceAll(res.data.items.map { it.toCached() })
+                }
                 ApiResult.Success(Unit, res.meta)
             }
             is ApiResult.Failure -> res
@@ -168,9 +198,9 @@ class CatalogRepository(
         offset: Int,
         limit: Int = 20,
     ): List<BookSummary> = catalogDao.search(
-        q = filters.query?.trim().orEmpty(),
-        author = filters.author?.trim().orEmpty(),
-        publisher = filters.publisher?.trim().orEmpty(),
+        q = SearchText.queryPattern(filters.query),
+        author = SearchText.escapeLike(filters.author?.trim().orEmpty()),
+        publisher = SearchText.escapeLike(filters.publisher?.trim().orEmpty()),
         language = filters.language?.trim().orEmpty(),
         genre = genreName?.trim().orEmpty(),
         availableOnly = filters.availableOnly == true,

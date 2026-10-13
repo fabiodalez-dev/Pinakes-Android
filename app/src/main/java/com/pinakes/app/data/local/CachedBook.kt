@@ -18,7 +18,8 @@ import com.pinakes.app.data.model.SyncBook
  * catalogue, kept current by the delta sync (`GET /catalog/sync`), plus the fields an offline
  * detail page needs. Ordering is `updatedAt DESC, id DESC` (newest first) or by title.
  * [updatedAt] is the server's `Y-m-d H:i:s` string, which sorts chronologically as text;
- * rows cached from a plain search page (older servers) keep it empty.
+ * rows cached from a plain search page (older servers) keep it empty. [searchKey] (schema v3)
+ * makes the offline search accent- and case-insensitive for every script.
  */
 @Entity(
     tableName = "cached_books",
@@ -46,6 +47,8 @@ data class CachedBook(
     val loanableNow: Boolean = false,
     val isWanted: Boolean = false,
     val updatedAt: String = "",
+    /** Folded text the offline search matches against (see [SearchText]); derived, never sent. */
+    val searchKey: String = SearchText.key(title, subtitle, author, publisher, isbn13, isbn10, ean),
 )
 
 fun CachedBook.toSummary(): BookSummary = BookSummary(

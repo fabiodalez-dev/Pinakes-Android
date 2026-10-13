@@ -3,6 +3,7 @@ package com.pinakes.app.staff
 import com.pinakes.app.data.model.SyncBook
 import com.pinakes.app.data.model.SyncItem
 import com.pinakes.app.data.model.SyncPage
+import com.pinakes.app.data.sync.SyncContinuation
 import com.pinakes.app.data.sync.SyncMerge
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -84,5 +85,21 @@ class SyncMergeTest {
 
     @Test fun clockMovedBackwardsForcesFull() {
         assertTrue(SyncMerge.shouldForceFull("t", lastFullAtMs = 10 * day, nowMs = 9 * day))
+    }
+
+    @Test fun continuationFollowsTheCursor() {
+        assertEquals(SyncContinuation.Next("abc"), SyncMerge.continuation(hasMore = true, nextCursor = "abc"))
+        assertEquals(SyncContinuation.Done, SyncMerge.continuation(hasMore = false, nextCursor = "abc"))
+        assertEquals(SyncContinuation.Done, SyncMerge.continuation(hasMore = false, nextCursor = null))
+    }
+
+    @Test fun hasMoreWithoutCursorIsBroken() {
+        assertEquals(SyncContinuation.Broken, SyncMerge.continuation(hasMore = true, nextCursor = null))
+        assertEquals(SyncContinuation.Broken, SyncMerge.continuation(hasMore = true, nextCursor = "  "))
+    }
+
+    @Test fun serversWithoutHasMorePageByCursor() {
+        assertEquals(SyncContinuation.Next("c"), SyncMerge.continuation(hasMore = null, nextCursor = "c"))
+        assertEquals(SyncContinuation.Done, SyncMerge.continuation(hasMore = null, nextCursor = ""))
     }
 }

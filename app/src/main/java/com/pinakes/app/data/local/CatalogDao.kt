@@ -45,18 +45,17 @@ interface CatalogDao {
     }
 
     /**
-     * Offline catalogue search. [q] matches title, subtitle, author, publisher and the
-     * identifiers (LIKE is case-insensitive for ASCII in SQLite); empty strings disable a
-     * filter. [sort] is `title_asc`, `title_desc` or `newest`.
+     * Offline catalogue search. [q] is a [SearchText.queryPattern] (folded, LIKE-escaped)
+     * matched against the folded [CachedBook.searchKey]; [author] and [publisher] are
+     * LIKE-escaped substrings; empty strings disable a filter. [sort] is `title_asc`,
+     * `title_desc` or `newest`.
      */
     @Query(
         """
         SELECT * FROM cached_books
-        WHERE (:q = '' OR title LIKE '%' || :q || '%' OR subtitle LIKE '%' || :q || '%'
-               OR author LIKE '%' || :q || '%' OR publisher LIKE '%' || :q || '%'
-               OR isbn13 LIKE '%' || :q || '%' OR isbn10 LIKE '%' || :q || '%' OR ean LIKE '%' || :q || '%')
-          AND (:author = '' OR author LIKE '%' || :author || '%')
-          AND (:publisher = '' OR publisher LIKE '%' || :publisher || '%')
+        WHERE (:q = '' OR searchKey LIKE '%' || :q || '%' ESCAPE '\')
+          AND (:author = '' OR author LIKE '%' || :author || '%' ESCAPE '\')
+          AND (:publisher = '' OR publisher LIKE '%' || :publisher || '%' ESCAPE '\')
           AND (:language = '' OR language = :language)
           AND (:genre = '' OR genre = :genre)
           AND (:availableOnly = 0 OR loanableNow = 1 OR copiesAvailable > 0)
