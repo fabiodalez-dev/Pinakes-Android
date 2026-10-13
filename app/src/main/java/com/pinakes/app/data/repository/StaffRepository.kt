@@ -137,9 +137,12 @@ class StaffRepository(
         raw?.let { runCatching { network.json.decodeFromJsonElement<ExistingBook>(it) }.getOrNull() }?.takeIf { it.id > 0 }
 }
 
-/** 403 on a staff route: either the role guard or app access was switched off. */
-fun ApiResult.Failure.isForbidden(): Boolean =
-    code == ErrorCodes.FORBIDDEN || (httpStatus == 403 && code != ErrorCodes.APP_ACCESS_DISABLED)
+/**
+ * The server's role guard refused the call: 403 with `error.code == "forbidden"` in the API's
+ * own envelope. A bare 403 (reverse proxy, WAF, CDN) or `app_access_disabled` is not a role
+ * change, so it must not drop the stored role nor close the screen.
+ */
+fun ApiResult.Failure.isForbidden(): Boolean = fromEnvelope && code == ErrorCodes.FORBIDDEN
 
 /** 409 `duplicate` (identifier or name already used). */
 fun ApiResult.Failure.isDuplicate(): Boolean =

@@ -25,6 +25,12 @@ sealed interface ApiResult<out T> {
         val retryAfterSeconds: Long? = null,
         /** Envelope meta of the error body (e.g. `existing` on a 409 duplicate), when present. */
         val meta: Meta? = null,
+        /**
+         * True when [code] came from the server's own error envelope, false when it was derived
+         * from the HTTP status (a proxy/WAF page, an empty body). Decisions such as "the role
+         * was revoked" must only trust the former.
+         */
+        val fromEnvelope: Boolean = false,
     ) : ApiResult<Nothing>
 
     val isSuccess: Boolean get() = this is Success
@@ -120,7 +126,7 @@ suspend fun <T> apiResponse(block: suspend () -> Response<Envelope<T>>): Pair<Ap
 }
 
 private fun ApiError.toFailure(httpStatus: Int): ApiResult.Failure =
-    ApiResult.Failure(code = code, message = message, httpStatus = httpStatus)
+    ApiResult.Failure(code = code, message = message, httpStatus = httpStatus, fromEnvelope = true)
 
 internal fun HttpException.toFailure(): ApiResult.Failure {
     val status = code()
@@ -138,7 +144,13 @@ internal fun parseErrorBody(body: String?, status: Int): ApiResult.Failure {
     val parsedError: ApiError? = envelope?.error
     val code = parsedError?.code ?: codeForStatus(status)
     val message = parsedError?.message?.takeIf { it.isNotBlank() } ?: defaultMessageForStatus(status)
-    return ApiResult.Failure(code = code, message = message, httpStatus = status, meta = envelope?.meta)
+    return ApiResult.Failure(
+        code = code,
+        message = message,
+        httpStatus = status,
+        meta = envelope?.meta,
+        fromEnvelope = parsedError != null,
+    )
 }
 
 private fun codeForStatus(status: Int): String = when (status) {

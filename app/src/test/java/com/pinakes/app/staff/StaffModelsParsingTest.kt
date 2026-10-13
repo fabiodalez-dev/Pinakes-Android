@@ -10,6 +10,7 @@ import com.pinakes.app.data.model.StaffLookups
 import com.pinakes.app.data.model.SyncPage
 import com.pinakes.app.data.model.flatten
 import com.pinakes.app.data.network.parseErrorBody
+import com.pinakes.app.data.repository.isForbidden
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -122,5 +123,17 @@ class StaffModelsParsingTest {
     @Test fun conflictReasonIsKept() {
         val f = parseErrorBody("""{"meta":{"reason":"active_circulation"},"error":{"code":"conflict","message":"x"}}""", 409)
         assertEquals("active_circulation", f.meta?.reason)
+    }
+
+    @Test fun onlyTheApiForbiddenCodeRevokesTheRole() {
+        val api = parseErrorBody("""{"data":null,"error":{"code":"forbidden","message":"Staff only"}}""", 403)
+        assertTrue(api.isForbidden())
+        // A WAF/proxy page: the status maps to "forbidden" but did not come from the API.
+        val waf = parseErrorBody("<html><body>Request blocked</body></html>", 403)
+        assertEquals("forbidden", waf.code)
+        assertFalse(waf.fromEnvelope)
+        assertFalse(waf.isForbidden())
+        assertFalse(parseErrorBody("", 403).isForbidden())
+        assertFalse(parseErrorBody("""{"error":{"code":"app_access_disabled","message":"x"}}""", 403).isForbidden())
     }
 }
