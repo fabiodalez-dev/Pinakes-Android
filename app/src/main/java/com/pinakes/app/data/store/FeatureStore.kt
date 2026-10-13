@@ -48,6 +48,12 @@ data class InstanceFeatures(
     val periodicalsAvailable: Boolean = false,
     val archivesAvailable: Boolean = false,
     val desiderataAvailable: Boolean = false,
+    /** Staff content management (Mobile API 1.6.0 `staff_catalog`); hidden until advertised. */
+    val staffCatalogAvailable: Boolean = false,
+    /** Delta catalogue sync (`catalog_sync`); without it the app keeps the first-page snapshot. */
+    val catalogSyncAvailable: Boolean = false,
+    /** Personal loans ICS feed (`calendar_feed`, false in catalogue mode). */
+    val calendarFeedAvailable: Boolean = false,
 ) {
     /** Library tab (loans + reservations) is shown only when at least one of them is enabled. */
     val showLibrary: Boolean get() = loans || reservations
@@ -106,6 +112,9 @@ class FeatureStore(context: Context) {
             periodicalsAvailable = prefs.getBoolean(KEY_PERIODICALS, false),
             archivesAvailable = f.archives && health.appAccessEnabled,
             desiderataAvailable = f.desiderata && health.appAccessEnabled,
+            staffCatalogAvailable = f.staffCatalog && health.appAccessEnabled,
+            catalogSyncAvailable = f.catalogSync && health.appAccessEnabled,
+            calendarFeedAvailable = f.calendarFeed && health.appAccessEnabled && !health.catalogueMode,
         )
         prefs.edit()
             .putBoolean(KEY_KNOWN, true)
@@ -121,6 +130,9 @@ class FeatureStore(context: Context) {
             .putBoolean(KEY_REGISTRATION_ENABLED, value.registrationEnabled)
             .putBoolean("archives", value.archivesAvailable)
             .putBoolean("desiderata", value.desiderataAvailable)
+            .putBoolean(KEY_STAFF_CATALOG, value.staffCatalogAvailable)
+            .putBoolean(KEY_CATALOG_SYNC, value.catalogSyncAvailable)
+            .putBoolean(KEY_CALENDAR_FEED, value.calendarFeedAvailable)
             .apply()
         _features.value = value
     }
@@ -163,6 +175,9 @@ class FeatureStore(context: Context) {
             periodicalsAvailable = prefs.getBoolean(KEY_PERIODICALS, false),
             archivesAvailable = prefs.getBoolean("archives", false),
             desiderataAvailable = prefs.getBoolean("desiderata", false),
+            staffCatalogAvailable = prefs.getBoolean(KEY_STAFF_CATALOG, false),
+            catalogSyncAvailable = prefs.getBoolean(KEY_CATALOG_SYNC, false),
+            calendarFeedAvailable = prefs.getBoolean(KEY_CALENDAR_FEED, false),
         )
     }
 
@@ -181,5 +196,8 @@ class FeatureStore(context: Context) {
         private const val KEY_REGISTRATION_ENABLED = "registration_enabled"
         private const val KEY_BOOK_CLUB = "f_book_club"
         private const val KEY_PERIODICALS = "f_periodicals"
+        private const val KEY_STAFF_CATALOG = "f_staff_catalog"
+        private const val KEY_CATALOG_SYNC = "f_catalog_sync"
+        private const val KEY_CALENDAR_FEED = "f_calendar_feed"
     }
 }

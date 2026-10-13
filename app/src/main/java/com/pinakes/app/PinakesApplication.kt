@@ -71,7 +71,9 @@ class PinakesApplication : Application(), ImageLoaderFactory {
                     this@PinakesApplication, CatalogSyncWorker.Deps::class.java,
                 )
                 if (!deps.session().isLoggedIn()) return
-                appScope.launch { deps.catalogRepository().refreshCatalog() }
+                appScope.launch { deps.catalogRepository().syncCatalog() }
+                // Pick up a role change made on the server (staff area visibility).
+                appScope.launch { deps.authRepository().refreshSession() }
             }
         })
 

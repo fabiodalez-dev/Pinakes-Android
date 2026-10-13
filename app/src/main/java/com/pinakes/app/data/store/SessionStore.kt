@@ -34,6 +34,16 @@ class SessionStore(context: Context) {
     private val _authState = MutableStateFlow(readAuthState())
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
+    private val _role = MutableStateFlow(prefs.getString(KEY_ROLE, null))
+
+    /**
+     * The signed-in user's `tipo_utente` (utente | premium | staff | admin), or null when it
+     * is unknown or the user is signed out. Refreshed from `/auth/login` and `GET /me`; the
+     * server stays authoritative (every staff route re-checks the role), so this only decides
+     * which entry points the app shows.
+     */
+    val role: StateFlow<String?> = _role.asStateFlow()
+
     /** Instance base URL, normalized to end with `/api/v1/` (or null before onboarding). */
     val instanceUrl: String? get() = prefs.getString(KEY_INSTANCE_URL, null)
 
@@ -79,8 +89,19 @@ class SessionStore(context: Context) {
             .putString(KEY_LIBRARY_NAME, libraryName)
             .putBoolean(KEY_ALLOW_INSECURE, allowInsecure)
             .remove(KEY_TOKEN)
+            .remove(KEY_ROLE)
             .apply()
+        _role.value = null
         _authState.value = readAuthState()
+    }
+
+    /** Persist the user's role; null forgets it (signed out, or revoked server-side). */
+    fun saveRole(role: String?) {
+        val normalized = role?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+        val editor = prefs.edit()
+        if (normalized == null) editor.remove(KEY_ROLE) else editor.putString(KEY_ROLE, normalized)
+        editor.apply()
+        _role.value = normalized
     }
 
     fun saveToken(token: String) {
@@ -90,7 +111,8 @@ class SessionStore(context: Context) {
 
     /** Clear only the token (logout); keep the instance so the user lands on the login screen. */
     fun clearToken() {
-        prefs.edit().remove(KEY_TOKEN).apply()
+        prefs.edit().remove(KEY_TOKEN).remove(KEY_ROLE).apply()
+        _role.value = null
         _authState.value = readAuthState()
     }
 
@@ -99,6 +121,7 @@ class SessionStore(context: Context) {
         val savedDevice = deviceId
         prefs.edit().clear().putString(KEY_DEVICE_ID, savedDevice).apply()
         pendingAllowInsecureHttp = false
+        _role.value = null
         _authState.value = readAuthState()
     }
 
@@ -116,6 +139,7 @@ class SessionStore(context: Context) {
         private const val KEY_LIBRARY_NAME = "library_name"
         private const val KEY_ALLOW_INSECURE = "allow_insecure_http"
         private const val KEY_DEVICE_ID = "device_id"
+        private const val KEY_ROLE = "user_role"
     }
 }
 

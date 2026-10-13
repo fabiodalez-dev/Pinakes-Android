@@ -21,6 +21,14 @@ data class Meta(
     // the list was cut short. Nullable with a null default on purpose: servers older than
     // the field simply omit it, and absent must read as "not truncated", never as "true".
     val truncated: Boolean? = null,
+    // Keyset pagination extras (staff list, catalogue sync). Absent on older endpoints.
+    val count: Int? = null,
+    val limit: Int? = null,
+    @SerialName("has_more") val hasMore: Boolean? = null,
+    // Error context: 409 `duplicate` carries the existing record, 409 `conflict` a reason
+    // (e.g. `active_circulation`). Kept as raw JSON so each caller decodes its own shape.
+    val existing: kotlinx.serialization.json.JsonElement? = null,
+    val reason: String? = null,
 )
 
 @Serializable
@@ -61,6 +69,11 @@ data class HealthFeatures(
     val reviews: Boolean = false,
     val archives: Boolean = false,
     val desiderata: Boolean = false,
+    // Mobile API 1.6.0: staff content management, delta catalogue sync and the personal
+    // loans calendar feed. Older servers omit them, so they default to off.
+    @SerialName("staff_catalog") val staffCatalog: Boolean = false,
+    @SerialName("catalog_sync") val catalogSync: Boolean = false,
+    @SerialName("calendar_feed") val calendarFeed: Boolean = false,
 )
 
 // ---------- Auth ----------

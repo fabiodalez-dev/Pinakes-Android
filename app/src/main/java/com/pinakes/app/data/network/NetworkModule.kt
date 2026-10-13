@@ -97,6 +97,8 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
     private var cachedPeriodicalsApi: PeriodicalsApi? = null
     @Volatile
     private var cachedCollectionsApi: CollectionsApi? = null
+    @Volatile
+    private var cachedStaffApi: StaffApi? = null
 
     /** Shared Retrofit for a given base URL, rebuilt only when the instance URL changes. */
     @Synchronized
@@ -119,6 +121,7 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
         cachedBookClubApi = null
         cachedPeriodicalsApi = null
         cachedCollectionsApi = null
+        cachedStaffApi = null
         return retrofit
     }
 
@@ -159,6 +162,13 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
         return cachedCollectionsApi ?: retrofit.create(CollectionsApi::class.java).also { cachedCollectionsApi = it }
     }
 
+    /** Staff content management (`/staff/...`), same base URL and bearer token as [api]. */
+    @Synchronized
+    fun staffApi(baseUrl: String? = null): StaffApi {
+        val retrofit = retrofit(baseUrl)
+        return cachedStaffApi ?: retrofit.create(StaffApi::class.java).also { cachedStaffApi = it }
+    }
+
     /** Drop the cached Retrofit so the next [api] call rebuilds against a new instance URL. */
     @Synchronized
     fun invalidate() {
@@ -168,6 +178,7 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
         cachedBookClubApi = null
         cachedPeriodicalsApi = null
         cachedCollectionsApi = null
+        cachedStaffApi = null
     }
 
     /**

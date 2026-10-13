@@ -1,12 +1,18 @@
 package com.pinakes.app.ui.common
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.pinakes.app.data.staff.StaffAccess
 import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.store.SessionStore
 import com.pinakes.app.data.store.ThemeStore
 import com.pinakes.app.ui.theme.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 
 /**
  * App-wide reactive state that several Composables need regardless of the current screen:
@@ -28,6 +34,18 @@ class AppViewModel @Inject constructor(
     // Includes bookClubAvailable, the Book Club plugin gate (from its own health probe).
     val features = featureStore.features
     val themeMode = themeStore.mode
+
+    /**
+     * Staff area visibility: an `admin`/`staff` role AND a server that advertises
+     * `staff_catalog`. The server re-checks the role on every staff call.
+     */
+    val isStaff: StateFlow<Boolean> = combine(session.role, featureStore.features) { role, f ->
+        StaffAccess.canManageCatalog(role, f.staffCatalogAvailable)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        StaffAccess.canManageCatalog(session.role.value, featureStore.features.value.staffCatalogAvailable),
+    )
 
     fun setThemeMode(mode: ThemeMode) = themeStore.setMode(mode)
 }
