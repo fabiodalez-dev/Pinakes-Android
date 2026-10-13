@@ -97,6 +97,13 @@ data class StaffBookEditUiState(
     val isEdit: Boolean get() = bookId > 0
     val errors: Set<FormField> get() = if (showErrors) form.validate(isEdit) else emptySet()
     val levels get() = shelves.firstOrNull { it.id == form.shelfId }?.levels.orEmpty()
+
+    /**
+     * Copies "Add copy" on the duplicate dialog adds to the existing record: the copies the
+     * user asked for when creating, but exactly one when editing (the form's count is then the
+     * edited record's own total, which must never be added to another book).
+     */
+    val duplicateAddQuantity: Int get() = if (isEdit) 1 else form.copies.coerceIn(StaffBookForm.COPIES_RANGE)
 }
 
 /**
@@ -387,13 +394,13 @@ class StaffBookEditViewModel @Inject constructor(
         _state.update { it.copy(duplicate = null, event = StaffEditEvent.OpenExisting(id)) }
     }
 
-    /** "Add copy" on the duplicate dialog: one more copy of the existing record. */
+    /** "Add copy" on the duplicate dialog: [StaffBookEditUiState.duplicateAddQuantity] copies of the existing record. */
     fun addCopyToExisting() {
         val existing = _state.value.duplicate ?: return
         if (existing.id <= 0) return
         _state.update { it.copy(saving = true) }
         viewModelScope.launch {
-            when (val res = staff.addCopies(existing.id, _state.value.form.copies.coerceIn(1, 100))) {
+            when (val res = staff.addCopies(existing.id, _state.value.duplicateAddQuantity)) {
                 is ApiResult.Success -> _state.update {
                     it.copy(saving = false, duplicate = null, event = StaffEditEvent.Saved(existing.id, created = false))
                 }

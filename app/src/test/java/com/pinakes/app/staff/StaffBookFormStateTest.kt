@@ -198,4 +198,12 @@ class StaffBookFormStateTest {
         assertTrue(form.canSave(isEdit = true))
         assertEquals(JsonObject(emptyMap()), StaffBookWrite.update(noLevel, form))
     }
+
+    @Test fun duplicateAddCopyAddsOneWhenEditingAndTheRequestedCopiesWhenCreating() {
+        val creating = com.pinakes.app.ui.screens.staff.StaffBookEditUiState(bookId = 0, form = valid.copy(copies = 3))
+        assertEquals(3, creating.duplicateAddQuantity)
+        // Editing a record with 5 copies whose new ISBN collides: never add 5 copies to the other book.
+        val editing = com.pinakes.app.ui.screens.staff.StaffBookEditUiState(bookId = 10, form = valid.copy(copies = 5))
+        assertEquals(1, editing.duplicateAddQuantity)
+    }
 }
