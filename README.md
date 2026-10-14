@@ -54,6 +54,61 @@ Login, home, catalog, book detail and calendar captures use the 2026 interface o
   </tr>
 </table>
 
+### Staff area
+
+Admin and staff accounts get a native staff area when the instance runs Mobile API 1.7.0: cataloguing with ISBN scanning, the whole circulation desk and the content of the Desiderata, Archives, Periodicals, Book Club and FRBR plugins. Captured on Android 15 at 360 dp against a local instance with demo data.
+
+#### Circulation desk
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/staff/circulation-desk.png" width="200" alt="Circulation desk with counters"><br><sub>Circulation desk</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/loans-overdue.png" width="200" alt="Overdue loans list"><br><sub>Loans by status</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/loan-detail-overdue.png" width="200" alt="Overdue loan with return, edit, reminder and receipt actions"><br><sub>Loan actions</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/loan-detail-request.png" width="200" alt="Pending request with approve and reject"><br><sub>Approve a request</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/staff/new-loan.png" width="200" alt="New loan form with borrower and book search"><br><sub>New loan</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/reservations.png" width="200" alt="Reservations grouped by title with queue position"><br><sub>Reservations queue</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/copy-scanner.png" width="200" alt="Copy label scanner"><br><sub>Scan a copy label</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/staff-hub.png" width="200" alt="Staff area hub"><br><sub>Staff area</sub></td>
+  </tr>
+</table>
+
+#### Cataloguing
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/staff/isbn-preview.png" width="200" alt="ISBN lookup preview from the server scrapers"><br><sub>Scan an ISBN</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/staff-books.png" width="200" alt="Staff book list"><br><sub>Books</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/book-edit.png" width="200" alt="Book editor with cover sources"><br><sub>Edit a record</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/book-copies.png" width="200" alt="Copies, location and labels in the book editor"><br><sub>Copies and labels</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/staff/author-detail.png" width="200" alt="Author page with books and record details"><br><sub>Author page</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/staff-authors.png" width="200" alt="Author search"><br><sub>Authors</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/staff-genres.png" width="200" alt="Genre tree"><br><sub>Genres</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/staff-series.png" width="200" alt="Series search"><br><sub>Series</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/staff/series-detail.png" width="200" alt="Series detail with its volumes"><br><sub>Series detail</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/staff-merges.png" width="200" alt="Merge duplicate authors, publishers and genres"><br><sub>Merge duplicates</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/staff-imports.png" width="200" alt="CSV and LibraryThing import"><br><sub>Import a file</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/staff-covers.png" width="200" alt="Missing covers and enrichment"><br><sub>Covers and enrichment</sub></td>
+  </tr>
+</table>
+
+#### Plugin content
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/staff/staff-desiderata.png" width="200" alt="Donation offers by status"><br><sub>Donation offers</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/staff-archives.png" width="200" alt="Archival units with publishing filter"><br><sub>Archives</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/staff-periodicals.png" width="200" alt="Periodicals desk with issue barcode lookup"><br><sub>Periodicals desk</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/staff-hub-2.png" width="200" alt="Staff hub plugin section"><br><sub>Staff tools</sub></td>
+  </tr>
+</table>
+
 ## Features
 
 | Area | What you get |
@@ -73,6 +128,10 @@ Login, home, catalog, book detail and calendar captures use the 2026 interface o
 | **Profile** | Edit profile, change password, device list, theme switcher, language switcher, logout |
 | **Notifications** | Loan due/overdue, reservation ready, book available |
 | **Themes** | 2026 warm neutrals, Geist + Fraunces, complete 3D covers and paired theme colours. Light by default; pick light/dark/system in Profile |
+| **Staff area** | For admin and staff accounts: cataloguing (ISBN/EAN scanner with batch mode, manual records, copies with their own codes, series, merge duplicates, label PDFs, CSV and LibraryThing import, covers and enrichment, authors, publishers, genres, shelves) and plugin content (donation offers, archives, periodicals desk, book clubs, FRBR works, digital files) |
+| **Circulation desk** | Counters, loans by status, new loan with borrower search and copy scanning, approve/reject, pickup, return with copy outcome, renew, bulk extend, reminders, receipt PDF, reservations queue. Hidden while offline |
+| **Offline catalogue** | Full catalogue mirrored on the device with delta sync; search, book pages, My Library and Wishlist work offline, while loan and reservation actions stay hidden until the connection is back |
+| **Loans in your calendar** | A private, revocable calendar link with your loans (start to due date) and reservations, for Google Calendar, Apple Calendar, Outlook and others |
 | **Languages** | Italian, English, French, German, following the device locale or an in-app choice |
 
 ## Tech stack
