@@ -34,6 +34,10 @@ class IssueScanResolverTest {
         val r = IssueScanResolver(holdMs = 800)
         assertNull(r.offer(masthead, 0))
         assertNull(r.offer(masthead, 40))
+        // The magazine stays in view: more bare frames arrive during the hold.
+        assertNull(r.offer(masthead, 80))
+        assertNull(r.offer(masthead, 120))
+        assertTrue(r.holding)
         assertNull(r.flush(500))
         assertEquals(masthead, r.flush(840))
         assertFalse(r.holding)

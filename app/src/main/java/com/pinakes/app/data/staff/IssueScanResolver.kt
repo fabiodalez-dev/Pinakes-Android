@@ -32,7 +32,9 @@ class IssueScanResolver(
     fun offer(code: String, nowMs: Long): String? {
         if (debouncer.paused) return null
         val suppressed = debouncer.suppressedAt(nowMs)
-        if (suppressed != null && suppressed.startsWith(code)) {
+        // The held masthead is itself the debouncer's last accepted code: its own next frames must
+        // keep the hold alive (the debouncer already ignores them), not cancel it.
+        if (suppressed != null && suppressed != pending && suppressed.startsWith(code)) {
             // The issue just handled (or its bare masthead) is still under the camera.
             pending = null
             return null
