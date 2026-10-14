@@ -47,6 +47,23 @@ class IssueScanResolverTest {
         assertFalse(r.holding)
     }
 
+    @Test fun theIssueJustHandledIsNotLookedUpAgainAfterResume() {
+        val r = IssueScanResolver()
+        r.offer(issue, 0)
+        assertEquals(issue, r.offer(issue, 40))
+        // Received or dismissed: the desk resumes with the magazine still under the camera.
+        r.debouncer.resume(1_000)
+        assertNull(r.offer(masthead, 1_040))
+        assertNull(r.offer(masthead, 1_080))
+        assertFalse(r.holding)
+        assertNull(r.offer(issue, 1_120))
+        assertNull(r.offer(issue, 1_160))
+        assertNull(r.flush(2_500))
+        // Once the window has passed the same issue can be scanned again.
+        assertNull(r.offer(issue, 4_100))
+        assertEquals(issue, r.offer(issue, 4_140))
+    }
+
     @Test fun nothingIsAcceptedWhilePaused() {
         val r = IssueScanResolver()
         r.debouncer.pause()

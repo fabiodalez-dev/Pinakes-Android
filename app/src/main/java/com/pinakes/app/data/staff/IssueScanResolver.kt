@@ -11,6 +11,8 @@ package com.pinakes.app.data.staff
  *   the meantime is taken at once. A masthead with no add-on at all is still looked up, by
  *   [flush] once the hold has passed.
  * - Every other code (an ISSN-less EAN, a code with its add-on) behaves as the debouncer says.
+ * - The issue the debouncer still suppresses (just received, claimed or dismissed, with the
+ *   magazine still under the camera) is not looked up again by either path, nor its masthead.
  *
  * Pure and clock-injected, like [ScanDebouncer]. Not thread-safe: the caller is on one thread.
  */
@@ -29,6 +31,12 @@ class IssueScanResolver(
     /** Feed one camera read (digits only); returns the code to look up now, else null. */
     fun offer(code: String, nowMs: Long): String? {
         if (debouncer.paused) return null
+        val suppressed = debouncer.suppressedAt(nowMs)
+        if (suppressed != null && suppressed.startsWith(code)) {
+            // The issue just handled (or its bare masthead) is still under the camera.
+            pending = null
+            return null
+        }
         if (code.length > MASTHEAD_LENGTH) {
             lastWithAddOn = code
             lastWithAddOnAt = nowMs

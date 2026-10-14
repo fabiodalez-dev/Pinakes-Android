@@ -48,6 +48,9 @@ class ScanDebouncer(
         return code
     }
 
+    /** The last accepted code while it is still inside its suppression window, else null. */
+    fun suppressedAt(nowMs: Long): String? = lastAccepted?.takeIf { nowMs - lastAcceptedAt < suppressMs }
+
     fun pause() {
         paused = true
         candidate = null
