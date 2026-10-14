@@ -24,7 +24,9 @@ has no shelf with a level), phase 2 (each skipped while its /health staff_* flag
 loan created by API with an Idempotency-Key and its replay, then returned in the app by
 typing the copy code; a copy with an explicit code from the book editor; a series created in
 the app; a two-row CSV import job followed to completion; a free Desiderata offer received into a picked record; an
-unpublished archive unit created and checked absent from the public list; then airplane-mode
+unpublished archive unit created and checked absent from the public list; Tier 2: an unknown
+code looked up at the periodicals desk (read-only), a book club and an FRBR work created in the
+app; then airplane-mode
 offline search and detail, calendar link + feed.
 Cleanup (only what this run created): created books deleted, the calendar link revoked when
 it did not exist before, device tokens issued during the run revoked, app data cleared,
@@ -170,6 +172,10 @@ CREATED = []          # book ids to delete
 CREATED_SERIES = []   # series ids to delete
 CREATED_ARCHIVES = [] # archive unit ids to delete
 CREATED_OFFERS = []   # desiderata offer ids to delete
+CREATED_CLUBS = []    # book club ids to delete
+CREATED_WORKS = []    # FRBR work ids to delete
+CLUB_NAME = f"E2E club {RUN}"
+WORK_TITLE = f"E2E work {RUN}"
 CIRC_TITLE = f"E2E circulation {RUN}"
 SERIES_NAME = f"E2E series {RUN}"
 IMPORT_TITLES = (f"E2E import A {RUN}", f"E2E import B {RUN}")
@@ -653,6 +659,71 @@ def archive_create_delete():
     return f"archive #{found[0]['id']}"
 
 
+@step("periodicals desk: an unknown code is looked up, nothing is changed")
+def periodicals_desk():
+    if not staff_flag("staff_periodicals"):
+        raise SkipStep("staff_periodicals is off on this instance")
+    code = "0000000000017"
+    _, expected, _ = API.call("GET", "periodicals/staff/scan-lookup?code=" + code)
+    assert (expected.get("data") or {}).get("match") == "none", f"code {code} unexpectedly matches: {expected.get('data')}"
+    back_to_hub()
+    ui.scroll_to(S["staff_periodicals"])
+    ui.tap(S["staff_periodicals"], exact=True)
+    deny_camera_prompt()
+    ui.tap(S["staff_periodicals_code"])
+    ui.type_text(code)
+    ui.hide_keyboard()
+    ui.tap(S["staff_scan_lookup"])
+    ui.wait(S["staff_periodicals_no_match"], 60)
+    ui.back()
+    back_to_hub()
+    return f"no match for {code}"
+
+
+@step("book clubs: create a club in the app")
+def club_create():
+    if not staff_flag("staff_bookclub"):
+        raise SkipStep("staff_bookclub is off on this instance")
+    back_to_hub()
+    ui.scroll_to(S["staff_clubs"])
+    ui.tap(S["staff_clubs"], exact=True)
+    ui.tap(S["staff_club_new"])
+    ui.tap(S["staff_field_name"])
+    ui.type_text(CLUB_NAME)
+    ui.hide_keyboard()
+    ui.scroll_to(S["action_save"], exact=True)
+    ui.tap(S["action_save"], exact=True)
+    ui.wait(S["staff_club_workflow_edit"], 60)      # the new club's page
+    _, clubs, _ = API.call("GET", "bookclub/staff/clubs")
+    found = [c for c in clubs.get("data") or [] if c.get("name") == CLUB_NAME]
+    CREATED_CLUBS.extend(c["id"] for c in found)
+    assert len(found) == 1 and found[0].get("privacy") == "public", f"clubs named {CLUB_NAME!r}: {found}"
+    back_to_hub()
+    return f"club #{found[0]['id']}"
+
+
+@step("FRBR: create a work in the app")
+def work_create():
+    if not staff_flag("staff_frbr"):
+        raise SkipStep("staff_frbr is off on this instance")
+    back_to_hub()
+    ui.scroll_to(S["staff_works"])
+    ui.tap(S["staff_works"], exact=True)
+    ui.tap(S["staff_work_new"])
+    ui.tap(S["staff_work_uniform_title"])
+    ui.type_text(WORK_TITLE)
+    ui.hide_keyboard()
+    ui.scroll_to(S["action_save"], exact=True)    # the work form is taller than the sheet
+    ui.tap(S["action_save"], exact=True)
+    ui.wait(S["staff_work_attach"], 60)             # the new work's page
+    _, works, _ = API.call("GET", "staff/works?q=" + urllib.request.quote(WORK_TITLE))
+    found = [w for w in works.get("data") or [] if w.get("uniform_title") == WORK_TITLE]
+    CREATED_WORKS.extend(w["id"] for w in found)
+    assert len(found) == 1, f"works titled {WORK_TITLE!r}: {found}"
+    back_to_hub()
+    return f"work #{found[0]['id']}"
+
+
 # ---------------------------------------------------------------- database (optional)
 
 DB_FLAGS = ("show_sesso", "show_cod_fiscale")
@@ -789,6 +860,17 @@ def _cleanup_server():
         for archive_id in CREATED_ARCHIVES:
             status, _, _ = API.call("DELETE", f"staff/archives/{archive_id}")
             print(f"    delete archive unit #{archive_id}: HTTP {status}")
+        # Tier 2 records found by their run-unique names, in case a step failed half-way.
+        _, clubs, _ = API.call("GET", "bookclub/staff/clubs")
+        CREATED_CLUBS.extend(c["id"] for c in clubs.get("data") or [] if c.get("name") == CLUB_NAME and c["id"] not in CREATED_CLUBS)
+        _, works, _ = API.call("GET", "staff/works?q=" + urllib.request.quote(WORK_TITLE))
+        CREATED_WORKS.extend(w["id"] for w in works.get("data") or [] if w.get("uniform_title") == WORK_TITLE and w["id"] not in CREATED_WORKS)
+        for club_id in CREATED_CLUBS:
+            status, _, _ = API.call("DELETE", f"bookclub/staff/clubs/{club_id}")
+            print(f"    delete book club #{club_id}: HTTP {status}")
+        for work_id in CREATED_WORKS:
+            status, _, _ = API.call("DELETE", f"staff/works/{work_id}")
+            print(f"    delete work #{work_id}: HTTP {status}")
         for offer_id in CREATED_OFFERS:
             status, _, _ = API.call("DELETE", f"staff/desiderata/offers/{offer_id}")
             print(f"    delete offer #{offer_id}: HTTP {status}")
@@ -818,6 +900,7 @@ def main():
         if ok and onboarding_and_login():
             for fn in (staff_hub, scan_add, scan_duplicate, manual_record, edit_location,
                        circulation_return, copy_with_code, series_roundtrip, csv_import_two_rows, desiderata_receive, archive_create_delete,
+                       periodicals_desk, club_create, work_create,
                        offline, calendar, hidden_profile_fields):
                 fn()
     finally:
