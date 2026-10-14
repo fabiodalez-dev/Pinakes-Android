@@ -64,8 +64,11 @@ object Routes {
     const val ARG_ISBN = "isbn"
     const val STAFF_BOOK_NEW = "staff/books/new?isbn={isbn}"
     fun staffBookNew(isbn: String = ""): String = "staff/books/new?isbn=${Uri.encode(isbn)}"
-    const val STAFF_BOOK_EDIT = "staff/books/{bookId}/edit"
-    fun staffBookEdit(bookId: Int): String = "staff/books/$bookId/edit"
+    /** Optional: the copy whose editor the book page opens straight away (a copy just received). */
+    const val ARG_COPY_ID = "copyId"
+    const val STAFF_BOOK_EDIT = "staff/books/{bookId}/edit?copy={copyId}"
+    fun staffBookEdit(bookId: Int, copyId: Int? = null): String =
+        "staff/books/$bookId/edit" + (copyId?.takeIf { it > 0 }?.let { "?copy=$it" } ?: "")
     const val STAFF_AUTHORS = "staff/authors"
     const val STAFF_PUBLISHERS = "staff/publishers"
     const val ARG_RECORD_ID = "recordId"
