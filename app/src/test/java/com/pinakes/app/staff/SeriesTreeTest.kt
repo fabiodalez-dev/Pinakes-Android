@@ -4,6 +4,10 @@ import com.pinakes.app.data.model.StaffSeries
 import com.pinakes.app.data.staff.SeriesTree
 import com.pinakes.app.ui.screens.staff.content.LabelForm
 import com.pinakes.app.ui.screens.staff.content.SeriesForm
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -51,11 +55,15 @@ class SeriesTreeTest {
         assertFalse(SeriesForm(name = " ").valid)
         assertFalse(SeriesForm(name = "x".repeat(101)).valid)
         assertFalse(SeriesForm(name = "A", cycleOrder = "70000").valid)
-        val write = SeriesForm(name = " Discworld ", cycleOrder = "3", parentName = "", complete = true).toWrite()
-        assertEquals("Discworld", write.name)
-        assertEquals(3, write.cycleOrder)
-        assertEquals("", write.parentName)
-        assertEquals(true, write.complete)
+        val body = SeriesForm(name = " Discworld ", cycleOrder = "3", parentName = "", complete = true).toJson()
+        assertEquals("Discworld", body["name"]!!.jsonPrimitive.content)
+        assertEquals(3, body["cycle_order"]!!.jsonPrimitive.int)
+        assertEquals("", body["parent_name"]!!.jsonPrimitive.content)
+        assertEquals(true, body["complete"]!!.jsonPrimitive.boolean)
+        // A cleared order is sent as an explicit null, so the server clears it instead of keeping it.
+        val cleared = SeriesForm(name = "Discworld", cycleOrder = "").toJson()
+        assertTrue(cleared.containsKey("cycle_order"))
+        assertEquals(JsonNull, cleared["cycle_order"])
     }
 
     @Test fun labelFormRanges() {

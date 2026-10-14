@@ -63,6 +63,9 @@ class StaffFilesRepository(
         const val EXPORTS_DIR = "exports"
         const val MAX_AGE_MS = 24L * 60 * 60 * 1000
 
+        /** Delete every staff export under [cacheDir] (logout, instance switch). */
+        fun purge(cacheDir: File): Boolean = File(cacheDir, EXPORTS_DIR).let { !it.exists() || it.deleteRecursively() }
+
         /** `attachment; filename="prestito_7_20261014.pdf"` → `prestito_7_20261014.pdf`. */
         fun filenameFrom(disposition: String?): String? {
             if (disposition.isNullOrBlank()) return null

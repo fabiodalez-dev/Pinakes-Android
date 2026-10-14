@@ -346,6 +346,8 @@ data class ImportJobUiState(
     val error: StaffMessage? = null,
     val forbidden: Boolean = false,
     val cancelled: Boolean = false,
+    /** The server answered 410 `gone`: the job ended elsewhere (finished, cancelled, expired). */
+    val ended: Boolean = false,
 )
 
 /**
@@ -378,7 +380,7 @@ class StaffImportJobViewModel @Inject constructor(
 
     fun resume() {
         val job = _state.value.job ?: return
-        if (loop?.isActive == true || ImportProgress.isFinished(job)) return
+        if (loop?.isActive == true || ImportProgress.isFinished(job) || _state.value.ended) return
         _state.update { it.copy(running = true, error = null) }
         loop = viewModelScope.launch {
             var step: ChunkStep = ImportProgress.next(job)
@@ -390,6 +392,9 @@ class StaffImportJobViewModel @Inject constructor(
                     ChunkStep.Done -> break
                     is ChunkStep.Stop -> {
                         _state.update { it.copy(forbidden = s.failure.isForbidden(), error = s.failure.toStaffMessage(R.string.staff_import_failed)) }
+                        // The job ended elsewhere (410 gone: finished, cancelled or expired on another
+                        // device): read its real final state, so Resume/Cancel go away.
+                        if (s.failure.code == "gone" || s.failure.httpStatus == 410) refreshAfterGone()
                         break
                     }
                 }
@@ -409,6 +414,12 @@ class StaffImportJobViewModel @Inject constructor(
             }
             _state.update { it.copy(running = false) }
         }
+    }
+
+    private suspend fun refreshAfterGone() {
+        // Whatever the server still says about it, a gone job is never resumable here.
+        _state.update { it.copy(ended = true) }
+        (content.importJob(jobId) as? ApiResult.Success)?.let { res -> _state.update { it.copy(job = res.data) } }
     }
 
     fun pause() {
@@ -445,12 +456,13 @@ fun StaffImportJobScreen(onNavigateUp: () -> Unit) {
             else -> LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(Spacing.lg)) {
                 item(key = "progress") {
                     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        val finished = ImportProgress.isFinished(job)
+                        val finished = ImportProgress.isFinished(job) || state.ended
                         Text(
                             stringResource(
                                 when {
                                     job.status == "cancelled" -> R.string.staff_import_status_cancelled
                                     job.status == "failed" -> R.string.staff_import_status_failed
+                                    state.ended && !ImportProgress.isFinished(job) -> R.string.staff_import_status_gone
                                     finished -> R.string.staff_import_status_done
                                     state.running -> R.string.staff_import_status_running
                                     else -> R.string.staff_import_status_paused

@@ -24,7 +24,6 @@ import com.pinakes.app.data.model.ParentWorkResult
 import com.pinakes.app.data.model.SeriesDeleteResult
 import com.pinakes.app.data.model.SeriesMergeResult
 import com.pinakes.app.data.model.SeriesRenameRequest
-import com.pinakes.app.data.model.SeriesWrite
 import com.pinakes.app.data.model.StaffCopy
 import com.pinakes.app.data.model.StaffSeries
 import com.pinakes.app.data.model.StaffSeriesDetail
@@ -41,7 +40,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import okio.source
 
 /** The import kinds of `POST /staff/imports`. */
 enum class ImportKind(val wire: String) { CSV("csv"), LIBRARYTHING("librarything") }
@@ -76,7 +74,7 @@ class StaffContentRepository(
     suspend fun seriesSuggest(query: String, field: String = "name"): ApiResult<List<String>> =
         session.staffCall { api.seriesSuggest(query.trim(), field) }
 
-    suspend fun saveSeries(id: Int?, body: SeriesWrite): ApiResult<StaffSeriesDetail> =
+    suspend fun saveSeries(id: Int?, body: kotlinx.serialization.json.JsonObject): ApiResult<StaffSeriesDetail> =
         session.staffCall { if (id == null || id <= 0) api.createSeries(body) else api.updateSeries(id, body) }
 
     suspend fun renameSeries(id: Int, name: String, mergeIfExists: Boolean): ApiResult<StaffSeriesDetail> =
@@ -185,13 +183,7 @@ class StaffContentRepository(
         open: () -> java.io.InputStream,
     ): ApiResult<com.pinakes.app.data.model.DigitalUploadResult> {
         val type = mime?.toMediaTypeOrNull() ?: "application/octet-stream".toMediaType()
-        val body = object : okhttp3.RequestBody() {
-            override fun contentType() = type
-            override fun contentLength() = length
-            override fun writeTo(sink: okio.BufferedSink) {
-                open().use { input -> sink.writeAll(input.source()) }
-            }
-        }
+        val body = StreamingBody(type, length, open)
         val part = MultipartBody.Part.createFormData("file", fileName, body)
         return session.staffCall { network.longStaffContentApi().uploadDigital(bookId, part, kind.toRequestBody("text/plain".toMediaType())) }
     }

@@ -62,7 +62,6 @@ import com.pinakes.app.R
 import com.pinakes.app.data.model.IdName
 import com.pinakes.app.data.model.LookupOption
 import com.pinakes.app.data.model.SeriesBook
-import com.pinakes.app.data.model.SeriesWrite
 import com.pinakes.app.data.model.StaffLookups
 import com.pinakes.app.data.model.StaffSeries
 import com.pinakes.app.data.model.StaffSeriesDetail
@@ -127,11 +126,20 @@ data class SeriesForm(
     val cycleOrderValid: Boolean get() = cycleOrder.isBlank() || cycleOrder.trim().toIntOrNull()?.let { it in 0..65535 } == true
     val valid: Boolean get() = name.isNotBlank() && name.trim().length <= 100 && cycleOrderValid
 
-    /** Cleared optional fields go as "" so an edit can empty them (absent keys are kept). */
-    fun toWrite(): SeriesWrite = SeriesWrite(
-        name = name.trim(), type = type.ifBlank { null }, parentName = parentName.trim(), group = group.trim(), cycle = cycle.trim(),
-        cycleOrder = cycleOrder.trim().toIntOrNull(), description = description.trim(), complete = complete,
-    )
+    /**
+     * Every key is sent so an edit can empty a field: cleared text goes as "", a cleared order
+     * as JSON null (an absent key would keep the stored value on the server).
+     */
+    fun toJson(): kotlinx.serialization.json.JsonObject = kotlinx.serialization.json.buildJsonObject {
+        put("name", kotlinx.serialization.json.JsonPrimitive(name.trim()))
+        put("type", type.ifBlank { null }?.let { kotlinx.serialization.json.JsonPrimitive(it) } ?: kotlinx.serialization.json.JsonNull)
+        put("parent_name", kotlinx.serialization.json.JsonPrimitive(parentName.trim()))
+        put("group", kotlinx.serialization.json.JsonPrimitive(group.trim()))
+        put("cycle", kotlinx.serialization.json.JsonPrimitive(cycle.trim()))
+        put("cycle_order", cycleOrder.trim().toIntOrNull()?.let { kotlinx.serialization.json.JsonPrimitive(it) } ?: kotlinx.serialization.json.JsonNull)
+        put("description", kotlinx.serialization.json.JsonPrimitive(description.trim()))
+        put("complete", kotlinx.serialization.json.JsonPrimitive(complete))
+    }
 
     companion object {
         fun from(d: StaffSeriesDetail) = SeriesForm(
@@ -206,7 +214,7 @@ class StaffSeriesViewModel @Inject constructor(
         if (!form.valid || _state.value.saving) return
         _state.update { it.copy(saving = true) }
         viewModelScope.launch {
-            val res = content.saveSeries(null, form.toWrite())
+            val res = content.saveSeries(null, form.toJson())
             _state.update {
                 when (res) {
                     is ApiResult.Success -> it.copy(saving = false, creating = null, createdId = res.data.id)
@@ -440,7 +448,7 @@ class StaffSeriesDetailViewModel @Inject constructor(
     fun saveEdit() {
         val form = _state.value.form ?: return
         if (!form.valid) return
-        mutate(R.string.staff_series_saved) { content.saveSeries(seriesId, form.toWrite()) }
+        mutate(R.string.staff_series_saved) { content.saveSeries(seriesId, form.toJson()) }
     }
 
     fun rename(name: String, merge: Boolean = false) {

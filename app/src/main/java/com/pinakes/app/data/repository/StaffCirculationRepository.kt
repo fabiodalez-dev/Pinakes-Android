@@ -42,6 +42,12 @@ class StaffCirculationRepository(
     private val network: NetworkModule,
     private val session: SessionStore,
 ) {
+    companion object {
+        /** Server limits of `POST /staff/loans/bulk-extend` and `/bulk-recall`. */
+        const val BULK_EXTEND_MAX = 500
+        const val BULK_RECALL_MAX = 50
+    }
+
     private val api get() = network.staffCirculationApi()
 
     suspend fun summary(): ApiResult<CirculationSummary> = session.staffCall { api.summary() }
@@ -88,12 +94,37 @@ class StaffCirculationRepository(
 
     suspend fun renew(id: Int): ApiResult<StaffLoan> = session.staffCall { api.renew(id) }
 
-    suspend fun bulkExtend(ids: List<Int>, days: Int): ApiResult<BulkExtendResult> =
-        session.staffCall { api.bulkExtend(BulkExtendRequest(ids.take(500), days.coerceIn(1, 365))) }
+    /**
+     * Extend every selected loan: the server takes at most [BULK_EXTEND_MAX] ids per call, so a
+     * larger selection goes in batches and the counts are summed. A failing batch stops there
+     * and reports the failure (the earlier batches are already applied server-side).
+     */
+    suspend fun bulkExtend(ids: List<Int>, days: Int): ApiResult<BulkExtendResult> {
+        val d = days.coerceIn(1, 365)
+        var extended = 0
+        for (batch in ids.distinct().chunked(BULK_EXTEND_MAX)) {
+            when (val res = session.staffCall { api.bulkExtend(BulkExtendRequest(batch, d)) }) {
+                is ApiResult.Success -> extended += res.data.extended
+                is ApiResult.Failure -> return res
+            }
+        }
+        return ApiResult.Success(BulkExtendResult(extended, d))
+    }
 
     suspend fun recall(id: Int): ApiResult<SentResult> = session.staffCall { api.recall(id) }
 
-    suspend fun bulkRecall(ids: List<Int>): ApiResult<BulkRecallResult> = session.staffCall { api.bulkRecall(BulkIdsRequest(ids.take(50))) }
+    /** Remind every selected borrower, in batches of [BULK_RECALL_MAX] (the server's limit), summing the counts. */
+    suspend fun bulkRecall(ids: List<Int>): ApiResult<BulkRecallResult> {
+        var sent = 0
+        var skipped = 0
+        for (batch in ids.distinct().chunked(BULK_RECALL_MAX)) {
+            when (val res = session.staffCall { api.bulkRecall(BulkIdsRequest(batch)) }) {
+                is ApiResult.Success -> { sent += res.data.sent; skipped += res.data.skipped }
+                is ApiResult.Failure -> return res
+            }
+        }
+        return ApiResult.Success(BulkRecallResult(sent, skipped))
+    }
 
     suspend fun emailReceipt(id: Int): ApiResult<SentResult> = session.staffCall { api.emailReceipt(id) }
 

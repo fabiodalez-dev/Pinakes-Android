@@ -68,10 +68,17 @@ class StaffPluginsRepository(
 
     suspend fun deleteArchiveCover(id: Int): ApiResult<StaffArchiveDetail> = session.staffCall { api.deleteArchiveCover(id) }
 
-    suspend fun uploadArchiveDocument(id: Int, fileName: String, bytes: ByteArray, mime: String?): ApiResult<StaffArchiveDetail> {
+    /** A document streamed from [open] (up to 200 MB server-side), on the long-timeout client. */
+    suspend fun uploadArchiveDocument(
+        id: Int,
+        fileName: String,
+        mime: String?,
+        length: Long,
+        open: () -> java.io.InputStream,
+    ): ApiResult<StaffArchiveDetail> {
         val type = mime?.toMediaTypeOrNull() ?: "application/octet-stream".toMediaType()
-        val part = MultipartBody.Part.createFormData("document", fileName, bytes.toRequestBody(type))
-        return session.staffCall { api.uploadArchiveDocument(id, part) }
+        val part = MultipartBody.Part.createFormData("document", fileName, StreamingBody(type, length, open))
+        return session.staffCall { network.longStaffPluginsApi().uploadArchiveDocument(id, part) }
     }
 
     suspend fun deleteArchiveDocument(id: Int, fileId: Int): ApiResult<StaffArchiveDetail> =

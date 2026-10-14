@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit
  * otherwise collide — so it is purged on logout and on instance switch (see
  * [clearHttpCache]) and no response body outlives the session that fetched it.
  */
-class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
+class NetworkModule(private val session: SessionStore, private val cacheDir: File? = null) {
 
     val json: Json = Json {
         ignoreUnknownKeys = true
@@ -112,6 +112,10 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
     private var cachedLongStaffApi: StaffContentApi? = null
     @Volatile
     private var cachedLongBaseUrl: String? = null
+    @Volatile
+    private var cachedLongPluginsApi: StaffPluginsApi? = null
+    @Volatile
+    private var cachedLongPluginsBaseUrl: String? = null
 
     /**
      * The same client with an 11-minute read timeout, for the synchronous server jobs that may
@@ -235,6 +239,23 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
         return api
     }
 
+    /** [StaffPluginsApi] on the long-timeout client, for archive document uploads (up to 200 MB). */
+    @Synchronized
+    fun longStaffPluginsApi(): StaffPluginsApi {
+        val target = requireNotNull(session.instanceUrl) { "No instance URL configured. Complete onboarding first." }
+        val normalized = if (target.endsWith("/")) target else "$target/"
+        cachedLongPluginsApi?.let { if (normalized == cachedLongPluginsBaseUrl) return it }
+        val api = Retrofit.Builder()
+            .baseUrl(normalized)
+            .client(longOkHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(StaffPluginsApi::class.java)
+        cachedLongPluginsApi = api
+        cachedLongPluginsBaseUrl = normalized
+        return api
+    }
+
     /** Drop the cached Retrofit so the next [api] call rebuilds against a new instance URL. */
     @Synchronized
     fun invalidate() {
@@ -250,6 +271,8 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
         cachedStaffPluginsApi = null
         cachedLongStaffApi = null
         cachedLongBaseUrl = null
+        cachedLongPluginsApi = null
+        cachedLongPluginsBaseUrl = null
     }
 
     /**
@@ -262,9 +285,11 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
      * signing out into an error the user has to fight.
      */
     suspend fun clearHttpCache() {
-        val cache = httpCache ?: return
         withContext(Dispatchers.IO) {
-            runCatching { cache.evictAll() }
+            runCatching { httpCache?.evictAll() }
+            // Staff exports (receipts naming a borrower, label PDFs, error CSVs) are response
+            // bodies too: they never outlive the session that downloaded them.
+            cacheDir?.let { runCatching { com.pinakes.app.data.repository.StaffFilesRepository.purge(it) } }
         }
     }
 

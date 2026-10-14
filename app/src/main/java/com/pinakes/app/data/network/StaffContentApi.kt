@@ -24,7 +24,6 @@ import com.pinakes.app.data.model.ParentWorkResult
 import com.pinakes.app.data.model.SeriesDeleteResult
 import com.pinakes.app.data.model.SeriesMergeResult
 import com.pinakes.app.data.model.SeriesRenameRequest
-import com.pinakes.app.data.model.SeriesWrite
 import com.pinakes.app.data.model.StaffCopy
 import com.pinakes.app.data.model.StaffSeries
 import com.pinakes.app.data.model.StaffSeriesDetail
@@ -73,10 +72,10 @@ interface StaffContentApi {
     suspend fun seriesSuggest(@Query("q") q: String, @Query("field") field: String? = null): Envelope<List<String>>
 
     @POST("staff/series")
-    suspend fun createSeries(@Body body: SeriesWrite): Envelope<StaffSeriesDetail>
+    suspend fun createSeries(@Body body: JsonObject): Envelope<StaffSeriesDetail>
 
     @PUT("staff/series/{id}")
-    suspend fun updateSeries(@Path("id") id: Int, @Body body: SeriesWrite): Envelope<StaffSeriesDetail>
+    suspend fun updateSeries(@Path("id") id: Int, @Body body: JsonObject): Envelope<StaffSeriesDetail>
 
     @POST("staff/series/{id}/rename")
     suspend fun renameSeries(@Path("id") id: Int, @Body body: SeriesRenameRequest): Envelope<StaffSeriesDetail>

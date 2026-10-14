@@ -70,19 +70,6 @@ data class StaffSeriesDetail(
 )
 
 @Serializable
-data class SeriesWrite(
-    val name: String,
-    val type: String? = null,
-    @SerialName("parent_id") val parentId: Int? = null,
-    @SerialName("parent_name") val parentName: String? = null,
-    val group: String? = null,
-    val cycle: String? = null,
-    @SerialName("cycle_order") val cycleOrder: Int? = null,
-    val description: String? = null,
-    val complete: Boolean? = null,
-)
-
-@Serializable
 data class SeriesRenameRequest(val name: String, @SerialName("merge_if_exists") val mergeIfExists: Boolean)
 
 @Serializable

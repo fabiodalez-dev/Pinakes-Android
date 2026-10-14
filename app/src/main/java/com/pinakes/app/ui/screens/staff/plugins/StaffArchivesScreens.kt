@@ -376,12 +376,26 @@ class StaffArchiveEditViewModel @Inject constructor(
     fun uploadDocument(uri: Uri?) {
         val id = _state.value.id
         if (uri == null || id <= 0) return
-        upload({
-            withContext(Dispatchers.IO) { readDocument(uri) }?.let { (name, mime, bytes) -> plugins.uploadArchiveDocument(id, name, bytes, mime) }
-        }, R.string.staff_archive_document_uploaded)
+        viewModelScope.launch {
+            // Provider lookups can block (cloud providers): off the main thread.
+            val meta = withContext(Dispatchers.IO) { documentMeta(uri) }
+            if (meta != null && meta.third > MAX_DOCUMENT_BYTES) {
+                _state.update { it.copy(message = StaffMessage(R.string.staff_archive_document_too_big)) }
+                return@launch
+            }
+            upload({
+                meta?.let { (name, mime, size) ->
+                    // Streamed from the provider: a large scan or video never sits in memory.
+                    plugins.uploadArchiveDocument(id, name, mime, size) {
+                        context.contentResolver.openInputStream(uri) ?: throw java.io.IOException("No stream for $uri")
+                    }
+                }
+            }, R.string.staff_archive_document_uploaded)
+        }
     }
 
-    private fun readDocument(uri: Uri): Triple<String, String?, ByteArray>? = runCatching {
+    /** Display name, type and size (-1 when the provider does not say) of a picked document. */
+    private fun documentMeta(uri: Uri): Triple<String, String?, Long>? = runCatching {
         val resolver = context.contentResolver
         var name = "document"
         var size = -1L
@@ -391,9 +405,7 @@ class StaffArchiveEditViewModel @Inject constructor(
                 c.getColumnIndex(OpenableColumns.SIZE).takeIf { it >= 0 }?.let { i -> if (!c.isNull(i)) size = c.getLong(i) }
             }
         }
-        if (size > MAX_DOCUMENT_BYTES) return null
-        val bytes = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
-        Triple(name, resolver.getType(uri), bytes)
+        Triple(name, resolver.getType(uri), size)
     }.getOrNull()
 
     fun removeDocument(fileId: Int) {
@@ -631,6 +643,7 @@ private fun ArchiveForm(
 data class AuthoritiesUiState(
     val query: String = "",
     val items: List<AuthorityRow> = emptyList(),
+    val nextCursor: String? = null,
     val loading: Boolean = true,
     val error: StaffMessage? = null,
     val forbidden: Boolean = false,
@@ -649,7 +662,7 @@ class StaffAuthoritiesViewModel @Inject constructor(private val plugins: StaffPl
             val res = plugins.authorities(_state.value.query)
             _state.update {
                 when (res) {
-                    is ApiResult.Success -> it.copy(items = res.data.items, loading = false, error = null)
+                    is ApiResult.Success -> it.copy(items = res.data.items, nextCursor = res.data.nextCursor, loading = false, error = null)
                     is ApiResult.Failure -> it.copy(loading = false, forbidden = res.isForbidden(), error = res.toStaffMessage(R.string.staff_error_load))
                 }
             }
@@ -657,6 +670,18 @@ class StaffAuthoritiesViewModel @Inject constructor(private val plugins: StaffPl
     }
 
     fun onQuery(value: String) { _state.update { it.copy(query = value) }; reload() }
+
+    fun loadMore() {
+        val s = _state.value
+        val cursor = s.nextCursor ?: return
+        if (job?.isActive == true) return
+        job = viewModelScope.launch {
+            val res = plugins.authorities(s.query, cursor = cursor)
+            if (res is ApiResult.Success && _state.value.query == s.query) {
+                _state.update { it.copy(items = (it.items + res.data.items).distinctBy(AuthorityRow::id), nextCursor = res.data.nextCursor) }
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -690,6 +715,9 @@ fun StaffAuthoritiesScreen(onNavigateUp: () -> Unit, onOpen: (Int) -> Unit) {
                         StaffActionRow(Icons.Outlined.Person, a.name,
                             listOfNotNull(a.type, a.dates, stringResource(R.string.staff_authority_units, a.unitsCount)).joinToString(" · ")) { onOpen(a.id) }
                     }
+                    if (state.nextCursor != null) item(key = "more") {
+                        LaunchedEffect(state.items.size) { vm.loadMore() }
+                    }
                 }
             }
         }
@@ -708,7 +736,13 @@ data class AuthorityEditUiState(
     val confirmDelete: Boolean = false,
     val done: Boolean = false,
     val forbidden: Boolean = false,
-)
+    val loadError: StaffMessage? = null,
+    /** An existing record was read from the server (a new one needs no read). */
+    val loaded: Boolean = false,
+) {
+    /** A new authority, or an existing one that was actually loaded. */
+    val editable: Boolean get() = id <= 0 || loaded
+}
 
 @HiltViewModel
 class StaffAuthorityEditViewModel @Inject constructor(
@@ -720,22 +754,36 @@ class StaffAuthorityEditViewModel @Inject constructor(
 
     init {
         viewModelScope.launch { (plugins.archiveLookups() as? ApiResult.Success)?.data?.let { l -> _state.update { it.copy(lookups = l) } } }
+        load()
+    }
+
+    /**
+     * Read the record. Until an existing authority is loaded the form is a placeholder: it is
+     * neither shown nor savable (a PUT of blank fields would wipe the record).
+     */
+    fun load() {
         val id = _state.value.id
-        if (id <= 0) _state.update { it.copy(loading = false) } else viewModelScope.launch {
+        if (id <= 0) {
+            _state.update { it.copy(loading = false) }
+            return
+        }
+        _state.update { it.copy(loading = true, loadError = null) }
+        viewModelScope.launch {
             val res = plugins.authority(id)
             _state.update {
                 when (res) {
-                    is ApiResult.Success -> it.copy(form = AuthorityForm.from(res.data), units = res.data.units, loading = false)
-                    is ApiResult.Failure -> it.copy(loading = false, forbidden = res.isForbidden(), error = res.toStaffMessage(R.string.staff_error_load))
+                    is ApiResult.Success -> it.copy(form = AuthorityForm.from(res.data), units = res.data.units, loading = false, loaded = true)
+                    is ApiResult.Failure -> it.copy(loading = false, forbidden = res.isForbidden(), loadError = res.toStaffMessage(R.string.staff_error_load))
                 }
             }
         }
     }
 
-    fun edit(key: String, value: String) = _state.update { it.copy(form = it.form.with(key, value), error = null) }
+    fun edit(key: String, value: String) = _state.update { if (!it.editable) it else it.copy(form = it.form.with(key, value), error = null) }
 
     fun save() {
         val s = _state.value
+        if (!s.editable) return
         if (!s.form.valid) { _state.update { it.copy(showErrors = true) }; return }
         if (s.saving) return
         _state.update { it.copy(saving = true, error = null) }
@@ -784,6 +832,10 @@ fun StaffAuthorityEditScreen(onNavigateUp: () -> Unit) {
         },
     ) { padding ->
         if (state.loading) { LoadingState(modifier = Modifier.padding(padding)); return@Scaffold }
+        if (!state.editable) {
+            ErrorState(message = state.loadError?.resolve() ?: stringResource(R.string.staff_error_load), onRetry = vm::load, modifier = Modifier.padding(padding))
+            return@Scaffold
+        }
         val f = state.form
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = Spacing.lg).imePadding(),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {

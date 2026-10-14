@@ -27,6 +27,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -87,6 +88,8 @@ data class StaffReservationsUiState(
     val filter: ReservationFilter = ReservationFilter.ACTIVE,
     val query: String = "",
     val items: List<StaffReservation> = emptyList(),
+    val nextCursor: String? = null,
+    val loadingMore: Boolean = false,
     val loading: Boolean = true,
     val refreshing: Boolean = false,
     val error: StaffMessage? = null,
@@ -117,8 +120,28 @@ class StaffReservationsViewModel @Inject constructor(private val circulation: St
             if (gen != generation) return@launch
             _state.update {
                 when (res) {
-                    is ApiResult.Success -> it.copy(items = res.data.items, loading = false, refreshing = false)
+                    is ApiResult.Success -> it.copy(items = res.data.items, nextCursor = res.data.nextCursor, loading = false, refreshing = false)
                     is ApiResult.Failure -> it.copy(loading = false, refreshing = false, forbidden = res.isForbidden(), error = res.toStaffMessage(R.string.staff_error_load))
+                }
+            }
+        }
+    }
+
+    /** Next page: a queue cut at a page boundary continues under the same title header. */
+    fun loadMore() {
+        val s = _state.value
+        val cursor = s.nextCursor ?: return
+        if (s.loadingMore || s.loading) return
+        val gen = generation
+        _state.update { it.copy(loadingMore = true) }
+        viewModelScope.launch {
+            val res = circulation.reservations(s.filter.wire, s.query, cursor)
+            _state.update {
+                when {
+                    gen != generation -> it.copy(loadingMore = false)
+                    res is ApiResult.Success -> it.copy(items = (it.items + res.data.items).distinctBy(StaffReservation::id), nextCursor = res.data.nextCursor, loadingMore = false)
+                    res is ApiResult.Failure -> it.copy(loadingMore = false, forbidden = res.isForbidden(), message = res.toStaffMessage(R.string.staff_error_load))
+                    else -> it.copy(loadingMore = false)
                 }
             }
         }
@@ -131,7 +154,7 @@ class StaffReservationsViewModel @Inject constructor(private val circulation: St
 
     fun setFilter(filter: ReservationFilter) {
         if (filter == _state.value.filter) return
-        _state.update { it.copy(filter = filter, items = emptyList()) }
+        _state.update { it.copy(filter = filter, items = emptyList(), nextCursor = null) }
         reload()
     }
 
@@ -253,6 +276,9 @@ fun StaffReservationsScreen(
                                 )
                             }
                             items(queue, key = { it.id }) { r -> StaffReservationRow(r, onClick = { vm.select(r) }, showBook = false) }
+                        }
+                        if (state.nextCursor != null) item(key = "more") {
+                            LaunchedEffect(state.items.size) { vm.loadMore() }
                         }
                     }
                 }

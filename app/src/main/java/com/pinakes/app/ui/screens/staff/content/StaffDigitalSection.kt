@@ -44,6 +44,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** The digital kinds of the Digital Library plugin. */
 enum class DigitalKind(val wire: String, val mimes: Array<String>) {
@@ -72,18 +74,22 @@ class StaffDigitalViewModel @Inject constructor(
         _state.update { it.copy(uploading = kind) }
         viewModelScope.launch {
             val resolver = context.contentResolver
-            var name = "${kind.wire}.bin"
-            var size = -1L
-            runCatching {
-                resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { c ->
-                    if (c.moveToFirst()) {
-                        c.getColumnIndex(OpenableColumns.DISPLAY_NAME).takeIf { it >= 0 }?.let { i -> c.getString(i)?.let { name = it } }
-                        c.getColumnIndex(OpenableColumns.SIZE).takeIf { it >= 0 }?.let { i -> if (!c.isNull(i)) size = c.getLong(i) }
+            // Provider lookups can block (cloud providers such as Drive): off the main thread.
+            val (name, size, mime) = withContext(Dispatchers.IO) {
+                var name = "${kind.wire}.bin"
+                var size = -1L
+                runCatching {
+                    resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { c ->
+                        if (c.moveToFirst()) {
+                            c.getColumnIndex(OpenableColumns.DISPLAY_NAME).takeIf { it >= 0 }?.let { i -> c.getString(i)?.let { name = it } }
+                            c.getColumnIndex(OpenableColumns.SIZE).takeIf { it >= 0 }?.let { i -> if (!c.isNull(i)) size = c.getLong(i) }
+                        }
                     }
                 }
+                Triple(name, size, runCatching { resolver.getType(uri) }.getOrNull())
             }
-            val res = content.uploadDigital(bookId, kind.wire, name, resolver.getType(uri), size) {
-                resolver.openInputStream(uri) ?: error("unreadable")
+            val res = content.uploadDigital(bookId, kind.wire, name, mime, size) {
+                resolver.openInputStream(uri) ?: throw java.io.IOException("No stream for $uri")
             }
             _state.update {
                 when (res) {

@@ -99,6 +99,8 @@ data class DesiderataUiState(
     val query: String = "",
     val offers: List<StaffOffer> = emptyList(),
     val wanted: List<StaffWantedBook> = emptyList(),
+    val nextCursor: String? = null,
+    val loadingMore: Boolean = false,
     val loading: Boolean = true,
     val refreshing: Boolean = false,
     val error: StaffMessage? = null,
@@ -139,7 +141,7 @@ class StaffDesiderataViewModel @Inject constructor(
                 if (gen != generation) return@launch
                 _state.update {
                     when (res) {
-                        is ApiResult.Success -> it.copy(wanted = res.data.items, loading = false, refreshing = false)
+                        is ApiResult.Success -> it.copy(wanted = res.data.items, nextCursor = res.data.nextCursor, loading = false, refreshing = false)
                         is ApiResult.Failure -> it.copy(loading = false, refreshing = false, forbidden = res.isForbidden(), error = res.toStaffMessage(R.string.staff_error_load))
                     }
                 }
@@ -148,7 +150,7 @@ class StaffDesiderataViewModel @Inject constructor(
                 if (gen != generation) return@launch
                 _state.update {
                     when (res) {
-                        is ApiResult.Success -> it.copy(offers = res.data.items, loading = false, refreshing = false)
+                        is ApiResult.Success -> it.copy(offers = res.data.items, nextCursor = res.data.nextCursor, loading = false, refreshing = false)
                         is ApiResult.Failure -> it.copy(loading = false, refreshing = false, forbidden = res.isForbidden(), error = res.toStaffMessage(R.string.staff_error_load))
                     }
                 }
@@ -161,9 +163,41 @@ class StaffDesiderataViewModel @Inject constructor(
         reload()
     }
 
+    /** The next page of the current tab (offers or wanted titles). */
+    fun loadMore() {
+        val s = _state.value
+        val cursor = s.nextCursor ?: return
+        if (s.loadingMore || s.loading) return
+        val gen = generation
+        _state.update { it.copy(loadingMore = true) }
+        viewModelScope.launch {
+            if (s.tab == DesiderataTab.WANTED) {
+                val res = plugins.wanted(s.query, cursor)
+                _state.update {
+                    when {
+                        gen != generation -> it.copy(loadingMore = false)
+                        res is ApiResult.Success -> it.copy(wanted = (it.wanted + res.data.items).distinctBy(StaffWantedBook::id), nextCursor = res.data.nextCursor, loadingMore = false)
+                        res is ApiResult.Failure -> it.copy(loadingMore = false, forbidden = res.isForbidden(), message = res.toStaffMessage(R.string.staff_error_load))
+                        else -> it.copy(loadingMore = false)
+                    }
+                }
+            } else {
+                val res = plugins.offers(s.tab.wire, s.query, cursor)
+                _state.update {
+                    when {
+                        gen != generation -> it.copy(loadingMore = false)
+                        res is ApiResult.Success -> it.copy(offers = (it.offers + res.data.items).distinctBy(StaffOffer::id), nextCursor = res.data.nextCursor, loadingMore = false)
+                        res is ApiResult.Failure -> it.copy(loadingMore = false, forbidden = res.isForbidden(), message = res.toStaffMessage(R.string.staff_error_load))
+                        else -> it.copy(loadingMore = false)
+                    }
+                }
+            }
+        }
+    }
+
     fun setTab(tab: DesiderataTab) {
         if (tab == _state.value.tab) return
-        _state.update { it.copy(tab = tab, offers = emptyList(), wanted = emptyList()) }
+        _state.update { it.copy(tab = tab, offers = emptyList(), wanted = emptyList(), nextCursor = null) }
         reload()
     }
 
@@ -323,6 +357,9 @@ fun StaffDesiderataScreen(onNavigateUp: () -> Unit, onOpenBook: (Int) -> Unit) {
                                     }
                                 }
                             }
+                        }
+                        if (state.nextCursor != null) item(key = "more") {
+                            LaunchedEffect(if (wantedTab) state.wanted.size else state.offers.size) { vm.loadMore() }
                         }
                     }
                 }

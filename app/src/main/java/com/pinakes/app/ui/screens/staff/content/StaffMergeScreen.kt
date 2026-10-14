@@ -92,6 +92,7 @@ data class MergeUiState(
     val tab: MergeTab = MergeTab.AUTHORS,
     val duplicates: List<List<DuplicateAuthor>> = emptyList(),
     val duplicatesLoading: Boolean = true,
+    val duplicatesError: StaffMessage? = null,
     val selection: MergeSelection = MergeSelection(),
     val picking: Boolean = false,
     val confirming: Boolean = false,
@@ -129,13 +130,14 @@ class StaffMergeViewModel @Inject constructor(
     init { loadDuplicates() }
 
     fun loadDuplicates() {
-        _state.update { it.copy(duplicatesLoading = true) }
+        _state.update { it.copy(duplicatesLoading = true, duplicatesError = null) }
         viewModelScope.launch {
             val res = content.authorDuplicates()
             _state.update {
                 when (res) {
                     is ApiResult.Success -> it.copy(duplicates = res.data.filter { g -> g.size >= 2 }, duplicatesLoading = false)
-                    is ApiResult.Failure -> it.copy(duplicatesLoading = false, forbidden = res.isForbidden(), error = res.toStaffMessage(R.string.staff_error_load))
+                    // Its own field: a failed suggestion list is not a failed merge.
+                    is ApiResult.Failure -> it.copy(duplicatesLoading = false, forbidden = res.isForbidden(), duplicatesError = res.toStaffMessage(R.string.staff_error_load))
                 }
             }
         }
@@ -174,7 +176,7 @@ class StaffMergeViewModel @Inject constructor(
     fun remove(item: PickItem) = toggle(item)
     fun setPrimary(id: Int) = _state.update { it.copy(selection = it.selection.copy(primaryId = id)) }
     fun setNewName(value: String) = _state.update { it.copy(selection = it.selection.copy(newName = value)) }
-    fun openConfirm() = _state.update { it.copy(confirming = it.selection.ready, picking = false) }
+    fun openConfirm() = _state.update { it.copy(confirming = it.selection.ready, picking = false, error = null) }
     fun closeConfirm() = _state.update { it.copy(confirming = false, error = null) }
 
     fun merge() {
@@ -299,7 +301,10 @@ private fun RecordMerge(state: MergeUiState, vm: StaffMergeViewModel) {
         }
         if (state.tab == MergeTab.AUTHORS) {
             item(key = "dup-title") { FormSectionTitle(stringResource(R.string.staff_merge_suggested)) }
-            if (!state.duplicatesLoading && state.duplicates.isEmpty()) item(key = "dup-empty") {
+            state.duplicatesError?.let { err ->
+                item(key = "dup-error") { InlineErrorBanner(message = err.resolve(), onRetry = vm::loadDuplicates) }
+            }
+            if (!state.duplicatesLoading && state.duplicatesError == null && state.duplicates.isEmpty()) item(key = "dup-empty") {
                 Text(stringResource(R.string.staff_merge_no_duplicates), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             itemsIndexed(state.duplicates, key = { i, g -> "g$i-${g.first().id}" }) { index, group ->

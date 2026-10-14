@@ -146,7 +146,11 @@ class StaffLoansViewModel @Inject constructor(
         _state.update { it.copy(loadingMore = true) }
         viewModelScope.launch {
             val res = circulation.loans(s.bucket, s.query, cursor)
-            if (gen != generation) return@launch
+            if (gen != generation) {
+                // A reload replaced the list meanwhile: drop this page, but never stay "loading".
+                _state.update { it.copy(loadingMore = false) }
+                return@launch
+            }
             _state.update {
                 when (res) {
                     is ApiResult.Success -> it.copy(items = (it.items + res.data.items).distinctBy(StaffLoan::id), nextCursor = res.data.nextCursor, loadingMore = false)
@@ -169,6 +173,9 @@ class StaffLoansViewModel @Inject constructor(
     }
 
     fun toggleSelecting() = _state.update { it.copy(selecting = !it.selecting && it.canSelect, selected = emptySet()) }
+
+    /** Select every loaded loan that can be extended or recalled. */
+    fun selectAll() = _state.update { s -> s.copy(selected = s.items.filter(LoanActions::isBulkSelectable).map(StaffLoan::id).toSet()) }
 
     fun toggle(loan: StaffLoan) {
         if (!LoanActions.isBulkSelectable(loan)) return
@@ -275,6 +282,7 @@ fun StaffLoansScreen(onNavigateUp: () -> Unit, onOpenLoan: (Int) -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(stringResource(R.string.staff_selected_count, state.selected.size), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        PinakesTextButton(stringResource(R.string.staff_select_all), onClick = vm::selectAll)
                         SecondaryButton(stringResource(R.string.staff_loan_action_recall), onClick = vm::bulkRecall, enabled = state.selected.isNotEmpty() && !state.bulkBusy)
                         PrimaryButton(stringResource(R.string.staff_bulk_extend), onClick = { extendOpen = true }, enabled = state.selected.isNotEmpty(), loading = state.bulkBusy)
                     }
