@@ -23,7 +23,7 @@ copies, manual record without ISBN, shelf/level location on edit (skipped when t
 has no shelf with a level), phase 2 (each skipped while its /health staff_* flag is off):
 loan created by API with an Idempotency-Key and its replay, then returned in the app by
 typing the copy code; a copy with an explicit code from the book editor; a series created in
-the app; a two-row CSV import job followed to completion; a Desiderata offer received; an
+the app; a two-row CSV import job followed to completion; a free Desiderata offer received into a picked record; an
 unpublished archive unit created and checked absent from the public list; then airplane-mode
 offline search and detail, calendar link + feed.
 Cleanup (only what this run created): created books deleted, the calendar link revoked when
@@ -40,6 +40,7 @@ import time
 import traceback
 import urllib.error
 import urllib.request
+import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ui  # noqa: E402
@@ -541,7 +542,7 @@ def copy_with_code():
     ui.type_text(code)
     ui.hide_keyboard()
     ui.tap(S["action_save"], exact=True)
-    ui.wait(S["staff_copy_added"], 30)
+    ui.wait(S["staff_copy_added"], 120)        # the copy save runs the full admin pipeline
     codes = [c.get("inventory_number") for c in API.book(book_id)["copies"]]
     assert code in codes, f"{code} not in {codes}"
     back_to_hub()
@@ -591,18 +592,18 @@ def csv_import_two_rows():
     return f"job {job['data']['id']}"
 
 
-@step("desiderata: an offer is received into the catalogue from the app")
+@step("desiderata: a free offer is received into a picked record from the app")
 def desiderata_receive():
     if not staff_flag("staff_desiderata"):
         raise SkipStep("staff_desiderata is off on this instance (backend pending)")
-    _, wanted, _ = API.call("GET", "desiderata?limit=1")
-    rows = wanted.get("data") or []
-    if not rows:
-        raise SkipStep("the library wants no title")
-    title = rows[0]["title"]
-    status, offer, _ = API.call("POST", "desiderata/offers", {"submission_id": f"e2e-{RUN}", "book_id": rows[0]["id"], "title": title,
+    target = next((r for r in API.find_book(CIRC_TITLE) if r.get("title") == CIRC_TITLE), None)
+    if target is None:
+        raise SkipStep("no record created by this run to receive into")
+    title = f"E2E offer {RUN}"
+    # A free offer (no wanted title): the run never touches someone else's wanted list.
+    status, offer, _ = API.call("POST", "desiderata/offers", {"submission_id": str(uuid.uuid4()), "title": title, "author": "E2E",
                                                               "notes": f"E2E {RUN}", "consent": True})
-    assert status in (200, 201), f"offer HTTP {status}"
+    assert status in (200, 201), f"offer HTTP {status}: {offer.get('error')}"
     offer_id = offer["data"]["id"]
     CREATED_OFFERS.append(offer_id)
     back_to_hub()
@@ -610,12 +611,19 @@ def desiderata_receive():
     ui.tap(S["staff_desiderata"])
     ui.scroll_to(title)
     ui.tap(title)
+    time.sleep(1.5)                           # let the sheet finish expanding
     ui.tap(S["staff_offer_receive"])
-    ui.wait(S["staff_offer_received"], 30)
-    _, after, _ = API.call("GET", "staff/desiderata/offers?status=received")
-    assert any(o["id"] == offer_id for o in after.get("data") or []), "offer not received"
+    ui.wait(S["staff_offer_receive_into"], 30)
+    ui.tap(S["cd_clear"])
+    ui.type_text(CIRC_TITLE)
+    ui.hide_keyboard()
+    ui.tap(CIRC_TITLE, timeout=60)
+    ui.wait(S["staff_offer_received"], 120)
+    _, after, _ = API.call("GET", "staff/desiderata/offers?status=received&q=" + urllib.request.quote(title))
+    got = [o for o in after.get("data") or [] if o["id"] == offer_id]
+    assert got and (got[0].get("received_book") or {}).get("id") == target["id"], f"offer after receive: {got}"
     back_to_hub()
-    return f"offer #{offer_id} for {title!r}"
+    return f"offer #{offer_id} received into book #{target['id']}"
 
 
 @step("archives: create an unpublished unit in the app")
