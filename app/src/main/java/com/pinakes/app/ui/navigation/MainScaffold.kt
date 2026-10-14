@@ -37,6 +37,8 @@ import com.pinakes.app.ui.screens.wishlist.WishlistScreen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScaffold(
+    tab: PinakesTab,
+    onTabChange: (PinakesTab) -> Unit,
     onLoggedOut: () -> Unit,
     onOpenBook: (Int) -> Unit,
     onOpenNotifications: () -> Unit,
@@ -58,18 +60,17 @@ fun MainScaffold(
     val isStaff by app.isStaff.collectAsStateWithLifecycle()
 
     var pendingCatalogQuery by rememberSaveable { mutableStateOf<String?>(null) }
-    var tab by rememberSaveable { mutableStateOf(PinakesTab.Home) }
 
     // If the active tab is gated off (e.g. server switched to CATALOGUE-ONLY MODE while the
     // app was open), fall back to Home so we never render a hidden/blank destination.
     val visibleTabs = visibleNavTabs(features.showLibrary, features.showWishlist)
     LaunchedEffect(visibleTabs) {
-        if (tab !in visibleTabs) tab = PinakesTab.Home
+        if (tab !in visibleTabs) onTabChange(PinakesTab.Home)
     }
     // Guard against the same condition during the frame the flags change, before the effect runs.
-    if (tab !in visibleTabs) tab = PinakesTab.Home
+    val shownTab = if (tab in visibleTabs) tab else PinakesTab.Home
 
-    val title = when (tab) {
+    val title = when (shownTab) {
         PinakesTab.Home -> stringResource(R.string.title_home)
         PinakesTab.Catalog -> stringResource(R.string.title_catalog)
         PinakesTab.Library -> stringResource(R.string.title_my_library)
@@ -80,7 +81,7 @@ fun MainScaffold(
     Scaffold(
         topBar = {
             // Home carries its own brand banner — skip the generic list top bar there.
-            if (tab != PinakesTab.Home) {
+            if (shownTab != PinakesTab.Home) {
                 PinakesListTopBar(
                     title = title,
                     onNotifications = if (features.notifications) onOpenNotifications else null,
@@ -89,29 +90,29 @@ fun MainScaffold(
         },
         floatingActionButton = {
             // Staff shortcut: scan an ISBN straight from the catalogue.
-            if (tab == PinakesTab.Catalog && isStaff) {
+            if (shownTab == PinakesTab.Catalog && isStaff) {
                 StaffFab(Icons.Outlined.QrCodeScanner, stringResource(R.string.staff_scan), onOpenStaffScan)
             }
         },
         bottomBar = {
             PinakesBottomBar(
-                selectedTab = tab,
-                onTabSelected = { tab = it },
+                selectedTab = shownTab,
+                onTabSelected = onTabChange,
                 showLibrary = features.showLibrary,
                 showWishlist = features.showWishlist,
             )
         },
     ) { padding ->
         Box(Modifier.padding(padding)) {
-            when (tab) {
+            when (shownTab) {
                 PinakesTab.Home -> HomeScreen(
                     onBookClick = onOpenBook,
                     onOpenArticles = if (features.periodicalsAvailable) onOpenArticles else null,
                     onOpenPeriodicals = if (features.periodicalsAvailable) onOpenPeriodicals else null,
                     onOpenDesiderata = if (features.desiderataAvailable) onOpenDesiderata else null,
                     onOpenArchives = if (features.archivesAvailable) onOpenArchives else null,
-                    onBrowseCatalog = { tab = PinakesTab.Catalog },
-                    onSearch = { query -> pendingCatalogQuery = query; tab = PinakesTab.Catalog },
+                    onBrowseCatalog = { onTabChange(PinakesTab.Catalog) },
+                    onSearch = { query -> pendingCatalogQuery = query; onTabChange(PinakesTab.Catalog) },
                 )
                 PinakesTab.Catalog -> SearchScreen(onBookClick = onOpenBook, onArticleClick = onOpenArticle, onWantedClick = onOpenWanted, onArchiveClick = onOpenArchive, initialQuery = pendingCatalogQuery, onQueryConsumed = { pendingCatalogQuery = null })
                 PinakesTab.Library -> LibraryScreen(onBookClick = onOpenBook)

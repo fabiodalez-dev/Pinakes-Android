@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.pinakes.app.ui.components.PinakesTab
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -74,6 +78,9 @@ import com.pinakes.app.ui.screens.staff.content.StaffSeriesScreen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
+    // The selected bottom-nav tab lives here, not in MainScaffold, so a book page (its own
+    // destination) can show the same bar and send the reader back to any tab.
+    var mainTab by rememberSaveable { mutableStateOf(PinakesTab.Home) }
     val app: AppViewModel = hiltViewModel()
     val authState by app.authState.collectAsStateWithLifecycle()
 
@@ -127,6 +134,8 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
 
         composable(Routes.MAIN_GRAPH) {
             MainScaffold(
+                tab = mainTab,
+                onTabChange = { mainTab = it },
                 onLoggedOut = {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(Routes.MAIN_GRAPH) { inclusive = true }
@@ -162,7 +171,15 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
             enterTransition = slideIn,
             popExitTransition = slideOut,
         ) {
-            BookDetailScreen(onNavigateUp = { navController.popBackStack() }, onFindWorks = { name, id -> navController.navigate(Routes.authorWorks(name, id)) })
+            BookDetailScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onFindWorks = { name, id -> navController.navigate(Routes.authorWorks(name, id)) },
+                selectedTab = mainTab,
+                onTabSelected = { tab ->
+                    mainTab = tab
+                    navController.popBackStack(Routes.MAIN_GRAPH, inclusive = false)
+                },
+            )
         }
 
         // ---- Staff area (admin/staff + Mobile API 1.6.0) ----

@@ -79,6 +79,8 @@ import com.pinakes.app.data.model.CirculationRequestKind
 import com.pinakes.app.data.model.PersonalHistory
 import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.common.OfflinePolicy
+import com.pinakes.app.ui.components.PinakesBottomBar
+import com.pinakes.app.ui.components.PinakesTab
 import com.pinakes.app.ui.common.DateFormat
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
@@ -106,6 +108,8 @@ import kotlinx.coroutines.launch
 fun BookDetailScreen(
     onNavigateUp: () -> Unit,
     onFindWorks: (String, Int?) -> Unit = { _, _ -> },
+    selectedTab: PinakesTab = PinakesTab.Catalog,
+    onTabSelected: ((PinakesTab) -> Unit)? = null,
 ) {
     val app: AppViewModel = hiltViewModel()
     val features by app.features.collectAsStateWithLifecycle()
@@ -168,6 +172,17 @@ fun BookDetailScreen(
             )
         },
         snackbarHost = { SnackbarHost(snackbarHost) },
+        bottomBar = {
+            // The same bottom navigation as the tabs: one tap goes back to any of them.
+            if (onTabSelected != null) {
+                PinakesBottomBar(
+                    selectedTab = selectedTab,
+                    onTabSelected = onTabSelected,
+                    showLibrary = features.showLibrary,
+                    showWishlist = features.showWishlist,
+                )
+            }
+        },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (val content = state.content) {
