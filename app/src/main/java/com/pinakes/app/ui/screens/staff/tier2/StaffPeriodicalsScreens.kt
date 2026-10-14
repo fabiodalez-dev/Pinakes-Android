@@ -67,7 +67,7 @@ import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.StaffTier2Repository
 import com.pinakes.app.data.repository.isForbidden
 import com.pinakes.app.data.staff.IssueStatus
-import com.pinakes.app.data.staff.ScanDebouncer
+import com.pinakes.app.data.staff.IssueScanResolver
 import com.pinakes.app.data.staff.SubscriptionForm
 import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.common.DateFormat
@@ -141,7 +141,9 @@ data class PeriodicalsDeskUiState(
 class StaffPeriodicalsDeskViewModel @Inject constructor(private val tier2: StaffTier2Repository) : ViewModel() {
     private val _state = MutableStateFlow(PeriodicalsDeskUiState())
     val state: StateFlow<PeriodicalsDeskUiState> = _state.asStateFlow()
-    private val debouncer = ScanDebouncer()
+    private val scans = IssueScanResolver()
+    private val debouncer get() = scans.debouncer
+    private var holdJob: Job? = null
     private var searchJob: Job? = null
 
     init { reload() }
@@ -178,8 +180,15 @@ class StaffPeriodicalsDeskViewModel @Inject constructor(private val tier2: Staff
     fun onDecoded(raw: String) {
         if (_state.value.looking || _state.value.scan != null) return
         val code = raw.filter(Char::isDigit).takeIf { it.isNotEmpty() } ?: return
-        val accepted = debouncer.offer(code, SystemClock.elapsedRealtime()) ?: return
-        lookup(accepted)
+        scans.offer(code, SystemClock.elapsedRealtime())?.let { lookup(it); return }
+        // A bare masthead waits briefly for a frame that also reads its issue add-on.
+        if (scans.holding && holdJob?.isActive != true) {
+            holdJob = viewModelScope.launch {
+                delay(scans.holdMs)
+                val held = scans.flush(SystemClock.elapsedRealtime())
+                if (held != null && !_state.value.looking && _state.value.scan == null) lookup(held)
+            }
+        }
     }
 
     /** The typed (or keyboard-wedge scanned) code; the field's text stays in the screen. */
@@ -191,6 +200,8 @@ class StaffPeriodicalsDeskViewModel @Inject constructor(private val tier2: Staff
     }
 
     private fun lookup(code: String) {
+        holdJob?.cancel()
+        scans.clear()
         debouncer.pause()
         _state.update { it.copy(looking = true, scannedCode = code) }
         viewModelScope.launch {
