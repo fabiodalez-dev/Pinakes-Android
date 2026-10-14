@@ -355,6 +355,7 @@
   "reviews_empty": "No reviews yet. Be the first!",
   "reviews_rating_content_desc": "Rating: %1$s out of 5",
   "reviews_write": "Write a review",
+  "reviews_borrow_first": "You can review this book once you have borrowed it.",
   "reviews_others_title": "What other readers say",
   "reviews_your_review": "Your review",
   "reviews_edit": "Edit",

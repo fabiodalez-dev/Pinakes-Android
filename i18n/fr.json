@@ -355,6 +355,7 @@
   "reviews_empty": "Aucun avis pour l'instant. Soyez le premier !",
   "reviews_rating_content_desc": "Note : %1$s sur 5",
   "reviews_write": "Rédiger un avis",
+  "reviews_borrow_first": "Vous pourrez donner votre avis sur ce livre après l'avoir emprunté.",
   "reviews_others_title": "L'avis des autres lecteurs",
   "reviews_your_review": "Votre avis",
   "reviews_edit": "Modifier",

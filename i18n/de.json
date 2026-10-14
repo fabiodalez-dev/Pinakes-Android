@@ -355,6 +355,7 @@
   "reviews_empty": "Noch keine Rezensionen. Sei der Erste!",
   "reviews_rating_content_desc": "Bewertung: %1$s von 5",
   "reviews_write": "Rezension schreiben",
+  "reviews_borrow_first": "Du kannst dieses Buch bewerten, sobald du es ausgeliehen hast.",
   "reviews_others_title": "Was andere Leser sagen",
   "reviews_your_review": "Deine Rezension",
   "reviews_edit": "Bearbeiten",
