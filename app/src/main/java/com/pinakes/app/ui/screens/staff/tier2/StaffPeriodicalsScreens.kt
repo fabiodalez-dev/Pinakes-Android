@@ -40,6 +40,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -121,7 +124,6 @@ internal fun issueStatusLabel(status: String): Int? = when (status) {
 // =============================================================================================
 
 data class PeriodicalsDeskUiState(
-    val manual: String = "",
     val looking: Boolean = false,
     val scan: PeriodicalScan? = null,
     val scannedCode: String = "",
@@ -180,13 +182,12 @@ class StaffPeriodicalsDeskViewModel @Inject constructor(private val tier2: Staff
         lookup(accepted)
     }
 
-    fun onManual(value: String) = _state.update { it.copy(manual = value.take(30)) }
-
-    fun submitManual() {
-        val code = _state.value.manual.trim()
-        if (code.isEmpty() || _state.value.looking) return
-        _state.update { it.copy(manual = "") }
+    /** The typed (or keyboard-wedge scanned) code; the field's text stays in the screen. */
+    fun submitManual(input: String): Boolean {
+        val code = input.trim()
+        if (code.isEmpty() || _state.value.looking) return false
         lookup(code)
+        return true
     }
 
     private fun lookup(code: String) {
@@ -256,11 +257,13 @@ fun StaffPeriodicalsDeskScreen(onNavigateUp: () -> Unit, onOpenPeriodical: (Int)
                         formats = BarcodeAnalyzer.ISBN_FORMATS, onCode = vm::onDecoded, looking = state.looking,
                         permissionText = stringResource(R.string.staff_periodicals_scan_permission),
                     )
+                    var manual by rememberSaveable { mutableStateOf("") }
+                    val submit = { if (vm.submitManual(manual)) manual = "" }
                     PinakesTextField(
-                        value = state.manual, onValueChange = vm::onManual, label = stringResource(R.string.staff_periodicals_code),
+                        value = manual, onValueChange = { manual = it.take(30) }, label = stringResource(R.string.staff_periodicals_code),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { vm.submitManual() }),
-                        trailingIcon = { IconButton(onClick = vm::submitManual) { Icon(Icons.Outlined.Search, contentDescription = stringResource(R.string.staff_scan_lookup)) } },
+                        keyboardActions = KeyboardActions(onSearch = { submit() }),
+                        trailingIcon = { IconButton(onClick = submit) { Icon(Icons.Outlined.Search, contentDescription = stringResource(R.string.staff_scan_lookup)) } },
                         modifier = Modifier.fillMaxWidth().testTag("issue-code"),
                     )
                     FormSectionTitle(stringResource(R.string.staff_periodicals_mastheads))

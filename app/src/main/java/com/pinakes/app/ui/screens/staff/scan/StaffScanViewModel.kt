@@ -52,7 +52,6 @@ data class StaffScanUiState(
     val shelves: List<Shelf> = emptyList(),
     val saving: Boolean = false,
     val added: List<ScanAdded> = emptyList(),
-    val manualInput: String = "",
     val manualError: Boolean = false,
     val message: String? = null,
     val messageRes: Int? = null,
@@ -106,18 +105,23 @@ class StaffScanViewModel @Inject constructor(
         lookup(identifier, accepted)
     }
 
-    fun onManualInput(value: String) = _state.update { it.copy(manualInput = value, manualError = false) }
+    fun clearManualError() = _state.update { if (it.manualError) it.copy(manualError = false) else it }
 
-    /** The always-visible manual entry (emulators, denied permission, damaged barcodes). */
-    fun submitManual() {
-        val identifier = IsbnCodec.fromManual(_state.value.manualInput)
+    /**
+     * The always-visible manual entry (emulators, denied permission, damaged barcodes, keyboard-
+     * wedge readers). The text lives in the screen so a reader typing the whole code at once
+     * loses no characters; returns true when the identifier was taken.
+     */
+    fun submitManual(input: String): Boolean {
+        val identifier = IsbnCodec.fromManual(input)
         if (identifier == null) {
             _state.update { it.copy(manualError = true) }
-            return
+            return false
         }
-        if (_state.value.phase is ScanPhase.Looking || _state.value.sheetOpen) return
-        _state.update { it.copy(manualInput = "", manualError = false) }
+        if (_state.value.phase is ScanPhase.Looking || _state.value.sheetOpen) return false
+        _state.update { it.copy(manualError = false) }
         lookup(identifier, identifier.lookupCode)
+        return true
     }
 
     private fun lookup(identifier: Identifier, code: String) {

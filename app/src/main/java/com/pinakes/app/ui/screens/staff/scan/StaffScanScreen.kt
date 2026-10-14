@@ -245,17 +245,19 @@ fun StaffScanScreen(
                 Text(stringResource(R.string.staff_scan_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             item(key = "manual") {
+                var manual by rememberSaveable { mutableStateOf("") }
+                val submit = { if (vm.submitManual(manual)) manual = "" }
                 PinakesTextField(
-                    value = state.manualInput,
-                    onValueChange = vm::onManualInput,
+                    value = manual,
+                    onValueChange = { manual = it; vm.clearManualError() },
                     label = stringResource(R.string.staff_scan_manual_label),
                     placeholder = "978-88-04-66823-7",
                     isError = state.manualError,
                     errorText = stringResource(R.string.staff_identifier_invalid),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { vm.submitManual() }),
+                    keyboardActions = KeyboardActions(onSearch = { submit() }),
                     trailingIcon = {
-                        IconButton(onClick = vm::submitManual, enabled = state.phase == ScanPhase.Scanning) {
+                        IconButton(onClick = submit, enabled = state.phase == ScanPhase.Scanning) {
                             Icon(Icons.Outlined.Search, contentDescription = stringResource(R.string.staff_scan_lookup))
                         }
                     },

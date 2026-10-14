@@ -114,7 +114,6 @@ sealed interface CopyScanPhase {
 
 data class CopyScanUiState(
     val phase: CopyScanPhase = CopyScanPhase.Scanning,
-    val manualInput: String = "",
     val manualError: Boolean = false,
     val returning: Boolean = false,
     val saving: Boolean = false,
@@ -144,17 +143,22 @@ class StaffCopyScanViewModel @Inject constructor(private val circulation: StaffC
         lookup(accepted)
     }
 
-    fun onManualInput(value: String) = _state.update { it.copy(manualInput = value.take(CopyCodeCodec.MAX_LENGTH), manualError = false) }
+    fun clearManualError() = _state.update { if (it.manualError) it.copy(manualError = false) else it }
 
-    fun submitManual() {
-        val code = CopyCodeCodec.normalize(_state.value.manualInput)
+    /**
+     * The typed (or keyboard-wedge scanned) code. The field's text stays in the screen, not in
+     * this state flow: an async round trip per keystroke drops characters when a USB/Bluetooth
+     * reader types the whole label at once. Returns true when the code was taken.
+     */
+    fun submitManual(input: String): Boolean {
+        val code = CopyCodeCodec.normalize(input)
         if (code.isEmpty()) {
             _state.update { it.copy(manualError = true) }
-            return
+            return false
         }
-        if (_state.value.phase != CopyScanPhase.Scanning) return
-        _state.update { it.copy(manualInput = "") }
+        if (_state.value.phase != CopyScanPhase.Scanning) return false
         lookup(code)
+        return true
     }
 
     private fun lookup(code: String) {
@@ -263,13 +267,17 @@ fun StaffCopyScanScreen(
                 permissionText = stringResource(R.string.staff_scan_copy_permission),
             )
             Text(stringResource(R.string.staff_scan_copy_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            var manual by rememberSaveable { mutableStateOf("") }
+            val submit = { if (vm.submitManual(manual)) manual = "" }
             PinakesTextField(
-                value = state.manualInput, onValueChange = vm::onManualInput, label = stringResource(R.string.staff_copy_code),
+                value = manual,
+                onValueChange = { manual = it.take(CopyCodeCodec.MAX_LENGTH); vm.clearManualError() },
+                label = stringResource(R.string.staff_copy_code),
                 isError = state.manualError, errorText = stringResource(R.string.staff_copy_code_required),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { vm.submitManual() }),
+                keyboardActions = KeyboardActions(onSearch = { submit() }),
                 trailingIcon = {
-                    IconButton(onClick = vm::submitManual, enabled = state.phase == CopyScanPhase.Scanning) {
+                    IconButton(onClick = submit, enabled = state.phase == CopyScanPhase.Scanning) {
                         Icon(Icons.Outlined.Search, contentDescription = stringResource(R.string.staff_scan_lookup))
                     }
                 },
