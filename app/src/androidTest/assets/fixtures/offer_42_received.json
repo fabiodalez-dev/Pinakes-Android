@@ -1,0 +1,25 @@
+{
+  "data": {
+    "id": 42,
+    "status": "received",
+    "status_label": "In attesa",
+    "donor_name": "Carla Bianchi",
+    "donor_email": "carla@example.org",
+    "title": "Un libro qualunque",
+    "author": "Anonimo",
+    "publisher": null,
+    "isbn": null,
+    "notes": "Good condition",
+    "book": null,
+    "received_book": {
+      "id": 5,
+      "title": "Orlando"
+    },
+    "copy_id": 78,
+    "source": "mobile",
+    "created_at": "2026-10-12 10:00:00",
+    "received_at": null
+  },
+  "meta": {},
+  "error": null
+}

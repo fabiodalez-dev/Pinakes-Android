@@ -373,7 +373,7 @@ internal fun SearchPickerSheet(
                         enabled = item.enabled,
                         shape = MaterialTheme.shapes.medium,
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xs).testTag("pick-${item.id}"),
                     ) {
                         Row(Modifier.padding(Spacing.md), verticalAlignment = Alignment.CenterVertically) {
                             if (selected != null) {

@@ -56,6 +56,11 @@ import com.pinakes.app.ui.screens.staff.circulation.StaffReservationsScreen
 import com.pinakes.app.ui.screens.staff.circulation.StaffUserScreen
 import com.pinakes.app.ui.screens.staff.scan.StaffCopyScanScreen
 import com.pinakes.app.ui.screens.staff.content.StaffMergeScreen
+import com.pinakes.app.ui.screens.staff.plugins.StaffArchiveEditScreen
+import com.pinakes.app.ui.screens.staff.plugins.StaffArchivesScreen
+import com.pinakes.app.ui.screens.staff.plugins.StaffAuthoritiesScreen
+import com.pinakes.app.ui.screens.staff.plugins.StaffAuthorityEditScreen
+import com.pinakes.app.ui.screens.staff.plugins.StaffDesiderataScreen
 import com.pinakes.app.ui.screens.staff.content.StaffCoversScreen
 import com.pinakes.app.ui.screens.staff.content.StaffImportJobScreen
 import com.pinakes.app.ui.screens.staff.content.StaffImportsScreen
@@ -280,6 +285,34 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
         }
         composable(Routes.STAFF_COVERS, enterTransition = slideIn, popExitTransition = slideOut) {
             StaffCoversScreen(onNavigateUp = { navController.popBackStack() })
+        }
+        // ---- Staff plugin content (Mobile API 1.7.0) ----
+        composable(Routes.STAFF_DESIDERATA, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffDesiderataScreen(onNavigateUp = { navController.popBackStack() }, onOpenBook = { navController.navigate(Routes.staffBookEdit(it)) })
+        }
+        composable(Routes.STAFF_ARCHIVES, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffArchivesScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpen = { navController.navigate(Routes.staffArchiveEdit(it)) },
+                onNew = { navController.navigate(Routes.staffArchiveEdit(0)) },
+            )
+        }
+        composable(
+            Routes.STAFF_ARCHIVE_EDIT,
+            arguments = listOf(navArgument(Routes.ARG_ARCHIVE_ID) { type = NavType.IntType; defaultValue = 0 }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StaffArchiveEditScreen(onNavigateUp = { navController.popBackStack() })
+        }
+        composable(Routes.STAFF_AUTHORITIES, enterTransition = slideIn, popExitTransition = slideOut) {
+            StaffAuthoritiesScreen(onNavigateUp = { navController.popBackStack() }, onOpen = { navController.navigate(Routes.staffAuthorityEdit(it)) })
+        }
+        composable(
+            Routes.STAFF_AUTHORITY_EDIT,
+            arguments = listOf(navArgument(Routes.ARG_AUTHORITY_ID) { type = NavType.IntType; defaultValue = 0 }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            StaffAuthorityEditScreen(onNavigateUp = { navController.popBackStack() })
         }
         composable(Routes.STAFF_COPY_SCAN, enterTransition = slideIn, popExitTransition = slideOut) {
             StaffCopyScanScreen(
