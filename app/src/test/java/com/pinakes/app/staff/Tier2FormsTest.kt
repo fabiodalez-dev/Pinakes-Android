@@ -81,6 +81,24 @@ class Tier2FormsTest {
         assertFalse(WorkflowDraft(draft.states.take(1)).valid)
     }
 
+    @Test fun savingAWorkflowKeepsTheFlagsTheEditorDoesNotModel() {
+        val club = json.decodeFromString<StaffClub>(
+            """{"id":1,"name":"C","privacy":"public","workflow":[{"key":"proposed","label":"Proposto","color":"#6b7280","flags":{"votable":true}},
+               {"key":"voting","label":"In votazione","color":"#8b5cf6","flags":{"voting":true,"future_flag":"x"}}],"members":[]}"""
+        )
+        // Only a label changes: `votable` and a flag from a later plugin version must survive.
+        val states = WorkflowDraft.from(club.workflow).update(0) { it.copy(label = "Proposte") }.toJson()["states"]!!.jsonArray
+        val proposed = states[0].jsonObject["flags"]!!.jsonObject
+        assertTrue(proposed["votable"]!!.jsonPrimitive.boolean)
+        assertFalse(proposed["voting"]!!.jsonPrimitive.boolean)
+        val voting = states[1].jsonObject["flags"]!!.jsonObject
+        assertEquals("x", voting["future_flag"]!!.jsonPrimitive.content)
+        assertTrue(voting["voting"]!!.jsonPrimitive.boolean)
+        // The editor's own flags still win over the stored ones.
+        val cleared = WorkflowDraft.from(club.workflow).update(1) { it.copy(voting = false) }.toJson()["states"]!!.jsonArray
+        assertFalse(cleared[1].jsonObject["flags"]!!.jsonObject["voting"]!!.jsonPrimitive.boolean)
+    }
+
     @Test fun clubFormValidation() {
         assertTrue(ClubForm(name = "Lettori").valid)
         assertFalse(ClubForm(name = "Lettori", color = "red").valid)

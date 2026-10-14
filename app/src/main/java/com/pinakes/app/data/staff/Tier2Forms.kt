@@ -111,6 +111,8 @@ data class WorkflowStateDraft(
     val voting: Boolean = false,
     val current: Boolean = false,
     val archived: Boolean = false,
+    /** Every flag the server sent, so a save keeps the ones the editor does not model (e.g. `votable`). */
+    val serverFlags: JsonObject = JsonObject(emptyMap()),
 )
 
 /** The club workflow editor: at least two states, each with a label; reorder, add, remove. Pure. */
@@ -132,7 +134,11 @@ data class WorkflowDraft(val states: List<WorkflowStateDraft>) {
     fun update(index: Int, transform: (WorkflowStateDraft) -> WorkflowStateDraft): WorkflowDraft =
         WorkflowDraft(states.mapIndexed { i, s -> if (i == index) transform(s) else s })
 
-    /** `{states: [{key, label, color, flags: {voting, current, archived}}]}`; a new state has an empty key (the server derives it). */
+    /**
+     * `{states: [{key, label, color, flags}]}`; a new state has an empty key (the server derives it).
+     * `flags` is the state's original object with only `voting`, `current` and `archived` overwritten,
+     * so renaming a label never strips a flag the app does not edit.
+     */
     fun toJson(): JsonObject = buildJsonObject {
         put("states", JsonArray(states.map { s ->
             buildJsonObject {
@@ -140,6 +146,7 @@ data class WorkflowDraft(val states: List<WorkflowStateDraft>) {
                 put("label", text(s.label))
                 put("color", text(s.color))
                 put("flags", buildJsonObject {
+                    s.serverFlags.forEach { (name, value) -> put(name, value) }
                     put("voting", JsonPrimitive(s.voting))
                     put("current", JsonPrimitive(s.current))
                     put("archived", JsonPrimitive(s.archived))
@@ -150,7 +157,10 @@ data class WorkflowDraft(val states: List<WorkflowStateDraft>) {
 
     companion object {
         fun from(states: List<ClubState>) = WorkflowDraft(states.map {
-            WorkflowStateDraft(it.key, it.label, it.color, it.flag("voting"), it.flag("current"), it.flag("archived"))
+            WorkflowStateDraft(
+                it.key, it.label, it.color, it.flag("voting"), it.flag("current"), it.flag("archived"),
+                serverFlags = it.flags as? JsonObject ?: JsonObject(emptyMap()),
+            )
         })
     }
 }
