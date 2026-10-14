@@ -1293,5 +1293,8 @@
   "staff_authority_mandates": "Mandate",
   "staff_authority_internal_structure": "Interne Struktur",
   "staff_authority_general_context": "Allgemeiner Kontext",
-  "staff_authority_linked_units": "Verknüpfte Einheiten"
+  "staff_authority_linked_units": "Verknüpfte Einheiten",
+  "staff_export_librarything": "Für LibraryThing exportieren",
+  "staff_merge_already_done": "Diese Einträge wurden bereits zusammengeführt.",
+  "staff_err_cover_download_failed": "Ein Cover wurde gefunden, konnte aber nicht heruntergeladen werden."
 }

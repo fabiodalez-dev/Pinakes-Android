@@ -39,6 +39,8 @@ data class Meta(
     @SerialName("retry_after") val retryAfter: Int? = null,
     // A create replayed through its Idempotency-Key: the original resource, nothing new made.
     val replayed: Boolean? = null,
+    // 409 `merge_error` on an author/publisher merge: ids that no longer exist (already merged).
+    val missing: List<Int>? = null,
 )
 
 @Serializable

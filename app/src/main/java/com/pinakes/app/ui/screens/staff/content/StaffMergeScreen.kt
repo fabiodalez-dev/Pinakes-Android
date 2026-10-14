@@ -188,10 +188,15 @@ class StaffMergeViewModel @Inject constructor(
             _state.update {
                 when (res) {
                     is ApiResult.Success -> it.copy(busy = false, confirming = false, selection = MergeSelection(), message = StaffMessage(R.string.staff_merge_done, args = listOf(ids.size)))
-                    is ApiResult.Failure -> it.copy(busy = false, forbidden = res.isForbidden(), error = res.toStaffMessage(R.string.staff_error_save))
+                    // A retried merge whose records are already gone: nothing left to do.
+                    is ApiResult.Failure -> if (res.code == "merge_error" && !res.meta?.missing.isNullOrEmpty()) {
+                        it.copy(busy = false, confirming = false, selection = MergeSelection(), message = StaffMessage(R.string.staff_merge_already_done))
+                    } else {
+                        it.copy(busy = false, forbidden = res.isForbidden(), error = res.toStaffMessage(R.string.staff_error_save))
+                    }
                 }
             }
-            if (res is ApiResult.Success && s.tab == MergeTab.AUTHORS) loadDuplicates()
+            if (s.tab == MergeTab.AUTHORS && (res is ApiResult.Success || (res as? ApiResult.Failure)?.code == "merge_error")) loadDuplicates()
         }
     }
 

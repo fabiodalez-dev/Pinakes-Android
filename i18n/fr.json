@@ -1293,5 +1293,8 @@
   "staff_authority_mandates": "Textes de référence",
   "staff_authority_internal_structure": "Organisation interne",
   "staff_authority_general_context": "Contexte général",
-  "staff_authority_linked_units": "Unités liées"
+  "staff_authority_linked_units": "Unités liées",
+  "staff_export_librarything": "Exporter pour LibraryThing",
+  "staff_merge_already_done": "Ces notices étaient déjà fusionnées.",
+  "staff_err_cover_download_failed": "Une couverture a été trouvée mais n’a pas pu être téléchargée."
 }

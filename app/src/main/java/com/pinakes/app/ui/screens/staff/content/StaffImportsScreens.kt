@@ -224,14 +224,17 @@ class StaffImportsViewModel @Inject constructor(
 
     fun downloadExample() = download("staff/imports/example.csv", "esempio_import.csv")
 
+    /** The whole catalogue as a LibraryThing TSV (core export, 15 a minute). */
+    fun exportLibraryThing() = download("staff/exports/librarything.tsv", "librarything.tsv", "text/tab-separated-values")
+
     fun downloadErrors(row: ImportHistoryRow) = download("staff/imports/history/${row.importId}/errors.csv", "errori_${row.importId}.csv")
 
-    private fun download(path: String, name: String) {
+    private fun download(path: String, name: String, mime: String = "text/csv") {
         viewModelScope.launch {
             val res = files.download(path, name)
             _state.update {
                 when (res) {
-                    is ApiResult.Success -> it.copy(export = res.data)
+                    is ApiResult.Success -> it.copy(export = res.data, exportMime = mime)
                     is ApiResult.Failure -> it.copy(forbidden = res.isForbidden(), message = res.toStaffMessage(R.string.staff_download_failed))
                 }
             }
@@ -300,6 +303,9 @@ fun StaffImportsScreen(onNavigateUp: () -> Unit, onOpenJob: (String) -> Unit) {
                         leadingIcon = Icons.Outlined.UploadFile, modifier = Modifier.fillMaxWidth().testTag("import-start"),
                     )
                     SecondaryButton(stringResource(R.string.staff_import_example), onClick = vm::downloadExample, leadingIcon = Icons.Outlined.Download, modifier = Modifier.fillMaxWidth())
+                    if (areas.libraryThing) {
+                        SecondaryButton(stringResource(R.string.staff_export_librarything), onClick = vm::exportLibraryThing, leadingIcon = Icons.Outlined.Download, modifier = Modifier.fillMaxWidth())
+                    }
                 }
             }
             if (state.jobs.isNotEmpty()) {
@@ -324,7 +330,7 @@ fun StaffImportsScreen(onNavigateUp: () -> Unit, onOpenJob: (String) -> Unit) {
             }
         }
     }
-    state.export?.let { ExportFileDialog(it, "text/csv", stringResource(R.string.staff_imports), onDismiss = vm::closeExport) }
+    state.export?.let { ExportFileDialog(it, state.exportMime, stringResource(R.string.staff_imports), onDismiss = vm::closeExport) }
 }
 
 private val MIME_TYPES = arrayOf("text/csv", "text/comma-separated-values", "text/plain", "text/tab-separated-values", "application/vnd.ms-excel")

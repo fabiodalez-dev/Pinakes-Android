@@ -1293,5 +1293,8 @@
   "staff_authority_mandates": "Mandates",
   "staff_authority_internal_structure": "Internal structure",
   "staff_authority_general_context": "General context",
-  "staff_authority_linked_units": "Linked units"
+  "staff_authority_linked_units": "Linked units",
+  "staff_export_librarything": "Export for LibraryThing",
+  "staff_merge_already_done": "These records were already merged.",
+  "staff_err_cover_download_failed": "A cover was found but could not be downloaded."
 }

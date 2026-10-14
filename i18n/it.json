@@ -1293,5 +1293,8 @@
   "staff_authority_mandates": "Mandati",
   "staff_authority_internal_structure": "Struttura interna",
   "staff_authority_general_context": "Contesto generale",
-  "staff_authority_linked_units": "Unità collegate"
+  "staff_authority_linked_units": "Unità collegate",
+  "staff_export_librarything": "Esporta per LibraryThing",
+  "staff_merge_already_done": "Queste schede erano già state unite.",
+  "staff_err_cover_download_failed": "È stata trovata una copertina ma non è stato possibile scaricarla."
 }

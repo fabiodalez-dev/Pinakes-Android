@@ -22,4 +22,16 @@ class MergeFlowTest : AppFlowTest() {
         assertTrue(body, body.contains("\"primary_id\":3"))
         waitText(text(R.string.staff_merge_done, 2))
     }
+
+    @Test fun aRetriedMergeWhoseRecordsAreGoneCountsAsDone() {
+        launch {
+            json("GET staff/authors/duplicates", "staff_author_duplicates")
+            body("POST staff/authors/merge", 409, """{"data":null,"meta":{"missing":[8]},"error":{"code":"merge_error","message":"x"}}""")
+        }
+        openStaffHub()
+        click(text(R.string.staff_merges))
+        clickTag("dup-group-0")
+        clickTag("merge-confirm")
+        waitText(text(R.string.staff_merge_already_done))
+    }
 }
