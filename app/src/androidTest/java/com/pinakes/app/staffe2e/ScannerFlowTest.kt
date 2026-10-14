@@ -1,6 +1,7 @@
 package com.pinakes.app.staffe2e
 
 import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -10,6 +11,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.pinakes.app.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /** The ISBN scanner, driven through the always-visible manual entry (as on an emulator). */
@@ -28,10 +30,14 @@ class ScannerFlowTest : AppFlowTest() {
     }
 
     @Test fun cameraDeniedKeepsManualEntryAndExplainsWhy() {
-        // Start from a denied camera whatever the device was left with: a permission granted
-        // by an earlier manual session would otherwise show the live preview instead.
-        InstrumentationRegistry.getInstrumentation().uiAutomation
-            .revokeRuntimePermission(InstrumentationRegistry.getInstrumentation().targetContext.packageName, Manifest.permission.CAMERA)
+        // Revoking a granted permission from inside the test would kill this very process (it
+        // shares the app's UID) and take the rest of the suite with it: a device left with the
+        // camera granted is skipped with the command that resets it instead.
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        assumeTrue(
+            "CAMERA is granted on this device: run `adb shell pm revoke ${context.packageName} android.permission.CAMERA` first",
+            context.checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED,
+        )
         launch()
         openScanner()
         // Denied (or never granted): the rationale or settings fallback replaces the preview,

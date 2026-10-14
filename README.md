@@ -156,6 +156,7 @@ Admin and staff accounts get a native staff area when the instance runs Mobile A
 ./gradlew assembleDebug   # debug APK → app/build/outputs/apk/debug/app-debug.apk
 ./gradlew lintDebug       # static analysis
 ./gradlew testDebugUnitTest
+adb shell pm revoke com.pinakes.app android.permission.CAMERA  # the camera-denied test needs it denied
 ./gradlew connectedDebugAndroidTest  # UI regression tests, with a running emulator
 ./gradlew assembleRelease # R8 + resource shrinking, unsigned without release credentials
 ```

@@ -1,6 +1,6 @@
 # Pinakes Android — Build Status
 
-## 1.8.0 (versionCode 21): circulation desk, book tools and plugin content for staff
+## 1.8.0 (versionCode 22): circulation desk, book tools and plugin content for staff
 
 Requires Mobile API 1.7.0. Every area is gated on its own `/health` flag (`staff_circulation`, `staff_copies`, `staff_series`, `staff_merges`, `staff_labels`, `staff_imports`, `staff_covers`, `staff_desiderata`, `staff_archives`) plus the staff role and `staff_catalog`; a server that answers `false` or omits a flag keeps the 1.7.0 staff area for that part. The 403 `forbidden` contract is unchanged: every new call goes through the shared `staffCall`, which drops the stored role.
 
