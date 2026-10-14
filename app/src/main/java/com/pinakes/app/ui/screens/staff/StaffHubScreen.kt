@@ -8,6 +8,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.AccountTree
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material.icons.automirrored.outlined.AssignmentReturn
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Business
@@ -55,6 +58,9 @@ data class StaffHubPhase2(
     val onDesiderata: () -> Unit = {},
     val onArchives: () -> Unit = {},
     val onAuthorities: () -> Unit = {},
+    val onPeriodicals: () -> Unit = {},
+    val onClubs: () -> Unit = {},
+    val onWorks: () -> Unit = {},
 )
 
 /**
@@ -141,6 +147,10 @@ fun StaffHubScreen(
                     StaffActionRow(Icons.Outlined.Archive, stringResource(R.string.staff_archives), stringResource(R.string.staff_archives_subtitle), phase2.onArchives)
                     StaffActionRow(Icons.Outlined.Person, stringResource(R.string.staff_authorities), onClick = phase2.onAuthorities)
                 }
+                if (areas.periodicals) StaffActionRow(Icons.Outlined.Newspaper, stringResource(R.string.staff_periodicals),
+                    stringResource(R.string.staff_periodicals_subtitle), phase2.onPeriodicals)
+                if (areas.bookClub) StaffActionRow(Icons.Outlined.Groups, stringResource(R.string.staff_clubs), stringResource(R.string.staff_clubs_subtitle), phase2.onClubs)
+                if (areas.works) StaffActionRow(Icons.Outlined.AccountTree, stringResource(R.string.staff_works), stringResource(R.string.staff_works_subtitle), phase2.onWorks)
             }
         }
     }

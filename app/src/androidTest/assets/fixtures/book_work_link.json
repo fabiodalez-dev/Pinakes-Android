@@ -1,0 +1,12 @@
+{
+  "data": {
+    "book_id": 5,
+    "work": {
+      "id": 2,
+      "uniform_title": "Odissea"
+    },
+    "expression_id": null
+  },
+  "meta": {},
+  "error": null
+}

@@ -188,6 +188,9 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                     onDesiderata = { navController.navigate(Routes.STAFF_DESIDERATA) },
                     onArchives = { navController.navigate(Routes.STAFF_ARCHIVES) },
                     onAuthorities = { navController.navigate(Routes.STAFF_AUTHORITIES) },
+                    onPeriodicals = { navController.navigate(Routes.STAFF_PERIODICALS) },
+                    onClubs = { navController.navigate(Routes.STAFF_CLUBS) },
+                    onWorks = { navController.navigate(Routes.STAFF_WORKS) },
                 ),
             )
         }
@@ -314,6 +317,42 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
         ) {
             StaffAuthorityEditScreen(onNavigateUp = { navController.popBackStack() })
         }
+        // ---- Staff Tier 2 bridges (periodicals desk, book clubs, FRBR works) ----
+        composable(Routes.STAFF_PERIODICALS, enterTransition = slideIn, popExitTransition = slideOut) {
+            com.pinakes.app.ui.screens.staff.tier2.StaffPeriodicalsDeskScreen(
+                onNavigateUp = { navController.popBackStack() }, onOpenPeriodical = { navController.navigate(Routes.staffPeriodical(it)) },
+            )
+        }
+        composable(
+            Routes.STAFF_PERIODICAL,
+            arguments = listOf(navArgument(Routes.ARG_PERIODICAL_ID) { type = NavType.IntType }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            com.pinakes.app.ui.screens.staff.tier2.StaffPeriodicalScreen(onNavigateUp = { navController.popBackStack() })
+        }
+        composable(Routes.STAFF_CLUBS, enterTransition = slideIn, popExitTransition = slideOut) {
+            com.pinakes.app.ui.screens.staff.tier2.StaffClubsScreen(onNavigateUp = { navController.popBackStack() }, onOpen = { navController.navigate(Routes.staffClub(it)) })
+        }
+        composable(
+            Routes.STAFF_CLUB,
+            arguments = listOf(navArgument(Routes.ARG_CLUB_ID) { type = NavType.IntType }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            com.pinakes.app.ui.screens.staff.tier2.StaffClubScreen(onNavigateUp = { navController.popBackStack() })
+        }
+        composable(Routes.STAFF_WORKS, enterTransition = slideIn, popExitTransition = slideOut) {
+            com.pinakes.app.ui.screens.staff.tier2.StaffWorksScreen(onNavigateUp = { navController.popBackStack() }, onOpen = { navController.navigate(Routes.staffWork(it)) })
+        }
+        composable(
+            Routes.STAFF_WORK,
+            arguments = listOf(navArgument(Routes.ARG_WORK_ID) { type = NavType.IntType }),
+            enterTransition = slideIn, popExitTransition = slideOut,
+        ) {
+            com.pinakes.app.ui.screens.staff.tier2.StaffWorkScreen(
+                onNavigateUp = { navController.popBackStack() }, onOpenBook = { navController.navigate(Routes.staffBookEdit(it)) },
+            )
+        }
+
         composable(Routes.STAFF_COPY_SCAN, enterTransition = slideIn, popExitTransition = slideOut) {
             StaffCopyScanScreen(
                 onNavigateUp = { navController.popBackStack() },

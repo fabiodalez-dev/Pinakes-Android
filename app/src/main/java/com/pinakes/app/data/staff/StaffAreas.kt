@@ -29,7 +29,7 @@ data class StaffAreas(
     val anyBooksTool: Boolean get() = series || merges || imports || covers || labels
 
     /** At least one plugin managed natively. */
-    val anyPlugin: Boolean get() = desiderata || archives
+    val anyPlugin: Boolean get() = desiderata || archives || periodicals || bookClub || works
 
     companion object {
         val None = StaffAreas()

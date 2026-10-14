@@ -1,0 +1,13 @@
+{
+  "data": {
+    "id": 5,
+    "user_id": 3,
+    "name": "Ada Rossi",
+    "email": "ada@example.org",
+    "role": "moderator",
+    "role_name": "Moderatore",
+    "status": "active"
+  },
+  "meta": {},
+  "error": null
+}

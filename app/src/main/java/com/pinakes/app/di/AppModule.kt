@@ -125,6 +125,10 @@ object AppModule {
     fun staffPluginsRepository(network: NetworkModule, session: SessionStore): StaffPluginsRepository =
         StaffPluginsRepository(network, session)
 
+    @Provides @Singleton
+    fun staffTier2Repository(network: NetworkModule, session: SessionStore): com.pinakes.app.data.repository.StaffTier2Repository =
+        com.pinakes.app.data.repository.StaffTier2Repository(network, session)
+
     /** Staff PDFs/CSVs land in `cache/exports/`, the directory the FileProvider shares. */
     @Provides @Singleton
     fun staffFilesRepository(@ApplicationContext context: Context, network: NetworkModule, session: SessionStore): StaffFilesRepository =

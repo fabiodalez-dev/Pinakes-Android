@@ -113,6 +113,19 @@ object Routes {
     const val STAFF_AUTHORITY_EDIT = "staff/authorities/{authorityId}/edit"
     fun staffAuthorityEdit(id: Int = 0): String = "staff/authorities/$id/edit"
 
+    // Staff area, Tier 2 bridges (periodicals desk, book clubs, FRBR works)
+    const val STAFF_PERIODICALS = "staff/periodicals"
+    const val STAFF_PERIODICAL = "staff/periodicals/{periodicalId}"
+    fun staffPeriodical(id: Int): String = "staff/periodicals/$id"
+    const val ARG_CLUB_ID = "clubId"
+    const val STAFF_CLUBS = "staff/clubs"
+    const val STAFF_CLUB = "staff/clubs/{clubId}"
+    fun staffClub(id: Int): String = "staff/clubs/$id"
+    const val ARG_WORK_ID = "workId"
+    const val STAFF_WORKS = "staff/works"
+    const val STAFF_WORK = "staff/works/{workId}"
+    fun staffWork(id: Int): String = "staff/works/$id"
+
     /** Graph hosting the bottom-nav + nested authed screens. */
     const val MAIN_GRAPH = "main"
     const val DESIDERATA = "desiderata"

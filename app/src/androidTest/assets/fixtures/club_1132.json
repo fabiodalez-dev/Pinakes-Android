@@ -1,0 +1,57 @@
+{
+  "data": {
+    "id": 1132,
+    "slug": "lettori",
+    "name": "Lettori del giovedì",
+    "description": "",
+    "rules": "",
+    "color": "#4f46e5",
+    "privacy": "public",
+    "max_members": null,
+    "active": true,
+    "moderate_proposals": false,
+    "max_proposals_per_member": null,
+    "modules": [],
+    "member_count": 1,
+    "created_at": "2026-10-13 17:21:02",
+    "workflow": [
+      {
+        "key": "proposed",
+        "label": "Proposto",
+        "color": "#6b7280",
+        "flags": {
+          "votable": true
+        }
+      },
+      {
+        "key": "voting",
+        "label": "In votazione",
+        "color": "#8b5cf6",
+        "flags": {
+          "voting": true
+        }
+      },
+      {
+        "key": "reading",
+        "label": "In lettura",
+        "color": "#10b981",
+        "flags": {
+          "current": true
+        }
+      }
+    ],
+    "members": [
+      {
+        "id": 5,
+        "user_id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "role": "member",
+        "role_name": "Membro",
+        "status": "active"
+      }
+    ]
+  },
+  "meta": {},
+  "error": null
+}

@@ -1,0 +1,18 @@
+{
+  "data": [
+    {
+      "id": 16,
+      "title": "Internazionale",
+      "issn": "1122-2832",
+      "type": "rivista",
+      "frequency": "settimanale",
+      "years_count": 2,
+      "issues_count": 14
+    }
+  ],
+  "meta": {
+    "next_cursor": null,
+    "has_more": false
+  },
+  "error": null
+}

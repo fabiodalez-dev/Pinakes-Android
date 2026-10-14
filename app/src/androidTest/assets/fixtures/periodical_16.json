@@ -1,0 +1,22 @@
+{
+  "data": {
+    "id": 16,
+    "title": "Internazionale",
+    "issn": "1122-2832",
+    "type": "rivista",
+    "frequency": "settimanale",
+    "holdings": "1993-",
+    "years": [
+      {
+        "id": 2,
+        "year": 2026,
+        "volume": "33",
+        "bound": false,
+        "issues_count": 2,
+        "owned_count": 1
+      }
+    ]
+  },
+  "meta": {},
+  "error": null
+}

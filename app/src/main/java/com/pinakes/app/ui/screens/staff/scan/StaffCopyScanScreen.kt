@@ -234,20 +234,6 @@ fun StaffCopyScanScreen(
     StaffSnackbarEffect(state.message, snackbar, vm::consumeMessage)
     LaunchedEffect(state.acceptedTick) { if (state.acceptedTick > 0) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
 
-    var granted by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
-    var asked by rememberSaveable { mutableStateOf(false) }
-    var cameraBroken by remember { mutableStateOf(false) }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it; asked = true }
-    LaunchedEffect(Unit) { if (!granted && !asked) permission.launch(Manifest.permission.CAMERA) }
-    val owner = LocalLifecycleOwner.current
-    DisposableEffect(owner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        }
-        owner.lifecycle.addObserver(observer)
-        onDispose { owner.lifecycle.removeObserver(observer) }
-    }
-
     Scaffold(
         topBar = {
             PinakesTopBar(
@@ -272,33 +258,10 @@ fun StaffCopyScanScreen(
             Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            Box(
-                Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(RoundedCornerShape(16.dp)).background(LocalPinakesColors.current.coverBlank),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (granted && !cameraBroken) {
-                    CameraPreview(
-                        onCode = vm::onDecoded, torchOn = false, onHasTorch = {}, onUnavailable = { cameraBroken = true },
-                        accent = LocalPinakesColors.current.accent, modifier = Modifier.fillMaxSize(), formats = BarcodeAnalyzer.COPY_FORMATS,
-                    )
-                } else {
-                    Column(Modifier.padding(Spacing.xl), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            stringResource(if (cameraBroken) R.string.staff_camera_unavailable else R.string.staff_scan_copy_permission),
-                            color = Color.White, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
-                        )
-                        if (!granted && !cameraBroken) {
-                            Spacer(Modifier.height(Spacing.md))
-                            PrimaryButton(stringResource(R.string.staff_scan_permission_allow), onClick = { permission.launch(Manifest.permission.CAMERA) })
-                        }
-                    }
-                }
-                if (state.phase is CopyScanPhase.Looking) {
-                    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color.White, strokeWidth = 3.dp)
-                    }
-                }
-            }
+            ScannerBox(
+                formats = BarcodeAnalyzer.COPY_FORMATS, onCode = vm::onDecoded, looking = state.phase is CopyScanPhase.Looking,
+                permissionText = stringResource(R.string.staff_scan_copy_permission),
+            )
             Text(stringResource(R.string.staff_scan_copy_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             PinakesTextField(
                 value = state.manualInput, onValueChange = vm::onManualInput, label = stringResource(R.string.staff_copy_code),

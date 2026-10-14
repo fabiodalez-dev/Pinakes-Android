@@ -109,6 +109,8 @@ class NetworkModule(private val session: SessionStore, private val cacheDir: Fil
     @Volatile
     private var cachedStaffPluginsApi: StaffPluginsApi? = null
     @Volatile
+    private var cachedStaffTier2Api: StaffTier2Api? = null
+    @Volatile
     private var cachedLongStaffApi: StaffContentApi? = null
     @Volatile
     private var cachedLongBaseUrl: String? = null
@@ -151,6 +153,7 @@ class NetworkModule(private val session: SessionStore, private val cacheDir: Fil
         cachedStaffCirculationApi = null
         cachedStaffContentApi = null
         cachedStaffPluginsApi = null
+        cachedStaffTier2Api = null
         return retrofit
     }
 
@@ -219,6 +222,13 @@ class NetworkModule(private val session: SessionStore, private val cacheDir: Fil
         return cachedStaffPluginsApi ?: retrofit.create(StaffPluginsApi::class.java).also { cachedStaffPluginsApi = it }
     }
 
+    /** Tier 2 staff bridges: periodicals desk, book club management, FRBR works. */
+    @Synchronized
+    fun staffTier2Api(baseUrl: String? = null): StaffTier2Api {
+        val retrofit = retrofit(baseUrl)
+        return cachedStaffTier2Api ?: retrofit.create(StaffTier2Api::class.java).also { cachedStaffTier2Api = it }
+    }
+
     /**
      * [StaffContentApi] on the long-timeout client. Use it only for `covers/sync`,
      * `enrich/batch` and import chunks with scraping, which the server runs synchronously.
@@ -269,6 +279,7 @@ class NetworkModule(private val session: SessionStore, private val cacheDir: Fil
         cachedStaffCirculationApi = null
         cachedStaffContentApi = null
         cachedStaffPluginsApi = null
+        cachedStaffTier2Api = null
         cachedLongStaffApi = null
         cachedLongBaseUrl = null
         cachedLongPluginsApi = null
