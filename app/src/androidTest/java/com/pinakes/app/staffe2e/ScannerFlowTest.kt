@@ -1,10 +1,12 @@
 package com.pinakes.app.staffe2e
 
+import android.Manifest
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performTextInput
+import androidx.test.platform.app.InstrumentationRegistry
 import com.pinakes.app.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -26,6 +28,10 @@ class ScannerFlowTest : AppFlowTest() {
     }
 
     @Test fun cameraDeniedKeepsManualEntryAndExplainsWhy() {
+        // Start from a denied camera whatever the device was left with: a permission granted
+        // by an earlier manual session would otherwise show the live preview instead.
+        InstrumentationRegistry.getInstrumentation().uiAutomation
+            .revokeRuntimePermission(InstrumentationRegistry.getInstrumentation().targetContext.packageName, Manifest.permission.CAMERA)
         launch()
         openScanner()
         // Denied (or never granted): the rationale or settings fallback replaces the preview,
