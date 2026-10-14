@@ -1296,5 +1296,13 @@
   "staff_authority_linked_units": "Linked units",
   "staff_export_librarything": "Export for LibraryThing",
   "staff_merge_already_done": "These records were already merged.",
-  "staff_err_cover_download_failed": "A cover was found but could not be downloaded."
+  "staff_err_cover_download_failed": "A cover was found but could not be downloaded.",
+  "staff_digital_title": "Digital content",
+  "staff_digital_hint": "Attach the eBook or the audiobook readers can open from the book page.",
+  "staff_digital_ebook": "Upload an eBook (PDF or EPUB)",
+  "staff_digital_audio": "Upload an audiobook",
+  "staff_digital_uploading": "Uploading…",
+  "staff_digital_ebook_done": "eBook attached",
+  "staff_digital_audio_done": "Audiobook attached",
+  "staff_digital_failed": "The file could not be attached."
 }

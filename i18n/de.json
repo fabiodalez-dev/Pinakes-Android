@@ -1296,5 +1296,13 @@
   "staff_authority_linked_units": "Verknüpfte Einheiten",
   "staff_export_librarything": "Für LibraryThing exportieren",
   "staff_merge_already_done": "Diese Einträge wurden bereits zusammengeführt.",
-  "staff_err_cover_download_failed": "Ein Cover wurde gefunden, konnte aber nicht heruntergeladen werden."
+  "staff_err_cover_download_failed": "Ein Cover wurde gefunden, konnte aber nicht heruntergeladen werden.",
+  "staff_digital_title": "Digitale Inhalte",
+  "staff_digital_hint": "Das E-Book oder Hörbuch anhängen, das Leser auf der Buchseite öffnen.",
+  "staff_digital_ebook": "E-Book hochladen (PDF oder EPUB)",
+  "staff_digital_audio": "Hörbuch hochladen",
+  "staff_digital_uploading": "Wird hochgeladen…",
+  "staff_digital_ebook_done": "E-Book angehängt",
+  "staff_digital_audio_done": "Hörbuch angehängt",
+  "staff_digital_failed": "Die Datei konnte nicht angehängt werden."
 }

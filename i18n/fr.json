@@ -1296,5 +1296,13 @@
   "staff_authority_linked_units": "Unités liées",
   "staff_export_librarything": "Exporter pour LibraryThing",
   "staff_merge_already_done": "Ces notices étaient déjà fusionnées.",
-  "staff_err_cover_download_failed": "Une couverture a été trouvée mais n’a pas pu être téléchargée."
+  "staff_err_cover_download_failed": "Une couverture a été trouvée mais n’a pas pu être téléchargée.",
+  "staff_digital_title": "Contenus numériques",
+  "staff_digital_hint": "Joignez l’eBook ou le livre audio que les lecteurs ouvrent depuis la fiche.",
+  "staff_digital_ebook": "Envoyer un eBook (PDF ou EPUB)",
+  "staff_digital_audio": "Envoyer un livre audio",
+  "staff_digital_uploading": "Envoi…",
+  "staff_digital_ebook_done": "eBook joint",
+  "staff_digital_audio_done": "Livre audio joint",
+  "staff_digital_failed": "Le fichier n’a pas pu être joint."
 }

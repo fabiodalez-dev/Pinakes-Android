@@ -252,6 +252,13 @@ data class EnrichBatchResult(
     val details: List<JsonElement> = emptyList(),
 )
 
+/** `POST /staff/books/{id}/digital`: where the uploaded eBook or audiobook is served. */
+@Serializable
+data class DigitalUploadResult(
+    @SerialName("file_url") val fileUrl: String? = null,
+    @SerialName("audio_url") val audioUrl: String? = null,
+)
+
 @Serializable
 data class CronRequest(val enabled: Boolean)
 

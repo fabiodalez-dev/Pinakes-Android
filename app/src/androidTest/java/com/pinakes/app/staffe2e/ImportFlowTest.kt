@@ -1,13 +1,7 @@
 package com.pinakes.app.staffe2e
 
-import android.content.ContentValues
-import android.os.Build
-import android.provider.MediaStore
-import androidx.test.uiautomator.By
-import androidx.test.uiautomator.Until
 import com.pinakes.app.R
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -66,29 +60,5 @@ class ImportFlowTest : AppFlowTest() {
         } finally {
             context.contentResolver.delete(uri, null, null)
         }
-    }
-
-    private fun publishDownload(name: String, content: String): android.net.Uri {
-        check(Build.VERSION.SDK_INT >= 29)
-        val values = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, name)
-            put(MediaStore.Downloads.MIME_TYPE, "text/csv")
-        }
-        val resolver = context.contentResolver
-        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: error("MediaStore refused the download")
-        resolver.openOutputStream(uri)!!.use { it.write(content.toByteArray()) }
-        return uri
-    }
-
-    /** Find [name] in the system document picker (Recent, else the Downloads root) and pick it. */
-    private fun pickInDocumentsUi(name: String) {
-        val file = device.wait(Until.findObject(By.text(name)), 6_000) ?: run {
-            device.wait(Until.findObject(By.desc("Show roots")), 3_000)?.click()
-            device.wait(Until.findObject(By.text("Downloads")), 3_000)?.click()
-            device.wait(Until.findObject(By.text(name)), 6_000)
-        }
-        assertNotNull("$name not shown by the document picker", file)
-        file!!.click()
-        device.waitForIdle()
     }
 }

@@ -1296,5 +1296,13 @@
   "staff_authority_linked_units": "Unità collegate",
   "staff_export_librarything": "Esporta per LibraryThing",
   "staff_merge_already_done": "Queste schede erano già state unite.",
-  "staff_err_cover_download_failed": "È stata trovata una copertina ma non è stato possibile scaricarla."
+  "staff_err_cover_download_failed": "È stata trovata una copertina ma non è stato possibile scaricarla.",
+  "staff_digital_title": "Contenuti digitali",
+  "staff_digital_hint": "Allega l’eBook o l’audiolibro che i lettori aprono dalla scheda del libro.",
+  "staff_digital_ebook": "Carica un eBook (PDF o EPUB)",
+  "staff_digital_audio": "Carica un audiolibro",
+  "staff_digital_uploading": "Caricamento…",
+  "staff_digital_ebook_done": "eBook allegato",
+  "staff_digital_audio_done": "Audiolibro allegato",
+  "staff_digital_failed": "Non è stato possibile allegare il file."
 }

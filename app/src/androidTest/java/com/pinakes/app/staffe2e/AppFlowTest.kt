@@ -197,4 +197,28 @@ abstract class AppFlowTest {
         instrumentation.uiAutomation.executeShellCommand("cmd connectivity airplane-mode $mode").close()
         Thread.sleep(1_500)
     }
+
+    protected fun publishDownload(name: String, content: String, mime: String = "text/csv"): android.net.Uri {
+        check(android.os.Build.VERSION.SDK_INT >= 29)
+        val values = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.Downloads.DISPLAY_NAME, name)
+            put(android.provider.MediaStore.Downloads.MIME_TYPE, mime)
+        }
+        val resolver = context.contentResolver
+        val uri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: error("MediaStore refused the download")
+        resolver.openOutputStream(uri)!!.use { it.write(content.toByteArray()) }
+        return uri
+    }
+
+    /** Find [name] in the system document picker (Recent, else the Downloads root) and pick it. */
+    protected fun pickInDocumentsUi(name: String) {
+        val file = device.wait(Until.findObject(By.text(name)), 6_000) ?: run {
+            device.wait(Until.findObject(By.desc("Show roots")), 3_000)?.click()
+            device.wait(Until.findObject(By.text("Downloads")), 3_000)?.click()
+            device.wait(Until.findObject(By.text(name)), 6_000)
+        }
+        org.junit.Assert.assertNotNull("$name not shown by the document picker", file)
+        file!!.click()
+        device.waitForIdle()
+    }
 }

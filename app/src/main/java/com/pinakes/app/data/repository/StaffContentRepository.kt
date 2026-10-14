@@ -41,6 +41,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.source
 
 /** The import kinds of `POST /staff/imports`. */
 enum class ImportKind(val wire: String) { CSV("csv"), LIBRARYTHING("librarything") }
@@ -170,6 +171,30 @@ class StaffContentRepository(
     suspend fun enrich(): ApiResult<EnrichOverview> = session.staffCall { api.enrich() }
 
     suspend fun enrichBatch(): ApiResult<EnrichBatchResult> = session.staffCall { network.longStaffContentApi().enrichBatch() }
+
+    /**
+     * Upload a digital file (`ebook` or `audio`) streamed from [open] (an audiobook can be large:
+     * it is never read into memory). Uses the long-timeout client.
+     */
+    suspend fun uploadDigital(
+        bookId: Int,
+        kind: String,
+        fileName: String,
+        mime: String?,
+        length: Long,
+        open: () -> java.io.InputStream,
+    ): ApiResult<com.pinakes.app.data.model.DigitalUploadResult> {
+        val type = mime?.toMediaTypeOrNull() ?: "application/octet-stream".toMediaType()
+        val body = object : okhttp3.RequestBody() {
+            override fun contentType() = type
+            override fun contentLength() = length
+            override fun writeTo(sink: okio.BufferedSink) {
+                open().use { input -> sink.writeAll(input.source()) }
+            }
+        }
+        val part = MultipartBody.Part.createFormData("file", fileName, body)
+        return session.staffCall { network.longStaffContentApi().uploadDigital(bookId, part, kind.toRequestBody("text/plain".toMediaType())) }
+    }
 
     suspend fun setEnrichCron(enabled: Boolean): ApiResult<CronResult> = session.staffCall { api.enrichCron(CronRequest(enabled)) }
 }

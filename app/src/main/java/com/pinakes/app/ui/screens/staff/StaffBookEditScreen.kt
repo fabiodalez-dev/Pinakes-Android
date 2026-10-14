@@ -307,6 +307,8 @@ private fun BookForm(state: StaffBookEditUiState, vm: StaffBookEditViewModel) {
                 onMessage = vm::showMessage,
                 onForbidden = vm::markForbidden,
             )
+            // Digital Library plugin (`staff_digital_library`): eBook / audiobook upload.
+            com.pinakes.app.ui.screens.staff.content.StaffDigitalSection(onMessage = vm::showMessage, onForbidden = vm::markForbidden)
         } else {
             QuantityStepper(stringResource(R.string.staff_copies), f.copies, { n -> vm.edit { it.copy(copies = n) } },
                 range = StaffBookForm.COPIES_RANGE)

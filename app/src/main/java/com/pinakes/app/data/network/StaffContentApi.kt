@@ -157,6 +157,14 @@ interface StaffContentApi {
     @PUT("staff/enrich/cron")
     suspend fun enrichCron(@Body body: CronRequest): Envelope<CronResult>
 
+    @Multipart
+    @POST("staff/books/{id}/digital")
+    suspend fun uploadDigital(
+        @Path("id") bookId: Int,
+        @Part file: MultipartBody.Part,
+        @Part("digital_type") digitalType: RequestBody,
+    ): Envelope<com.pinakes.app.data.model.DigitalUploadResult>
+
     /** A binary staff export (PDF, CSV), relative to the API base URL. */
     @Streaming
     @GET
