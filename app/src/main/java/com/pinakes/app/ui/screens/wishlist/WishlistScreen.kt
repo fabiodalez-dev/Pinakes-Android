@@ -26,11 +26,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pinakes.app.R
+import com.pinakes.app.ui.common.OfflinePolicy
+import com.pinakes.app.data.network.ErrorCodes
+import androidx.compose.material.icons.outlined.CloudOff
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.AvailabilityStatus
 import com.pinakes.app.ui.components.EmptyState
 import com.pinakes.app.ui.components.ErrorState
+import com.pinakes.app.ui.components.InlineErrorBanner
 import com.pinakes.app.ui.components.LoadingState
 import com.pinakes.app.ui.components.MediaRow
 import com.pinakes.app.ui.theme.Spacing
@@ -55,7 +59,17 @@ fun WishlistScreen(onBookClick: (Int) -> Unit) {
         ) {
             when (val content = state.content) {
                 is UiState.Loading -> LoadingState(label = stringResource(R.string.wishlist_loading))
-                is UiState.Error -> ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
+                is UiState.Error -> if (content.code == ErrorCodes.NETWORK) {
+                    EmptyState(
+                        title = stringResource(R.string.offline_no_copy_title),
+                        subtitle = stringResource(R.string.offline_no_copy),
+                        icon = Icons.Outlined.CloudOff,
+                        actionLabel = stringResource(R.string.action_retry),
+                        onAction = vm::refresh,
+                    )
+                } else {
+                    ErrorState(message = content.resolvedMessage(), onRetry = vm::refresh)
+                }
                 is UiState.Success -> {
                     if (content.data.isEmpty()) {
                         EmptyState(
@@ -69,24 +83,37 @@ fun WishlistScreen(onBookClick: (Int) -> Unit) {
                             contentPadding = PaddingValues(Spacing.lg),
                             verticalArrangement = Arrangement.spacedBy(Spacing.md),
                         ) {
+                            if (state.offlineNow) {
+                                item(key = "offline") {
+                                    InlineErrorBanner(message = stringResource(R.string.offline_lists_cached), onRetry = vm::refresh)
+                                }
+                            }
                             items(content.data, key = { it.bookId }) { item ->
                                 MediaRow(
                                     modifier = Modifier.animateItem(),
                                     title = item.title,
                                     coverUrl = item.coverUrl,
                                     line1 = item.author,
-                                    status = if (item.available) AvailabilityStatus.Available else AvailabilityStatus.Unavailable,
+                                    // Cached availability is never shown as current.
+                                    status = when {
+                                        !OfflinePolicy.showCurrentAvailability(state.offlineNow) -> null
+                                        item.available -> AvailabilityStatus.Available
+                                        else -> AvailabilityStatus.Unavailable
+                                    },
                                     onClick = { onBookClick(item.bookId) },
-                                    trailing = {
-                                        IconButton(
-                                            onClick = { vm.remove(item.bookId) },
-                                            enabled = state.removingId != item.bookId,
-                                        ) {
-                                            Icon(
-                                                Icons.Outlined.DeleteOutline,
-                                                contentDescription = stringResource(R.string.cd_remove),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
+                                    // Removing needs the server: hidden while showing the offline copy.
+                                    trailing = if (state.offlineNow) null else {
+                                        {
+                                            IconButton(
+                                                onClick = { vm.remove(item.bookId) },
+                                                enabled = state.removingId != item.bookId,
+                                            ) {
+                                                Icon(
+                                                    Icons.Outlined.DeleteOutline,
+                                                    contentDescription = stringResource(R.string.cd_remove),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
                                         }
                                     },
                                 )

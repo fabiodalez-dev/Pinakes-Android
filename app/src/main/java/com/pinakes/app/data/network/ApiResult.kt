@@ -23,6 +23,14 @@ sealed interface ApiResult<out T> {
         val message: String,
         val httpStatus: Int = 0,
         val retryAfterSeconds: Long? = null,
+        /** Envelope meta of the error body (e.g. `existing` on a 409 duplicate), when present. */
+        val meta: Meta? = null,
+        /**
+         * True when [code] came from the server's own error envelope, false when it was derived
+         * from the HTTP status (a proxy/WAF page, an empty body). Decisions such as "the role
+         * was revoked" must only trust the former.
+         */
+        val fromEnvelope: Boolean = false,
     ) : ApiResult<Nothing>
 
     val isSuccess: Boolean get() = this is Success
@@ -38,6 +46,9 @@ object ErrorCodes {
     const val FORBIDDEN = "forbidden"
     const val NOT_FOUND = "not_found"
     const val CONFLICT = "conflict"                  // 409 overlap / unavailable / cannot-cancel
+    const val DUPLICATE = "duplicate"                // 409 staff create: identifier/name already exists
+    const val LOCK_ERROR = "lock_error"              // 503 staff create: duplicate-check lock busy
+    const val SCRAPE_UNAVAILABLE = "scrape_unavailable" // 503 ISBN lookup: no scraper reachable
     const val VALIDATION = "validation"              // 400 / 422
     const val SERVER_ERROR = "server_error"          // 5xx
     const val NETWORK = "network"                    // no connectivity / timeout
@@ -115,7 +126,7 @@ suspend fun <T> apiResponse(block: suspend () -> Response<Envelope<T>>): Pair<Ap
 }
 
 private fun ApiError.toFailure(httpStatus: Int): ApiResult.Failure =
-    ApiResult.Failure(code = code, message = message, httpStatus = httpStatus)
+    ApiResult.Failure(code = code, message = message, httpStatus = httpStatus, fromEnvelope = true)
 
 internal fun HttpException.toFailure(): ApiResult.Failure {
     val status = code()
@@ -127,12 +138,19 @@ internal fun HttpException.toFailure(): ApiResult.Failure {
 
 /** Parse an error envelope body if present, otherwise derive a code from the HTTP status. */
 internal fun parseErrorBody(body: String?, status: Int): ApiResult.Failure {
-    val parsedError: ApiError? = body?.takeIf { it.isNotBlank() }?.let {
-        runCatching { errorJson.decodeFromString<Envelope<Unit>>(it).error }.getOrNull()
+    val envelope: Envelope<Unit>? = body?.takeIf { it.isNotBlank() }?.let {
+        runCatching { errorJson.decodeFromString<Envelope<Unit>>(it) }.getOrNull()
     }
+    val parsedError: ApiError? = envelope?.error
     val code = parsedError?.code ?: codeForStatus(status)
     val message = parsedError?.message?.takeIf { it.isNotBlank() } ?: defaultMessageForStatus(status)
-    return ApiResult.Failure(code = code, message = message, httpStatus = status)
+    return ApiResult.Failure(
+        code = code,
+        message = message,
+        httpStatus = status,
+        meta = envelope?.meta,
+        fromEnvelope = parsedError != null,
+    )
 }
 
 private fun codeForStatus(status: Int): String = when (status) {

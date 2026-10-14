@@ -1,0 +1,16 @@
+{
+  "data": {
+    "id": 4,
+    "periodical_id": 16,
+    "periodical": "Internazionale",
+    "year_id": 2,
+    "year": 2026,
+    "number": "12",
+    "date": "2026-10-09",
+    "status": "posseduto",
+    "claimed_at": null,
+    "claims": 0
+  },
+  "meta": {},
+  "error": null
+}

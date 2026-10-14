@@ -88,6 +88,46 @@ fun PdfReaderDialog(
             state = PdfState.Error
         }
     }
+    PdfReaderContent(state, onDismiss)
+}
+
+/**
+ * The same reader for a PDF already on disk (a staff export downloaded with the bearer token:
+ * receipts and labels never go through the unauthenticated media client). The reader works on
+ * a private copy, so [file] stays available for sharing after the dialog closes.
+ */
+@Composable
+fun PdfReaderDialog(
+    file: File,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    var state by remember { mutableStateOf<PdfState>(PdfState.Loading) }
+
+    LaunchedEffect(file) {
+        state = PdfState.Loading
+        var document: CachedPdfDocument? = null
+        try {
+            withContext(Dispatchers.IO) {
+                val copy = File.createTempFile("pinakes-export-", ".pdf", context.cacheDir)
+                file.copyTo(copy, overwrite = true)
+                document = CachedPdfDocument.open(copy)
+            }
+            state = PdfState.Ready(checkNotNull(document))
+            awaitCancellation()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            state = PdfState.Error
+        } finally {
+            withContext(NonCancellable + Dispatchers.IO) { document?.close() }
+        }
+    }
+    PdfReaderContent(state, onDismiss)
+}
+
+@Composable
+private fun PdfReaderContent(state: PdfState, onDismiss: () -> Unit) {
 
     Dialog(
         onDismissRequest = onDismiss,

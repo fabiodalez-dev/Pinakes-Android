@@ -1,0 +1,64 @@
+{
+  "data": {
+    "levels": [
+      {
+        "value": "fonds",
+        "label": "Fondo"
+      },
+      {
+        "value": "series",
+        "label": "Serie"
+      },
+      {
+        "value": "file",
+        "label": "Fascicolo"
+      },
+      {
+        "value": "item",
+        "label": "Unità"
+      }
+    ],
+    "specific_materials": [
+      {
+        "value": "text",
+        "label": "Testo"
+      },
+      {
+        "value": "photograph",
+        "label": "Fotografia"
+      }
+    ],
+    "color_modes": [
+      {
+        "value": "bw",
+        "label": "Bianco e nero"
+      }
+    ],
+    "authority_types": [
+      {
+        "value": "person",
+        "label": "Persona"
+      },
+      {
+        "value": "corporate",
+        "label": "Ente"
+      },
+      {
+        "value": "family",
+        "label": "Famiglia"
+      }
+    ],
+    "authority_roles": [
+      {
+        "value": "creator",
+        "label": "Produttore"
+      },
+      {
+        "value": "subject",
+        "label": "Soggetto"
+      }
+    ]
+  },
+  "meta": {},
+  "error": null
+}

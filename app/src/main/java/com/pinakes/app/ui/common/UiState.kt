@@ -22,9 +22,14 @@ sealed interface UiState<out T> {
 /** True when the [UiState.Success] payload is an empty collection. */
 fun <T> UiState<List<T>>.isEmptyList(): Boolean = this is UiState.Success && data.isEmpty()
 
-/** Resolves an error message: prefers the server [message], falls back to the localized [messageRes]. */
+/**
+ * Resolves an error message: prefers the server [message], falls back to the localized
+ * [messageRes]. A NETWORK error always gets the localized offline wording: its message is the
+ * raw IOException text and is never shown.
+ */
 @androidx.compose.runtime.Composable
 fun UiState.Error.resolvedMessage(): String = when {
+    code == com.pinakes.app.data.network.ErrorCodes.NETWORK -> androidx.compose.ui.res.stringResource(com.pinakes.app.R.string.offline_generic)
     message.isNotBlank() -> message
     messageRes != null -> androidx.compose.ui.res.stringResource(messageRes)
     else -> ""

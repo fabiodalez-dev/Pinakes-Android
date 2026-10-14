@@ -1,12 +1,20 @@
 package com.pinakes.app.ui.common
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.pinakes.app.data.connectivity.ConnectivityObserver
+import com.pinakes.app.data.staff.StaffAccess
+import com.pinakes.app.data.staff.StaffAreas
 import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.store.SessionStore
 import com.pinakes.app.data.store.ThemeStore
 import com.pinakes.app.ui.theme.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 
 /**
  * App-wide reactive state that several Composables need regardless of the current screen:
@@ -22,12 +30,40 @@ class AppViewModel @Inject constructor(
     session: SessionStore,
     featureStore: FeatureStore,
     private val themeStore: ThemeStore,
+    connectivity: ConnectivityObserver,
 ) : ViewModel() {
 
     val authState = session.authState
     // Includes bookClubAvailable, the Book Club plugin gate (from its own health probe).
     val features = featureStore.features
     val themeMode = themeStore.mode
+
+    /** The signed-in user's role, refreshed from login and `GET /me`. */
+    val role = session.role
+
+    /**
+     * Staff area visibility: an `admin`/`staff` role AND a server that advertises
+     * `staff_catalog`. The server re-checks the role on every staff call.
+     */
+    val isStaff: StateFlow<Boolean> = combine(session.role, featureStore.features) { role, f ->
+        StaffAccess.canManageCatalog(role, f.staffCatalogAvailable)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        StaffAccess.canManageCatalog(session.role.value, featureStore.features.value.staffCatalogAvailable),
+    )
+
+    /**
+     * The staff areas to show (Mobile API 1.7.0): role × `/health` flags × connectivity. The
+     * circulation desk disappears the moment the device goes offline and comes back with it.
+     */
+    val staffAreas: StateFlow<StaffAreas> = combine(session.role, featureStore.features, connectivity.isOnline) { role, f, online ->
+        StaffAreas.of(role, f, online)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        StaffAreas.of(session.role.value, featureStore.features.value, connectivity.isOnline.value),
+    )
 
     fun setThemeMode(mode: ThemeMode) = themeStore.setMode(mode)
 }

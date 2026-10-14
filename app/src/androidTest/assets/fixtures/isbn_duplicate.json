@@ -1,0 +1,35 @@
+{
+  "data": {
+    "identifier": {
+      "input": "9788845292613",
+      "isbn10": "8845292614",
+      "isbn13": "9788845292613",
+      "ean": null,
+      "kind": "isbn"
+    },
+    "found": true,
+    "existing": {
+      "id": 42,
+      "title": "Il nome della rosa",
+      "copies_total": 2,
+      "location": "A.1.4"
+    },
+    "preview": {
+      "title": "Il nome della rosa",
+      "authors": [
+        "Umberto Eco"
+      ],
+      "publisher": "Bompiani",
+      "year": "1980",
+      "pages": "503",
+      "cover_url": null,
+      "isbn13": "9788845292613",
+      "source": "test"
+    },
+    "sources_checked": [
+      "test"
+    ]
+  },
+  "meta": {},
+  "error": null
+}

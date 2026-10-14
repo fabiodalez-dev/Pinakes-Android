@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit
  * otherwise collide — so it is purged on logout and on instance switch (see
  * [clearHttpCache]) and no response body outlives the session that fetched it.
  */
-class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
+class NetworkModule(private val session: SessionStore, private val cacheDir: File? = null) {
 
     val json: Json = Json {
         ignoreUnknownKeys = true
@@ -60,7 +60,10 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
             .addInterceptor(CleartextGuardInterceptor { session.allowInsecureHttp || session.pendingAllowInsecureHttp })
             .addInterceptor(AuthInterceptor(session))
             .connectTimeout(20, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            // 60 s: a staff create runs the whole admin pipeline (scraper hooks, cover download)
+            // and can exceed 30 s on a busy server; timing out after the server already saved
+            // left the user with an error for a record that exists.
+            .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
         httpCache?.let { builder.cache(it) }
         // Complete incomplete server certificate chains via AIA, like a browser does. Self-hosted
@@ -97,6 +100,33 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
     private var cachedPeriodicalsApi: PeriodicalsApi? = null
     @Volatile
     private var cachedCollectionsApi: CollectionsApi? = null
+    @Volatile
+    private var cachedStaffApi: StaffApi? = null
+    @Volatile
+    private var cachedStaffCirculationApi: StaffCirculationApi? = null
+    @Volatile
+    private var cachedStaffContentApi: StaffContentApi? = null
+    @Volatile
+    private var cachedStaffPluginsApi: StaffPluginsApi? = null
+    @Volatile
+    private var cachedStaffTier2Api: StaffTier2Api? = null
+    @Volatile
+    private var cachedLongStaffApi: StaffContentApi? = null
+    @Volatile
+    private var cachedLongBaseUrl: String? = null
+    @Volatile
+    private var cachedLongPluginsApi: StaffPluginsApi? = null
+    @Volatile
+    private var cachedLongPluginsBaseUrl: String? = null
+
+    /**
+     * The same client with an 11-minute read timeout, for the synchronous server jobs that may
+     * run up to 600 s (covers sync, an enrichment batch, an import chunk with scraping). Only
+     * those calls use it; everything else keeps the normal timeouts.
+     */
+    private val longOkHttpClient: OkHttpClient by lazy {
+        okHttpClient.newBuilder().readTimeout(660, TimeUnit.SECONDS).writeTimeout(120, TimeUnit.SECONDS).build()
+    }
 
     /** Shared Retrofit for a given base URL, rebuilt only when the instance URL changes. */
     @Synchronized
@@ -119,6 +149,11 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
         cachedBookClubApi = null
         cachedPeriodicalsApi = null
         cachedCollectionsApi = null
+        cachedStaffApi = null
+        cachedStaffCirculationApi = null
+        cachedStaffContentApi = null
+        cachedStaffPluginsApi = null
+        cachedStaffTier2Api = null
         return retrofit
     }
 
@@ -159,6 +194,78 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
         return cachedCollectionsApi ?: retrofit.create(CollectionsApi::class.java).also { cachedCollectionsApi = it }
     }
 
+    /** Staff content management (`/staff/...`), same base URL and bearer token as [api]. */
+    @Synchronized
+    fun staffApi(baseUrl: String? = null): StaffApi {
+        val retrofit = retrofit(baseUrl)
+        return cachedStaffApi ?: retrofit.create(StaffApi::class.java).also { cachedStaffApi = it }
+    }
+
+    /** Staff circulation desk (`/staff/circulation`, `/staff/loans`, `/staff/reservations`, ...). */
+    @Synchronized
+    fun staffCirculationApi(baseUrl: String? = null): StaffCirculationApi {
+        val retrofit = retrofit(baseUrl)
+        return cachedStaffCirculationApi ?: retrofit.create(StaffCirculationApi::class.java).also { cachedStaffCirculationApi = it }
+    }
+
+    /** Staff content: copies, series, merges, labels, imports, covers and enrichment. */
+    @Synchronized
+    fun staffContentApi(baseUrl: String? = null): StaffContentApi {
+        val retrofit = retrofit(baseUrl)
+        return cachedStaffContentApi ?: retrofit.create(StaffContentApi::class.java).also { cachedStaffContentApi = it }
+    }
+
+    /** Staff management of plugin content (Desiderata, Archives). */
+    @Synchronized
+    fun staffPluginsApi(baseUrl: String? = null): StaffPluginsApi {
+        val retrofit = retrofit(baseUrl)
+        return cachedStaffPluginsApi ?: retrofit.create(StaffPluginsApi::class.java).also { cachedStaffPluginsApi = it }
+    }
+
+    /** Tier 2 staff bridges: periodicals desk, book club management, FRBR works. */
+    @Synchronized
+    fun staffTier2Api(baseUrl: String? = null): StaffTier2Api {
+        val retrofit = retrofit(baseUrl)
+        return cachedStaffTier2Api ?: retrofit.create(StaffTier2Api::class.java).also { cachedStaffTier2Api = it }
+    }
+
+    /**
+     * [StaffContentApi] on the long-timeout client. Use it only for `covers/sync`,
+     * `enrich/batch` and import chunks with scraping, which the server runs synchronously.
+     */
+    @Synchronized
+    fun longStaffContentApi(): StaffContentApi {
+        val target = requireNotNull(session.instanceUrl) { "No instance URL configured. Complete onboarding first." }
+        val normalized = if (target.endsWith("/")) target else "$target/"
+        cachedLongStaffApi?.let { if (normalized == cachedLongBaseUrl) return it }
+        val api = Retrofit.Builder()
+            .baseUrl(normalized)
+            .client(longOkHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(StaffContentApi::class.java)
+        cachedLongStaffApi = api
+        cachedLongBaseUrl = normalized
+        return api
+    }
+
+    /** [StaffPluginsApi] on the long-timeout client, for archive document uploads (up to 200 MB). */
+    @Synchronized
+    fun longStaffPluginsApi(): StaffPluginsApi {
+        val target = requireNotNull(session.instanceUrl) { "No instance URL configured. Complete onboarding first." }
+        val normalized = if (target.endsWith("/")) target else "$target/"
+        cachedLongPluginsApi?.let { if (normalized == cachedLongPluginsBaseUrl) return it }
+        val api = Retrofit.Builder()
+            .baseUrl(normalized)
+            .client(longOkHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(StaffPluginsApi::class.java)
+        cachedLongPluginsApi = api
+        cachedLongPluginsBaseUrl = normalized
+        return api
+    }
+
     /** Drop the cached Retrofit so the next [api] call rebuilds against a new instance URL. */
     @Synchronized
     fun invalidate() {
@@ -168,6 +275,15 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
         cachedBookClubApi = null
         cachedPeriodicalsApi = null
         cachedCollectionsApi = null
+        cachedStaffApi = null
+        cachedStaffCirculationApi = null
+        cachedStaffContentApi = null
+        cachedStaffPluginsApi = null
+        cachedStaffTier2Api = null
+        cachedLongStaffApi = null
+        cachedLongBaseUrl = null
+        cachedLongPluginsApi = null
+        cachedLongPluginsBaseUrl = null
     }
 
     /**
@@ -180,9 +296,11 @@ class NetworkModule(private val session: SessionStore, cacheDir: File? = null) {
      * signing out into an error the user has to fight.
      */
     suspend fun clearHttpCache() {
-        val cache = httpCache ?: return
         withContext(Dispatchers.IO) {
-            runCatching { cache.evictAll() }
+            runCatching { httpCache?.evictAll() }
+            // Staff exports (receipts naming a borrower, label PDFs, error CSVs) are response
+            // bodies too: they never outlive the session that downloaded them.
+            cacheDir?.let { runCatching { com.pinakes.app.data.repository.StaffFilesRepository.purge(it) } }
         }
     }
 

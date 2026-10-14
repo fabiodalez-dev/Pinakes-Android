@@ -8,6 +8,9 @@ import com.pinakes.app.data.model.BookSummary
 import com.pinakes.app.data.model.CatalogLanguage
 import com.pinakes.app.data.model.GenreNode
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.connectivity.ConnectivityObserver
+import com.pinakes.app.data.network.ErrorCodes
+import kotlinx.coroutines.flow.drop
 import com.pinakes.app.data.repository.CatalogRepository
 import com.pinakes.app.data.repository.SearchFilters
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -57,8 +60,18 @@ data class SearchUiState(
     val filtersOpen: Boolean = false,
     val appliedFilters: SearchFilters = SearchFilters(),
     val searchRevision: Int = 0,
+    /** Results come from the offline catalogue because the server is unreachable. */
+    val offline: Boolean = false,
+    /** Offline pagination: rows already shown and whether another page exists. */
+    val offlineOffset: Int = 0,
+    val offlineHasMore: Boolean = false,
+    /** Device connectivity: results loaded online lose their availability pills when it drops. */
+    val connected: Boolean = true,
 ) {
-    val hasMore: Boolean get() = nextCursor != null
+    /** Availability shown on the results is current only online and from the server. */
+    val availabilityCurrent: Boolean get() = connected && !offline
+
+    val hasMore: Boolean get() = nextCursor != null || (offline && offlineHasMore)
 
     /** How many facet filters (excluding the free-text query) are currently active. */
     val activeFilterCount: Int
@@ -91,9 +104,16 @@ internal fun SearchUiState.withQuery(value: String): SearchUiState {
 }
 
 @HiltViewModel
-class SearchViewModel @Inject constructor(private val catalog: CatalogRepository) : ViewModel() {
+class SearchViewModel @Inject constructor(
+    private val catalog: CatalogRepository,
+    private val connectivity: ConnectivityObserver,
+) : ViewModel() {
 
-    private val _state = MutableStateFlow(SearchUiState())
+    private companion object {
+        const val OFFLINE_PAGE = 20
+    }
+
+    private val _state = MutableStateFlow(SearchUiState(connected = connectivity.isOnline.value))
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
 
     private var searchJob: Job? = null
@@ -112,6 +132,13 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
         loadLanguages()
         // Catalog lands on the full listing — browse-all (empty query, no filters).
         runSearch(reset = true)
+        viewModelScope.launch {
+            connectivity.isOnline.drop(1).collect { online ->
+                _state.update { it.copy(connected = online) }
+                // Back online after answering from the cache: ask the server again.
+                if (online && _state.value.offline) runSearch(reset = true)
+            }
+        }
     }
 
     private fun loadGenres() {
@@ -216,6 +243,21 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
         if (s.loadingMore || s.loading || !s.hasMore) return
         _state.update { it.copy(loadingMore = true) }
         val generation = searchGeneration
+        if (s.offline) {
+            viewModelScope.launch {
+                val page = offlinePage(s.appliedFilters, s.sort, s.offlineOffset)
+                if (generation != searchGeneration) return@launch
+                _state.update {
+                    it.copy(
+                        items = it.items + page,
+                        offlineOffset = it.offlineOffset + page.size,
+                        offlineHasMore = page.size == OFFLINE_PAGE,
+                        loadingMore = false,
+                    )
+                }
+            }
+            return
+        }
         viewModelScope.launch {
             val res = catalog.search(s.appliedFilters, cursor = s.nextCursor, sort = s.sort.apiValue)
             // A sort/filter reset superseded this page mid-flight: drop it so we neither append
@@ -233,6 +275,25 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
                 is ApiResult.Failure -> _state.update { it.copy(loadingMore = false) }
             }
         }
+    }
+
+    /** One page of the offline catalogue for [filters]; sort is limited to title / newest. */
+    private suspend fun offlinePage(filters: SearchFilters, sort: BookSort, offset: Int): List<BookSummary> {
+        val genreName = filters.genreId?.let { id -> findGenreName(_state.value.genres, id) }
+        val offlineSort = when (sort) {
+            BookSort.TITLE_DESC -> "title_desc"
+            BookSort.NEWEST -> "newest"
+            else -> "title_asc"
+        }
+        return catalog.searchOffline(filters, genreName, offlineSort, offset, OFFLINE_PAGE)
+    }
+
+    private fun findGenreName(nodes: List<GenreNode>, id: Int): String? {
+        for (n in nodes) {
+            if (n.id == id) return n.name
+            findGenreName(n.children, id)?.let { return it }
+        }
+        return null
     }
 
     private fun runSearch(reset: Boolean) {
@@ -264,11 +325,32 @@ class SearchViewModel @Inject constructor(private val catalog: CatalogRepository
                         totalCount = res.data.totalCount,
                         loading = false,
                         error = null,
+                        offline = false,
+                        offlineOffset = 0,
+                        offlineHasMore = false,
                     )
                 }
-                is ApiResult.Failure -> _state.update {
-                    // null when the server message is blank → the screen shows the localized fallback.
-                    it.copy(loading = false, error = res.message.takeIf { m -> m.isNotBlank() })
+                is ApiResult.Failure -> if (res.code == ErrorCodes.NETWORK) {
+                    // No connection: answer from the offline catalogue instead of an error.
+                    val page = offlinePage(searchFilters, _state.value.sort, 0)
+                    if (generation != searchGeneration) return@launch
+                    _state.update {
+                        it.copy(
+                            items = page,
+                            nextCursor = null,
+                            totalCount = null,
+                            loading = false,
+                            error = null,
+                            offline = true,
+                            offlineOffset = page.size,
+                            offlineHasMore = page.size == OFFLINE_PAGE,
+                        )
+                    }
+                } else {
+                    _state.update {
+                        // null when the server message is blank → the screen shows the localized fallback.
+                        it.copy(loading = false, error = res.message.takeIf { m -> m.isNotBlank() }, offline = false)
+                    }
                 }
             }
         }

@@ -7,7 +7,10 @@ import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.CirculationRequestKind
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.connectivity.ConnectivityObserver
 import com.pinakes.app.data.network.ErrorCodes
+import com.pinakes.app.ui.common.serverMessage
+import kotlinx.coroutines.flow.drop
 import com.pinakes.app.data.repository.CatalogRepository
 import com.pinakes.app.data.repository.LibraryRepository
 import com.pinakes.app.data.repository.WishlistRepository
@@ -39,7 +42,16 @@ data class BookDetailUiState(
     val availabilityFallback: Boolean = false,
     // When true the loan-request sheet is open.
     val showLoanSheet: Boolean = false,
-)
+    /** The page comes from the offline cache (server unreachable): actions are hidden. */
+    val offline: Boolean = false,
+    /** When the offline copy was last synced (server time), for "last known" wording. */
+    val syncedAt: String? = null,
+    /** Device connectivity: a page loaded online hides its loan actions when it drops. */
+    val connected: Boolean = true,
+) {
+    /** Cached page or no connection: no loan/reservation affordance, no current availability. */
+    val offlineNow: Boolean get() = offline || !connected
+}
 
 data class RequestConfirmation(
     val desiredDate: String,
@@ -52,15 +64,25 @@ class BookDetailViewModel @Inject constructor(
     private val catalog: CatalogRepository,
     private val library: LibraryRepository,
     private val wishlist: WishlistRepository,
+    private val connectivity: ConnectivityObserver,
 ) : ViewModel() {
 
     // The book id arrives as a navigation argument; Hilt populates SavedStateHandle from it.
     private val bookId: Int = savedStateHandle.get<Int>(Routes.ARG_BOOK_ID) ?: 0
 
-    private val _state = MutableStateFlow(BookDetailUiState())
+    private val _state = MutableStateFlow(BookDetailUiState(connected = connectivity.isOnline.value))
     val state: StateFlow<BookDetailUiState> = _state.asStateFlow()
 
-    init { load() }
+    init {
+        load()
+        viewModelScope.launch {
+            connectivity.isOnline.drop(1).collect { online ->
+                // Offline: close the loan sheet at once (availability can't be guaranteed).
+                _state.update { it.copy(connected = online, showLoanSheet = it.showLoanSheet && online) }
+                if (online && (_state.value.offline || _state.value.content is UiState.Error)) load()
+            }
+        }
+    }
 
     fun load() {
         _state.update { it.copy(content = UiState.Loading) }
@@ -70,32 +92,42 @@ class BookDetailViewModel @Inject constructor(
                     it.copy(
                         content = UiState.Success(res.data),
                         wishlisted = res.data.personalHistory?.hasWishlisted ?: it.wishlisted,
+                        offline = false,
                     )
                 }
-                is ApiResult.Failure -> _state.update {
-                    it.copy(content = UiState.Error(res.message, res.code, R.string.book_error_load))
+                is ApiResult.Failure -> {
+                    val cached = if (res.code == ErrorCodes.NETWORK) catalog.bookOffline(bookId) else null
+                    val syncedAt = if (cached != null) catalog.lastSyncedAt() else null
+                    _state.update {
+                        if (cached != null) it.copy(content = UiState.Success(cached), offline = true, syncedAt = syncedAt)
+                        else it.copy(content = UiState.Error(res.message, res.code, R.string.book_error_load))
+                    }
                 }
             }
         }
     }
 
     fun toggleWishlist() {
-        if (_state.value.wishlistBusy) return
+        if (_state.value.wishlistBusy || _state.value.offlineNow) return
         val nowWishlisted = !_state.value.wishlisted
         _state.update { it.copy(wishlistBusy = true) }
         viewModelScope.launch {
             val res = if (nowWishlisted) wishlist.add(bookId) else wishlist.remove(bookId)
             when (res) {
-                is ApiResult.Success -> _state.update {
-                    it.copy(
-                        wishlisted = nowWishlisted,
-                        wishlistBusy = false,
-                        snackbar = null,
-                        snackbarRes = if (nowWishlisted) R.string.snackbar_added_to_wishlist else R.string.snackbar_removed_from_wishlist,
-                    )
+                is ApiResult.Success -> {
+                    _state.update {
+                        it.copy(
+                            wishlisted = nowWishlisted,
+                            wishlistBusy = false,
+                            snackbar = null,
+                            snackbarRes = if (nowWishlisted) R.string.snackbar_added_to_wishlist else R.string.snackbar_removed_from_wishlist,
+                        )
+                    }
+                    // Bring the offline copy up to date after the confirmation, not before it.
+                    if (nowWishlisted) launch { runCatching { wishlist.refreshCache() } }
                 }
                 is ApiResult.Failure -> _state.update {
-                    if (res.message.isNotBlank()) it.copy(wishlistBusy = false, snackbar = res.message, snackbarRes = null)
+                    if (res.serverMessage() != null) it.copy(wishlistBusy = false, snackbar = res.serverMessage(), snackbarRes = null)
                     else it.copy(wishlistBusy = false, snackbar = null, snackbarRes = R.string.snackbar_wishlist_update_error)
                 }
             }
@@ -108,6 +140,7 @@ class BookDetailViewModel @Inject constructor(
      * picker and flags [BookDetailUiState.availabilityFallback].
      */
     fun openLoanSheet() {
+        if (_state.value.offlineNow) return
         _state.update { it.copy(showLoanSheet = true, availabilityLoading = true, availabilityFallback = false, availability = null) }
         viewModelScope.launch {
             when (val res = catalog.bookAvailability(bookId)) {
@@ -148,6 +181,9 @@ class BookDetailViewModel @Inject constructor(
                         )
                     }
                     load()
+                    // The request is now a pending loan or a reservation: refresh the offline
+                    // copy after the confirmation instead of holding it back.
+                    launch { runCatching { library.refreshCache() } }
                 }
                 is ApiResult.Failure -> {
                     // Close the calendar dialog so the error is visible: the snackbar
@@ -155,8 +191,8 @@ class BookDetailViewModel @Inject constructor(
                     when {
                         res.code == ErrorCodes.CONFLICT ->
                             _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = null, snackbarRes = R.string.snackbar_request_conflict) }
-                        res.message.isNotBlank() ->
-                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = res.message, snackbarRes = null) }
+                        res.serverMessage() != null ->
+                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = res.serverMessage(), snackbarRes = null) }
                         else ->
                             _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = null, snackbarRes = R.string.snackbar_request_error) }
                     }

@@ -1,0 +1,42 @@
+{
+  "data": {
+    "name": "Test Library",
+    "version": "0.8.5",
+    "api_version": "v1",
+    "features": {
+      "catalog": true,
+      "loans": true,
+      "reservations": true,
+      "wishlist": true,
+      "messages": true,
+      "notifications": true,
+      "push": false,
+      "reviews": false,
+      "archives": false,
+      "desiderata": false,
+      "staff_catalog": true,
+      "catalog_sync": true,
+      "calendar_feed": true,
+      "staff_circulation": true,
+      "staff_copies": true,
+      "staff_series": true,
+      "staff_merges": true,
+      "staff_labels": true,
+      "staff_imports": true,
+      "staff_covers": true,
+      "staff_desiderata": true,
+      "staff_archives": true,
+      "staff_periodicals": false,
+      "staff_bookclub": false,
+      "staff_frbr": false,
+      "staff_digital_library": false,
+      "staff_librarything": false
+    },
+    "catalogue_mode": false,
+    "loan_approval_required": true,
+    "app_access_enabled": true,
+    "registration_enabled": false
+  },
+  "meta": {},
+  "error": null
+}

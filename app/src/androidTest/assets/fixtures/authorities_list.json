@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "id": 7,
+      "type": "person",
+      "name": "Rossi, Mario",
+      "dates": "1880-1950",
+      "units_count": 2
+    }
+  ],
+  "meta": {
+    "next_cursor": null,
+    "has_more": false
+  },
+  "error": null
+}

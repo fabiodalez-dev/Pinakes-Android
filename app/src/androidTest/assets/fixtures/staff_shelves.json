@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "id": 7,
+      "code": "A",
+      "name": "Narrativa",
+      "order": 1,
+      "levels": [
+        {
+          "id": 70,
+          "number": 1,
+          "description": "Alto",
+          "order": 1
+        }
+      ]
+    }
+  ],
+  "meta": {},
+  "error": null
+}

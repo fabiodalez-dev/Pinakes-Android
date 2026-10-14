@@ -1,0 +1,31 @@
+{
+  "data": [
+    {
+      "id": 3,
+      "parent_id": null,
+      "title": "Fondo Rossi",
+      "reference_code": "IT-PIN-1",
+      "level": "fonds",
+      "date_start": 1920,
+      "date_end": 1950,
+      "cover_url": null,
+      "published": false
+    },
+    {
+      "id": 4,
+      "parent_id": 3,
+      "title": "Lettere",
+      "reference_code": "IT-PIN-2",
+      "level": "series",
+      "date_start": 1920,
+      "date_end": 1950,
+      "cover_url": null,
+      "published": true
+    }
+  ],
+  "meta": {
+    "next_cursor": null,
+    "has_more": false
+  },
+  "error": null
+}

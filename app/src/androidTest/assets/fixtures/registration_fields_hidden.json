@@ -1,0 +1,28 @@
+{
+  "data": {
+    "registration_enabled": true,
+    "builtin_fields": {
+      "cognome": {
+        "required": true,
+        "configurable": false
+      }
+    },
+    "custom_fields": [],
+    "profile_fields": {
+      "data_nascita": {
+        "visible": true,
+        "configurable": false
+      },
+      "sesso": {
+        "visible": false,
+        "configurable": true
+      },
+      "cod_fiscale": {
+        "visible": false,
+        "configurable": true
+      }
+    }
+  },
+  "meta": {},
+  "error": null
+}

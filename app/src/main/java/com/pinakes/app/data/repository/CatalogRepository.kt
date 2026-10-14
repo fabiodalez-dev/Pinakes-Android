@@ -1,20 +1,30 @@
 package com.pinakes.app.data.repository
 
 import com.pinakes.app.data.local.CatalogDao
+import com.pinakes.app.data.local.SearchText
+import com.pinakes.app.data.local.SyncMeta
+import com.pinakes.app.data.local.SyncMetaDao
 import com.pinakes.app.data.local.toCached
+import com.pinakes.app.data.local.toOfflineDetail
 import com.pinakes.app.data.local.toSummary
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.BookSummary
 import com.pinakes.app.data.model.CatalogLanguage
 import com.pinakes.app.data.model.GenreNode
+import com.pinakes.app.data.model.SyncPage
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.network.NetworkModule
 import com.pinakes.app.data.network.apiCall
 import com.pinakes.app.data.network.apiResponse
+import com.pinakes.app.data.sync.SyncMerge
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import com.pinakes.app.data.sync.SyncContinuation
+import java.util.concurrent.ConcurrentHashMap
 
 /** Filters for a catalog search; nulls are omitted from the query. */
 data class SearchFilters(
@@ -43,18 +53,34 @@ data class SearchPage(
 class CatalogRepository(
     private val network: NetworkModule,
     private val catalogDao: CatalogDao,
+    private val syncMeta: SyncMetaDao,
+    private val nowMs: () -> Long = System::currentTimeMillis,
 ) {
 
-    // Small in-memory ETag cache for book detail: id -> (etag, payload).
-    private val detailCache = HashMap<Int, Pair<String?, BookDetail>>()
+    /** Serialises sync runs: the foreground observer, Home and the worker may all ask at once. */
+    private val syncMutex = Mutex()
+
+    /**
+     * Guards every cache write and [clearCache]. A sync fetches without it, then applies its
+     * result under it only if [cacheGeneration] is unchanged, so a run that was in flight when
+     * the instance was forgotten can never write the old library's rows or watermark back.
+     */
+    private val writeMutex = Mutex()
+
+    @Volatile
+    private var cacheGeneration = 0
+
+    // Small in-memory ETag cache for book detail: id -> (etag, payload). Concurrent: detail
+    // screens, the sync and clearCache() touch it from different coroutines.
+    private val detailCache = ConcurrentHashMap<Int, Pair<String?, BookDetail>>()
 
     /**
      * Reactive cached catalog snapshot (offline-first). Emits whatever Room holds —
      * including offline — so the UI can render instantly without a network round-trip
      * for the list or, via Coil's disk cache, its covers. Empty until the first refresh.
      */
-    fun observeCachedCatalog(): Flow<List<BookSummary>> =
-        catalogDao.observeAll().map { rows -> rows.map { it.toSummary() } }
+    fun observeCachedCatalog(limit: Int = HOME_SHELF_SIZE): Flow<List<BookSummary>> =
+        catalogDao.observeNewest(limit).map { rows -> rows.map { it.toSummary() } }
 
     /** True once a catalog snapshot has been cached at least once. */
     suspend fun hasCachedCatalog(): Boolean = catalogDao.count() > 0
@@ -65,23 +91,133 @@ class CatalogRepository(
      * payloads can never surface under library B.
      */
     suspend fun clearCache() {
-        detailCache.clear()
-        catalogDao.clear()
+        writeMutex.withLock {
+            cacheGeneration++
+            detailCache.clear()
+            catalogDao.clear()
+            syncMeta.clear()
+        }
     }
 
+    /** Transitional alias: every caller now gets the delta sync. */
+    suspend fun refreshCatalog(): ApiResult<Unit> = syncCatalog()
+
     /**
-     * Refresh the cached catalog from the network (first page, unfiltered) and replace
-     * the Room snapshot atomically. On network failure the existing cache is kept, so a
-     * refresh-on-open that fails never wipes the offline catalog.
+     * Bring the offline catalogue up to date with `GET /catalog/sync`.
+     *
+     * Uses the stored watermark as `since`; omits it (full pass) when there is none or the
+     * last full pass is older than seven days ([SyncMerge.shouldForceFull]). Every page is
+     * fetched first, then merged and applied in one transaction, and only then is the new
+     * watermark stored. Any failure keeps the cache and the old watermark untouched.
+     * A server without the endpoint (404) falls back to the legacy first-page snapshot.
+     * Concurrent calls collapse: a run already in progress makes the second call a no-op.
      */
-    suspend fun refreshCatalog(limit: Int = 40): ApiResult<Unit> =
-        when (val res = search(SearchFilters(), limit = limit)) {
+    suspend fun syncCatalog(): ApiResult<Unit> {
+        if (!syncMutex.tryLock()) return ApiResult.Success(Unit)
+        try {
+            val generation = cacheGeneration
+            val since = syncMeta.get(SyncMeta.CATALOG_SERVER_TIME)
+            val lastFullAt = syncMeta.get(SyncMeta.CATALOG_LAST_FULL_AT)?.toLongOrNull()
+            val requestFull = SyncMerge.shouldForceFull(since, lastFullAt, nowMs())
+            val api = network.api()
+            val pages = ArrayList<SyncPage>()
+            var cursor: String? = null
+            var guard = 0
+            do {
+                val res = apiCall {
+                    api.catalogSync(
+                        since = if (requestFull || cursor != null) null else since,
+                        cursor = cursor,
+                        limit = SYNC_PAGE_SIZE,
+                    )
+                }
+                when (res) {
+                    is ApiResult.Success -> {
+                        pages += res.data
+                        cursor = when (val c = SyncMerge.continuation(res.meta?.hasMore, res.meta?.nextCursor)) {
+                            is SyncContinuation.Next -> c.cursor
+                            SyncContinuation.Done -> null
+                            // Never apply a partial run nor advance the watermark past it.
+                            SyncContinuation.Broken ->
+                                return ApiResult.Failure(ErrorCodes.SERVER_ERROR, "Catalogue sync page without a cursor", 0)
+                        }
+                    }
+                    is ApiResult.Failure -> {
+                        return if (res.httpStatus == 404 && pages.isEmpty()) legacySnapshot(generation) else res
+                    }
+                }
+            } while (cursor != null && ++guard < MAX_SYNC_PAGES)
+            if (cursor != null) {
+                // The server kept paging past the safety cap: do not trust a partial run.
+                return ApiResult.Failure(ErrorCodes.SERVER_ERROR, "Catalogue sync did not finish", 0)
+            }
+
+            val result = SyncMerge.merge(pages, requestedFull = requestFull)
+            val rows = result.upserts.map { it.toCached() }
+            writeMutex.withLock {
+                // The instance was forgotten (cache cleared) while this run was fetching.
+                if (generation != cacheGeneration) return ApiResult.Success(Unit)
+                if (result.fullResync) {
+                    catalogDao.replaceAll(rows)
+                    syncMeta.put(SyncMeta(SyncMeta.CATALOG_LAST_FULL_AT, nowMs().toString()))
+                } else {
+                    catalogDao.applyDelta(rows, result.deleteIds)
+                }
+                result.serverTime?.let { syncMeta.put(SyncMeta(SyncMeta.CATALOG_SERVER_TIME, it)) }
+            }
+            // Book pages served from memory may now be stale.
+            result.upserts.forEach { detailCache.remove(it.id) }
+            result.deleteIds.forEach { detailCache.remove(it) }
+            return ApiResult.Success(Unit)
+        } finally {
+            syncMutex.unlock()
+        }
+    }
+
+    /** Servers before Mobile API 1.6.0: cache the first unfiltered page, as 1.6.x did. */
+    private suspend fun legacySnapshot(generation: Int): ApiResult<Unit> =
+        when (val res = search(SearchFilters(), limit = HOME_SHELF_SIZE)) {
             is ApiResult.Success -> {
-                catalogDao.replaceAll(res.data.items.mapIndexed { i, b -> b.toCached(i) })
+                writeMutex.withLock {
+                    if (generation == cacheGeneration) catalogDao.replaceAll(res.data.items.map { it.toCached() })
+                }
                 ApiResult.Success(Unit, res.meta)
             }
             is ApiResult.Failure -> res
         }
+
+    /**
+     * Search the offline catalogue (used when the server is unreachable). Filters mirror the
+     * online ones by value: genre and language match the cached labels. [sort] accepts
+     * `title_asc`, `title_desc` or `newest` (anything else falls back to title).
+     */
+    suspend fun searchOffline(
+        filters: SearchFilters,
+        genreName: String?,
+        sort: String?,
+        offset: Int,
+        limit: Int = 20,
+    ): List<BookSummary> = catalogDao.search(
+        q = SearchText.queryPattern(filters.query),
+        author = SearchText.escapeLike(filters.author?.trim().orEmpty()),
+        publisher = SearchText.escapeLike(filters.publisher?.trim().orEmpty()),
+        language = filters.language?.trim().orEmpty(),
+        genre = genreName?.trim().orEmpty(),
+        availableOnly = filters.availableOnly == true,
+        sort = when (sort) {
+            "title_desc" -> "title_desc"
+            "newest" -> "newest"
+            else -> "title_asc"
+        },
+        limit = limit,
+        offset = offset,
+    ).map { it.toSummary() }
+
+    /** Server time of the last completed sync (`Y-m-d H:i:s`), or null when never synced. */
+    suspend fun lastSyncedAt(): String? = syncMeta.get(SyncMeta.CATALOG_SERVER_TIME)
+
+    /** A summary-level detail page from the cache, or null when the title is not cached. */
+    suspend fun bookOffline(id: Int): BookDetail? = catalogDao.byId(id)?.toOfflineDetail()
 
     suspend fun search(
         filters: SearchFilters,
@@ -168,5 +304,14 @@ class CatalogRepository(
     suspend fun bookAvailability(id: Int): ApiResult<AvailabilityCalendar> {
         val api = network.api()
         return apiCall { api.bookAvailability(id) }
+    }
+
+    private companion object {
+        /** Home shelf and legacy snapshot size (the server page cap is 50). */
+        const val HOME_SHELF_SIZE = 40
+        const val SYNC_PAGE_SIZE = 200
+
+        /** 200 × 2 000 = 400 000 titles: far beyond any target catalogue, still finite. */
+        const val MAX_SYNC_PAGES = 2_000
     }
 }

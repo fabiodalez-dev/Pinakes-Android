@@ -10,7 +10,11 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.network.ErrorCodes
+import com.pinakes.app.data.repository.AuthRepository
 import com.pinakes.app.data.repository.CatalogRepository
+import com.pinakes.app.data.repository.LibraryRepository
+import com.pinakes.app.data.repository.WishlistRepository
+import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.store.SessionStore
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -19,7 +23,8 @@ import dagger.hilt.components.SingletonComponent
 import java.util.concurrent.TimeUnit
 
 /**
- * Periodic background refresh of the offline catalog snapshot. Complements the
+ * Periodic background refresh of the offline catalogue (delta sync, weekly full resync) and of
+ * the cached loans and wishlist. Complements the
  * foreground refresh in [com.pinakes.app.PinakesApplication]: even if the user doesn't
  * open the app, WorkManager keeps the cached "Available now" shelf reasonably fresh so the
  * catalog works offline without hammering the server.
@@ -39,6 +44,11 @@ class CatalogSyncWorker(
     interface Deps {
         fun session(): SessionStore
         fun catalogRepository(): CatalogRepository
+        fun libraryRepository(): LibraryRepository
+        fun wishlistRepository(): WishlistRepository
+        fun featureStore(): FeatureStore
+        fun authRepository(): AuthRepository
+        fun connectivity(): com.pinakes.app.data.connectivity.ConnectivityObserver
     }
 
     override suspend fun doWork(): Result {
@@ -46,7 +56,15 @@ class CatalogSyncWorker(
         // Nothing to sync for a signed-out user; succeed so the periodic chain continues.
         if (!deps.session().isLoggedIn()) return Result.success()
 
-        return when (val res = deps.catalogRepository().refreshCatalog()) {
+        val res = deps.catalogRepository().syncCatalog()
+        // Best effort: keep the personal lists readable offline too. Their failures never
+        // decide the worker's result (the catalogue sync does).
+        if (res is ApiResult.Success) {
+            val features = deps.featureStore().features.value
+            if (features.showLibrary) runCatching { deps.libraryRepository().refreshCache() }
+            if (features.showWishlist) runCatching { deps.wishlistRepository().refreshCache() }
+        }
+        return when (res) {
             is ApiResult.Success -> Result.success()
             // Only retry TRANSIENT failures; give up (success) on permanent
             // ones so the periodic chain keeps running without burning

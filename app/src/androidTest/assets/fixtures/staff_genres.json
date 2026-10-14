@@ -1,0 +1,19 @@
+{
+  "data": [
+    {
+      "id": 10,
+      "name": "Narrativa",
+      "parent_id": null,
+      "children": [
+        {
+          "id": 11,
+          "name": "Romanzo",
+          "parent_id": 10,
+          "children": []
+        }
+      ]
+    }
+  ],
+  "meta": {},
+  "error": null
+}
