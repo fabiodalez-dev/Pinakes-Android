@@ -9,6 +9,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -84,6 +85,12 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
     val app: AppViewModel = hiltViewModel()
     val authState by app.authState.collectAsStateWithLifecycle()
 
+    // A new session (another account, another library, or the same one after a logout or an
+    // expired token) always opens on Home, not on the tab the previous session left open.
+    LaunchedEffect(authState) {
+        if (authState != AuthState.Authenticated) mainTab = PinakesTab.Home
+    }
+
     val start = when (authState) {
         AuthState.NeedsOnboarding -> Routes.ONBOARDING
         AuthState.NeedsLogin -> Routes.LOGIN
@@ -137,6 +144,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 tab = mainTab,
                 onTabChange = { mainTab = it },
                 onLoggedOut = {
+                    mainTab = PinakesTab.Home
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(Routes.MAIN_GRAPH) { inclusive = true }
                     }
