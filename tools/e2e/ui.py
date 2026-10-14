@@ -4,7 +4,7 @@
 Usable as a module (``import ui``) or from the shell for poking at a screen:
 
     ANDROID_SERIAL=emulator-5554 python3 tools/e2e/ui.py dump
-    python3 tools/e2e/ui.py tap "Staff area"
+    python3 tools/e2e/ui.py tap "Admin area"
     python3 tools/e2e/ui.py shot /tmp/screen.png
 
 Texts are matched case-insensitively against a node's text or content description. The

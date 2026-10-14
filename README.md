@@ -54,7 +54,7 @@ Login, home, catalog, book detail and calendar captures use the 2026 interface o
   </tr>
 </table>
 
-### Staff area
+### Admin area
 
 Admin and staff accounts get a native staff area when the instance runs Mobile API 1.7.0: cataloguing with ISBN scanning, the whole circulation desk and the content of the Desiderata, Archives, Periodicals, Book Club and FRBR plugins. Captured on Android 15 at 360 dp against a local instance with demo data.
 
@@ -71,7 +71,7 @@ Admin and staff accounts get a native staff area when the instance runs Mobile A
     <td align="center"><img src="docs/screenshots/staff/new-loan.png" width="200" alt="New loan form with borrower and book search"><br><sub>New loan</sub></td>
     <td align="center"><img src="docs/screenshots/staff/reservations.png" width="200" alt="Reservations grouped by title with queue position"><br><sub>Reservations queue</sub></td>
     <td align="center"><img src="docs/screenshots/staff/copy-scanner.png" width="200" alt="Copy label scanner"><br><sub>Scan a copy label</sub></td>
-    <td align="center"><img src="docs/screenshots/staff/staff-hub.png" width="200" alt="Staff area hub"><br><sub>Staff area</sub></td>
+    <td align="center"><img src="docs/screenshots/staff/staff-hub.png" width="200" alt="Admin area hub"><br><sub>Admin area</sub></td>
   </tr>
 </table>
 
@@ -128,7 +128,7 @@ Admin and staff accounts get a native staff area when the instance runs Mobile A
 | **Profile** | Edit profile, change password, device list, theme switcher, language switcher, logout |
 | **Notifications** | Loan due/overdue, reservation ready, book available |
 | **Themes** | 2026 warm neutrals, Geist + Fraunces, complete 3D covers and paired theme colours. Light by default; pick light/dark/system in Profile |
-| **Staff area** | For admin and staff accounts: cataloguing (ISBN/EAN scanner with batch mode, manual records, copies with their own codes, series, merge duplicates, label PDFs, CSV and LibraryThing import, covers and enrichment, authors, publishers, genres, shelves) and plugin content (donation offers, archives, periodicals desk, book clubs, FRBR works, digital files) |
+| **Admin area** | For admin and staff accounts: cataloguing (ISBN/EAN scanner with batch mode, manual records, copies with their own codes, series, merge duplicates, label PDFs, CSV and LibraryThing import, covers and enrichment, authors, publishers, genres, shelves) and plugin content (donation offers, archives, periodicals desk, book clubs, FRBR works, digital files) |
 | **Circulation desk** | Counters, loans by status, new loan with borrower search and copy scanning, approve/reject, pickup, return with copy outcome, renew, bulk extend, reminders, receipt PDF, reservations queue. Hidden while offline |
 | **Offline catalogue** | Full catalogue mirrored on the device with delta sync; search, book pages, My Library and Wishlist work offline, while loan and reservation actions stay hidden until the connection is back |
 | **Loans in your calendar** | A private, revocable calendar link with your loans (start to due date) and reservations, for Google Calendar, Apple Calendar, Outlook and others |
