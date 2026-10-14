@@ -1,5 +1,6 @@
 package com.pinakes.app.ui.screens.library
 
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,7 @@ import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -70,12 +71,14 @@ fun LibraryScreen(onBookClick: (Int) -> Unit) {
                 stringResource(R.string.library_tab_history),
                 stringResource(R.string.library_tab_reservations),
             )
-            TabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.surface) {
+            // Scrollable so a long label ("Reservations", "Vormerkungen") never wraps mid-word at
+            // phone widths.
+            ScrollableTabRow(selectedTabIndex = tab, edgePadding = 0.dp, containerColor = MaterialTheme.colorScheme.surface) {
                 tabs.forEachIndexed { i, label ->
                     Tab(
                         selected = tab == i,
                         onClick = { tab = i },
-                        text = { Text(label, style = MaterialTheme.typography.labelLarge) },
+                        text = { Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false) },
                     )
                 }
             }
