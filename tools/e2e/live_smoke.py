@@ -20,7 +20,12 @@ instance database, used to switch the gender / tax code visibility and restore i
 
 Steps: onboarding URL, login, staff hub, manual ISBN add (scraped preview), duplicate add
 copies, manual record without ISBN, shelf/level location on edit (skipped when the instance
-has no shelf with a level), airplane-mode offline search and detail, calendar link + feed.
+has no shelf with a level), phase 2 (each skipped while its /health staff_* flag is off):
+loan created by API with an Idempotency-Key and its replay, then returned in the app by
+typing the copy code; a copy with an explicit code from the book editor; a series created in
+the app; a two-row CSV import job followed to completion; a Desiderata offer received; an
+unpublished archive unit created and checked absent from the public list; then airplane-mode
+offline search and detail, calendar link + feed.
 Cleanup (only what this run created): created books deleted, the calendar link revoked when
 it did not exist before, device tokens issued during the run revoked, app data cleared,
 airplane mode off. Exit code 0 only when every step passed.
@@ -95,13 +100,18 @@ class Api:
     def __init__(self):
         self.token = None
 
-    def call(self, method, path, body=None, raw=False, auth=True, base=None):
+    def call(self, method, path, body=None, raw=False, auth=True, base=None, headers=None, multipart=None):
         url = (base or HOST_URL) + "/api/v1/" + path.lstrip("/") if not path.startswith("http") else path
         data = json.dumps(body).encode() if body is not None else None
+        content_type = "application/json"
+        if multipart is not None:
+            data, content_type = encode_multipart(multipart)
         req = urllib.request.Request(url, data=data, method=method)
         req.add_header("Accept", "application/json")
+        for k, v in (headers or {}).items():
+            req.add_header(k, v)
         if data is not None:
-            req.add_header("Content-Type", "application/json")
+            req.add_header("Content-Type", content_type)
         if auth and self.token:
             req.add_header("Authorization", "Bearer " + self.token)
         try:
@@ -138,8 +148,31 @@ class Api:
         return body["data"]
 
 
+def encode_multipart(fields):
+    """fields: {name: str | (filename, bytes, mime)} → (body, content type)."""
+    boundary = "e2e" + RUN + str(random.randint(1000, 9999))
+    out = b""
+    for name, value in fields.items():
+        out += f"--{boundary}\r\n".encode()
+        if isinstance(value, tuple):
+            filename, payload, mime = value
+            out += f'Content-Disposition: form-data; name="{name}"; filename="{filename}"\r\nContent-Type: {mime}\r\n\r\n'.encode()
+            out += payload + b"\r\n"
+        else:
+            out += f'Content-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'.encode()
+    out += f"--{boundary}--\r\n".encode()
+    return out, f"multipart/form-data; boundary={boundary}"
+
+
 API = Api()
 CREATED = []          # book ids to delete
+CREATED_SERIES = []   # series ids to delete
+CREATED_ARCHIVES = [] # archive unit ids to delete
+CREATED_OFFERS = []   # desiderata offer ids to delete
+CIRC_TITLE = f"E2E circulation {RUN}"
+SERIES_NAME = f"E2E series {RUN}"
+IMPORT_TITLES = (f"E2E import A {RUN}", f"E2E import B {RUN}")
+ARCHIVE_REF = f"E2E-{RUN}"
 RESULTS = []          # (step, ok, detail)
 DEVICES_BEFORE = set()
 STATE = {"devices_known": False, "calendar_was_enabled": None}
@@ -248,7 +281,7 @@ def onboarding_and_login():
     ui.type_text(DEVICE_URL)
     ui.hide_keyboard()
     ui.tap(S["action_discover_library"])
-    ui.wait(S["action_continue"], 30)
+    ui.wait(S["action_continue"], 90)       # discovery on a loaded dev server
     ui.tap(S["action_continue"])
     ui.wait(S["login_email_label"], 30)
     ui.tap(S["login_email_label"], exact=True)
@@ -276,7 +309,8 @@ def staff_hub():
 
 @step("scan: manual ISBN, scraped preview, add with 2 copies")
 def scan_add():
-    ui.tap(S["staff_scan"])
+    ui.scroll_to(S["staff_scan"], exact=True)
+    ui.tap(S["staff_scan"], exact=True)
     deny_camera_prompt()
     ui.wait(S["staff_scan_manual_label"])
     scanner_lookup(ISBN)
@@ -310,7 +344,8 @@ def scan_duplicate():
 
 @step("manual record without ISBN")
 def manual_record():
-    ui.tap(S["staff_add_manual"])
+    ui.scroll_to(S["staff_add_manual"], exact=True)
+    ui.tap(S["staff_add_manual"], exact=True)
     ui.wait(S["staff_field_title"])
     ui.tap(S["staff_field_title"])
     ui.type_text(MANUAL_TITLE)
@@ -335,7 +370,8 @@ def edit_location():
         raise SkipStep("no manual record")
     shelf, level = shelves[0], shelves[0]["levels"][0]
     before = API.book(CREATED[1])
-    ui.tap(S["staff_books"])
+    ui.scroll_to(S["staff_books"], exact=True)
+    ui.tap(S["staff_books"], exact=True)
     ui.tap(S["staff_books_search"])
     ui.type_text(MANUAL_TITLE)
     ui.hide_keyboard()
@@ -349,7 +385,8 @@ def edit_location():
     ui.tap(S["staff_level"])
     ui.tap(s("staff_level_number", level["number"]))
     ui.tap(S["staff_book_save"])
-    ui.gone(S["staff_book_save"], 120)       # the edit screen closes after the save
+    # The save button shows a spinner (no text) while saving: wait for the editor itself to close.
+    ui.gone(S["staff_book_edit"], 120)
     after = API.book(CREATED[1])
     loc = after.get("location") or {}
     assert loc.get("shelf_id") == shelf["id"] and loc.get("level_id") == level["id"], f"location {loc}"
@@ -414,6 +451,198 @@ def calendar():
     assert b"BEGIN:VCALENDAR" in payload, "feed is not iCalendar"
     assert "text/calendar" in (headers.get("Content-Type") or ""), "feed content type"
     ui.back()
+
+
+# ---------------------------------------------------------------- phase 2 (Mobile API 1.7.0)
+
+def staff_flag(name):
+    _, body, _ = API.call("GET", "health", auth=False)
+    return bool((body.get("data") or {}).get("features", {}).get(name))
+
+
+def on_hub(nodes=None):
+    """The hub: its title is on screen and the bottom navigation is not (Profile shows both)."""
+    nodes = nodes if nodes is not None else ui.dump()
+    return ui.find(S["staff_title"], exact=True, nodes=nodes) and not ui.find(S["nav_profile"], exact=True, nodes=nodes)
+
+
+def back_to_hub():
+    for _ in range(6):
+        if on_hub():
+            return
+        if ui.find(S["nav_profile"], exact=True):
+            break
+        ui.hide_keyboard()
+        ui.back()
+    open_staff_hub()
+
+
+@step("circulation: loan by API, return by typed copy code in the app")
+def circulation_return():
+    if not staff_flag("staff_circulation"):
+        raise SkipStep("staff_circulation is off on this instance")
+    _, me, _ = API.call("GET", "me")
+    user_id = me["data"]["id"]
+    status, book, _ = API.call("POST", "staff/books", {"title": CIRC_TITLE, "copies": 1})
+    assert status in (200, 201), f"create book HTTP {status}"
+    CREATED.append(book["data"]["id"])
+    code = API.book(book["data"]["id"])["copies"][0]["inventory_number"]
+    key = f"e2e-{RUN}-loan"
+    status, loan, _ = API.call("POST", "staff/loans", {"user_id": user_id, "book_id": book["data"]["id"], "immediate": True,
+                                                       "copy_code": code}, headers={"Idempotency-Key": key})
+    assert status in (200, 201), f"create loan HTTP {status}: {loan.get('error')}"
+    loan_id = loan["data"]["id"]
+    # The same submission again is a replay, not a second loan.
+    status, again, _ = API.call("POST", "staff/loans", {"user_id": user_id, "book_id": book["data"]["id"], "immediate": True,
+                                                        "copy_code": code}, headers={"Idempotency-Key": key})
+    assert status == 200 and again["data"]["id"] == loan_id, f"replay HTTP {status}"
+    back_to_hub()
+    ui.scroll_to(S["staff_scan_copy"])
+    ui.tap(S["staff_scan_copy"])
+    deny_camera_prompt()
+    ui.tap(S["staff_copy_code"])
+    ui.type_text(code)
+    ui.hide_keyboard()
+    ui.tap(S["staff_scan_lookup"])
+    ui.wait(CIRC_TITLE, 30)
+    ui.tap(S["staff_loan_action_return"], exact=True)
+    ui.wait(S["staff_return_title"], 15)
+    time.sleep(1.5)
+    nodes = ui.dump()
+    buttons = [n for n in nodes if n.text == S["staff_loan_action_return"]]
+    ui.tap_xy(*buttons[-1].center)
+    ui.wait(s("staff_copy_returned_count", 1), 30)
+    _, after, _ = API.call("GET", f"staff/loans/{loan_id}")
+    assert after["data"]["status"] == "restituito", f"loan status {after['data']['status']}"
+    back_to_hub()
+    return f"loan #{loan_id} returned by code {code}"
+
+
+@step("copies: add a copy with an explicit code from the book editor")
+def copy_with_code():
+    if not staff_flag("staff_copies"):
+        raise SkipStep("staff_copies is off on this instance")
+    if not CREATED:
+        raise SkipStep("no book created by this run")
+    book_id = CREATED[-1]
+    title = API.book(book_id)["title"]
+    code = f"E2E-{RUN}-2"
+    back_to_hub()
+    ui.scroll_to(S["staff_books"], exact=True)
+    ui.tap(S["staff_books"], exact=True)
+    ui.tap(S["staff_books_search"])
+    ui.type_text(title)
+    ui.hide_keyboard()
+    ui.tap(title, timeout=30)
+    ui.wait(S["staff_book_save"], 30)
+    ui.scroll_to(S["staff_copy_add_with_code"])
+    ui.tap(S["staff_copy_add_with_code"])
+    ui.tap(S["staff_copy_code"])
+    ui.type_text(code)
+    ui.hide_keyboard()
+    ui.tap(S["action_save"], exact=True)
+    ui.wait(S["staff_copy_added"], 30)
+    codes = [c.get("inventory_number") for c in API.book(book_id)["copies"]]
+    assert code in codes, f"{code} not in {codes}"
+    back_to_hub()
+    return f"{code} on book #{book_id}"
+
+
+@step("series: create a series in the app")
+def series_roundtrip():
+    if not staff_flag("staff_series"):
+        raise SkipStep("staff_series is off on this instance")
+    back_to_hub()
+    ui.scroll_to(S["staff_series"])
+    ui.tap(S["staff_series"], exact=True)
+    ui.tap(S["staff_series_new"])
+    ui.tap(S["staff_field_name"])
+    ui.type_text(SERIES_NAME)
+    ui.hide_keyboard()
+    ui.tap(S["action_save"], exact=True)
+    ui.wait(S["staff_series_add_books"], 30)
+    _, rows, _ = API.call("GET", "staff/series?flat=1&q=" + urllib.request.quote(SERIES_NAME))
+    found = [r for r in rows.get("data") or [] if r.get("name") == SERIES_NAME]
+    CREATED_SERIES.extend(r["id"] for r in found)
+    assert len(found) == 1, f"expected the series once, found {len(found)}"
+    back_to_hub()
+    return f"series #{found[0]['id']}"
+
+
+@step("imports: a two-row CSV job runs to completion in the app")
+def csv_import_two_rows():
+    if not staff_flag("staff_imports"):
+        raise SkipStep("staff_imports is off on this instance (backend pending)")
+    csv = "titolo;autore\n" + "\n".join(f"{t};E2E Author" for t in IMPORT_TITLES) + "\n"
+    status, job, _ = API.call("POST", "staff/imports", multipart={
+        "file": (f"e2e-{RUN}.csv", csv.encode(), "text/csv"), "kind": "csv", "enable_scraping": "0"})
+    assert status == 201, f"create import HTTP {status}: {job.get('error')}"
+    back_to_hub()
+    ui.scroll_to(S["staff_imports"])
+    ui.tap(S["staff_imports"])
+    ui.scroll_to(f"e2e-{RUN}.csv")
+    ui.tap(f"e2e-{RUN}.csv")
+    ui.wait(S["staff_import_status_done"], 120)
+    for t in IMPORT_TITLES:
+        rows = [r for r in API.find_book(t) if r["title"] == t]
+        CREATED.extend(r["id"] for r in rows if r["id"] not in CREATED)
+        assert len(rows) == 1, f"{t!r} imported {len(rows)} times"
+    back_to_hub()
+    return f"job {job['data']['id']}"
+
+
+@step("desiderata: an offer is received into the catalogue from the app")
+def desiderata_receive():
+    if not staff_flag("staff_desiderata"):
+        raise SkipStep("staff_desiderata is off on this instance (backend pending)")
+    _, wanted, _ = API.call("GET", "desiderata?limit=1")
+    rows = wanted.get("data") or []
+    if not rows:
+        raise SkipStep("the library wants no title")
+    title = rows[0]["title"]
+    status, offer, _ = API.call("POST", "desiderata/offers", {"submission_id": f"e2e-{RUN}", "book_id": rows[0]["id"], "title": title,
+                                                              "notes": f"E2E {RUN}", "consent": True})
+    assert status in (200, 201), f"offer HTTP {status}"
+    offer_id = offer["data"]["id"]
+    CREATED_OFFERS.append(offer_id)
+    back_to_hub()
+    ui.scroll_to(S["staff_desiderata"])
+    ui.tap(S["staff_desiderata"])
+    ui.scroll_to(title)
+    ui.tap(title)
+    ui.tap(S["staff_offer_receive"])
+    ui.wait(S["staff_offer_received"], 30)
+    _, after, _ = API.call("GET", "staff/desiderata/offers?status=received")
+    assert any(o["id"] == offer_id for o in after.get("data") or []), "offer not received"
+    back_to_hub()
+    return f"offer #{offer_id} for {title!r}"
+
+
+@step("archives: create an unpublished unit in the app")
+def archive_create_delete():
+    if not staff_flag("staff_archives"):
+        raise SkipStep("staff_archives is off on this instance (backend pending)")
+    back_to_hub()
+    ui.scroll_to(S["staff_archives"])
+    ui.tap(S["staff_archives"], exact=True)
+    ui.tap(S["staff_archive_new"])
+    ui.tap(S["staff_archive_published"])          # new units start published: turn it off
+    ui.tap(S["staff_archive_reference_code"])
+    ui.type_text(ARCHIVE_REF)
+    ui.hide_keyboard()
+    ui.tap(S["staff_archive_constructed_title"])
+    ui.type_text(f"E2E unit {RUN}")
+    ui.hide_keyboard()
+    ui.tap(S["action_save"], exact=True)
+    ui.wait(S["staff_archive_created"], 30)
+    _, rows, _ = API.call("GET", "staff/archives?published=all&q=" + urllib.request.quote(ARCHIVE_REF))
+    found = [r for r in rows.get("data") or [] if r.get("reference_code") == ARCHIVE_REF]
+    CREATED_ARCHIVES.extend(r["id"] for r in found)
+    assert len(found) == 1 and not found[0].get("published"), f"archive rows {found}"
+    _, public, _ = API.call("GET", "archives?q=" + urllib.request.quote(ARCHIVE_REF))
+    assert not any(r.get("reference_code") == ARCHIVE_REF for r in public.get("data") or []), "unpublished unit is public"
+    back_to_hub()
+    return f"archive #{found[0]['id']}"
 
 
 # ---------------------------------------------------------------- database (optional)
@@ -533,6 +762,28 @@ def _cleanup_server():
         ui.airplane(False)
     except Exception:  # noqa: BLE001
         pass
+    if API.token:
+        # Phase 2 records found by their run-unique names, in case a step failed half-way.
+        for t in (CIRC_TITLE,) + IMPORT_TITLES:
+            for r in API.find_book(t):
+                if r.get("title") == t and r["id"] not in CREATED:
+                    CREATED.append(r["id"])
+        for book_id in list(CREATED):
+            # A loan this run left open keeps the book: return it first.
+            _, loans, _ = API.call("GET", f"staff/loans?bucket=all&book_id={book_id}")
+            for loan in loans.get("data") or []:
+                if "return" in (loan.get("actions") or []):
+                    status, _, _ = API.call("POST", f"staff/loans/{loan['id']}/return", {"outcome": "restituito"})
+                    print(f"    return loan #{loan['id']}: HTTP {status}")
+        for series_id in CREATED_SERIES:
+            status, _, _ = API.call("DELETE", f"staff/series/{series_id}")
+            print(f"    delete series #{series_id}: HTTP {status}")
+        for archive_id in CREATED_ARCHIVES:
+            status, _, _ = API.call("DELETE", f"staff/archives/{archive_id}")
+            print(f"    delete archive unit #{archive_id}: HTTP {status}")
+        for offer_id in CREATED_OFFERS:
+            status, _, _ = API.call("DELETE", f"staff/desiderata/offers/{offer_id}")
+            print(f"    delete offer #{offer_id}: HTTP {status}")
     for book_id in CREATED:
         status, _, _ = API.call("DELETE", f"staff/books/{book_id}")
         print(f"    delete book #{book_id}: HTTP {status}")
@@ -557,7 +808,9 @@ def main():
     try:
         # Without a signed-in app the remaining steps cannot run: stop there.
         if ok and onboarding_and_login():
-            for fn in (staff_hub, scan_add, scan_duplicate, manual_record, edit_location, offline, calendar, hidden_profile_fields):
+            for fn in (staff_hub, scan_add, scan_duplicate, manual_record, edit_location,
+                       circulation_return, copy_with_code, series_roundtrip, csv_import_two_rows, desiderata_receive, archive_create_delete,
+                       offline, calendar, hidden_profile_fields):
                 fn()
     finally:
         cleanup()
