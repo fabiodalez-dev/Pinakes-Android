@@ -55,6 +55,7 @@ internal fun ScannerBox(
     looking: Boolean,
     permissionText: String,
     modifier: Modifier = Modifier,
+    appendEanAddOn: Boolean = false,
 ) {
     val context = LocalContext.current
     fun hasCamera() = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
@@ -77,6 +78,7 @@ internal fun ScannerBox(
             CameraPreview(
                 onCode = onCode, torchOn = false, onHasTorch = {}, onUnavailable = { cameraBroken = true },
                 accent = LocalPinakesColors.current.accent, modifier = Modifier.fillMaxSize(), formats = formats,
+                appendEanAddOn = appendEanAddOn,
             )
         } else {
             Column(Modifier.padding(Spacing.xl), horizontalAlignment = Alignment.CenterHorizontally) {

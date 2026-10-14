@@ -8,7 +8,10 @@ import com.google.zxing.DecodeHintType
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.NotFoundException
 import com.google.zxing.PlanarYUVLuminanceSource
+import com.google.zxing.LuminanceSource
 import com.google.zxing.ReaderException
+import com.google.zxing.Result
+import com.google.zxing.ResultMetadataType
 import com.google.zxing.common.HybridBinarizer
 
 /**
@@ -24,6 +27,7 @@ import com.google.zxing.common.HybridBinarizer
  */
 class BarcodeAnalyzer(
     private val formats: List<BarcodeFormat> = ISBN_FORMATS,
+    private val appendEanAddOn: Boolean = false,
     private val onCode: (String) -> Unit,
 ) : ImageAnalysis.Analyzer {
 
@@ -33,6 +37,29 @@ class BarcodeAnalyzer(
 
         /** Copy inventory labels (CODE 128, CODE 39) plus EAN-13 for libraries that label with it. */
         val COPY_FORMATS: List<BarcodeFormat> = listOf(BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.EAN_13)
+
+        /**
+         * The decoded text, with the EAN 2/5-digit add-on appended when [appendEanAddOn] asks for
+         * it. A periodical issue is identified by the 13-digit masthead code PLUS its add-on (the
+         * issue number); ZXing reports the add-on only as metadata. Books never ask for it: on an
+         * ISBN the 5-digit add-on is a price, not part of the identifier.
+         */
+        internal fun codeOf(result: Result, appendEanAddOn: Boolean): String {
+            val addOn = if (appendEanAddOn) result.resultMetadata?.get(ResultMetadataType.UPC_EAN_EXTENSION) as? String else null
+            return if (addOn.isNullOrEmpty()) result.text else result.text + addOn
+        }
+
+        /** One decode pass over [source], as the analyzer runs it on a camera frame. */
+        internal fun decode(source: LuminanceSource, formats: List<BarcodeFormat>, appendEanAddOn: Boolean): String? {
+            val reader = MultiFormatReader().apply {
+                setHints(mapOf(DecodeHintType.POSSIBLE_FORMATS to formats, DecodeHintType.TRY_HARDER to true))
+            }
+            return try {
+                codeOf(reader.decodeWithState(BinaryBitmap(HybridBinarizer(source))), appendEanAddOn)
+            } catch (_: ReaderException) {
+                null
+            }
+        }
     }
 
     private val reader = MultiFormatReader().apply {
@@ -79,7 +106,7 @@ class BarcodeAnalyzer(
             val top = (h - cropH) / 2
             val luminance = PlanarYUVLuminanceSource(data, w, h, 0, top, w, cropH, false)
             val result = reader.decodeWithState(BinaryBitmap(HybridBinarizer(luminance)))
-            result?.text?.let(onCode)
+            result?.let { onCode(codeOf(it, appendEanAddOn)) }
         } catch (_: NotFoundException) {
             // No barcode in this frame: the normal case.
         } catch (_: ReaderException) {

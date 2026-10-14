@@ -256,6 +256,8 @@ fun StaffPeriodicalsDeskScreen(onNavigateUp: () -> Unit, onOpenPeriodical: (Int)
                     ScannerBox(
                         formats = BarcodeAnalyzer.ISBN_FORMATS, onCode = vm::onDecoded, looking = state.looking,
                         permissionText = stringResource(R.string.staff_periodicals_scan_permission),
+                        // The issue is the masthead EAN plus its add-on: keep both from the camera.
+                        appendEanAddOn = true,
                     )
                     var manual by rememberSaveable { mutableStateOf("") }
                     val submit = { if (vm.submitManual(manual)) manual = "" }
