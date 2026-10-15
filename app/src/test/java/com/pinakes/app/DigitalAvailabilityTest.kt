@@ -95,6 +95,49 @@ class DigitalAvailabilityTest {
         org.junit.Assert.assertFalse(old.copy(ebookUrl = "javascript:bad").digitalOnly)
     }
 
+    // The app's own parser settings (NetworkModule.json): a closed file's url = null becomes "".
+    private val api = Json { ignoreUnknownKeys = true; explicitNulls = false; isLenient = true; coerceInputValues = true }
+
+    @Test fun closedFilesKeepTheirCardWithTheReasonInsteadOfAButton() {
+        val book = api.decodeFromString<BookDetail>("""{"id":7,"title":"Access","availability":{"copies_total":1},
+            "digital_attachments":[
+              {"url":"https://library.example/uploads/digital/open.pdf?pk_exp=4102444800&pk_uid=3&pk_sig=ab","label":"Open edition","kind":"ebook","visibility":"public","access":"granted"},
+              {"url":null,"label":"Readers edition","kind":"ebook","visibility":"users","access":"login_required"},
+              {"url":null,"label":"Loan edition","kind":"audio","visibility":"loan","access":"loan_required"}]}""")
+        // Two closed files share the same empty address: both stay listed.
+        assertEquals(listOf("Open edition", "Readers edition", "Loan edition"), book.digitalFiles.map { it.label })
+        show(book)
+        compose.onNodeWithText("Sign in to open it").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("For readers who have this book on loan").performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithTag("digital-locked").assertCountEquals(2)
+        compose.onAllNodesWithText("Read").assertCountEquals(1)
+        compose.onAllNodesWithText("Play").assertCountEquals(0)
+    }
+
+    @Test fun filesFromServersBeforeAccessControlAreOpen() {
+        val book = api.decodeFromString<BookDetail>("""{"title":"Old","digital_attachments":[{"url":"https://library.example/a.pdf","label":"A","kind":"ebook"}]}""")
+        val file = book.digitalFiles.single()
+        org.junit.Assert.assertFalse(file.locked)
+        org.junit.Assert.assertFalse(file.linkExpired())
+    }
+
+    @Test fun anExpiredSignedLinkFetchesTheRecordAgainInsteadOfOpening() {
+        var refreshes = 0
+        val messages = mutableListOf<String>()
+        val expired = DigitalAttachment("https://library.example/uploads/digital/x.pdf?pk_exp=1000&pk_uid=3&pk_sig=ab", label = "Old link", access = "granted")
+        org.junit.Assert.assertTrue(expired.linkExpired())
+        org.junit.Assert.assertFalse(expired.copy(url = "https://library.example/uploads/digital/x.pdf?pk_exp=4102444800").linkExpired())
+        compose.setContent { PinakesTheme {
+            DetailContent(BookDetail(title = "Expired", digitalAttachments = listOf(expired)), wishlisted = false, reserveBusy = false,
+                canBorrow = true, showWishlist = false, showReviews = false, onReserve = {}, onToggleWishlist = {},
+                onShowMessage = { messages += it }, onRefreshLinks = { refreshes++ })
+        } }
+        compose.onNodeWithText("Read").performScrollTo().performClick()
+        compose.waitForIdle()
+        assertEquals(1, refreshes)
+        assertEquals(listOf("Link refreshed: tap again to open it."), messages)
+    }
+
     @Test fun wantedCreditsKeepTranslatorSeparateAndSupportOlderServers() {
         val book = Json.decodeFromString<WantedBook>("""{"id":133,"title":"Wanted","author":"Tomás Ibáñez","contributors":[{"id":1,"name":"Tomás Ibáñez","role":"principale"},{"id":2,"name":"Alice Zaffaroni","role":"traduttore"}]}""")
         val aliases = listOf(AuthorRef(3, "Italian alias", "autore"), AuthorRef(4, "English alias", "author"),

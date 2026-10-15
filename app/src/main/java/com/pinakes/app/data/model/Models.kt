@@ -347,17 +347,51 @@ data class BookDetail(
             audioUrl?.takeIf { hasAudio && it.isNotBlank() }?.let { DigitalAttachment(it, kind = "audio") },
             ebookUrl?.takeIf { hasEbook && it.isNotBlank() }?.let { DigitalAttachment(it, kind = "ebook") },
         )
-    }.filter { it.safeUrl != null }.distinctBy { it.url }
+    }.filter { it.safeUrl != null || it.locked }.let { files ->
+        // A closed file has no address (the server sends url = null): several of them are
+        // all "", so only the open ones are told apart by their address.
+        val seen = HashSet<String>()
+        files.filter { it.locked || seen.add(it.url) }
+    }
 }
 
+/**
+ * One digital file of a record. Servers from Pinakes 0.8.6 (issue #480) say who may open
+ * it and what this reader may do: a closed file keeps its entry with an empty [url] and
+ * the reason in [access]. Older servers send neither field, and every file is open.
+ */
 @Serializable
-data class DigitalAttachment(val url: String = "", val label: String = "", val kind: String = "ebook") {
+data class DigitalAttachment(
+    val url: String = "",
+    val label: String = "",
+    val kind: String = "ebook",
+    /** public | users | staff | loan, as resolved by the server; null on older servers. */
+    val visibility: String? = null,
+    /** granted | login_required | loan_required | staff_only; null on older servers (= granted). */
+    val access: String? = null,
+) {
+    val locked: Boolean get() = access != null && access != ACCESS_GRANTED
     val safeUrl: String? get() = url.takeIf {
         val uri = runCatching { java.net.URI(it) }.getOrNull()
         uri?.scheme?.lowercase() in listOf("http", "https") && !uri?.host.isNullOrBlank()
     }
+
+    /** When a signed link stops working (its pk_exp, in epoch seconds); null for an unsigned link. */
+    val expiresAt: Long? get() = runCatching { java.net.URI(url).rawQuery }.getOrNull()
+        ?.split('&')?.firstOrNull { it.startsWith("pk_exp=") }?.substringAfter('=')?.toLongOrNull()
+
+    /** The signed link has expired, or will within a minute: the record must be fetched again first. */
+    fun linkExpired(nowSeconds: Long = System.currentTimeMillis() / 1000): Boolean =
+        expiresAt?.let { it <= nowSeconds + 60 } == true
+
     val format: String get() = runCatching { java.net.URI(url).path.substringAfterLast('.').uppercase() }.getOrDefault("")
     val isPdf: Boolean get() = format == "PDF"
+
+    companion object {
+        const val ACCESS_GRANTED = "granted"
+        const val ACCESS_LOGIN_REQUIRED = "login_required"
+        const val ACCESS_LOAN_REQUIRED = "loan_required"
+    }
 }
 
 @Serializable

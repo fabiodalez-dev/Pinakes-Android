@@ -1442,5 +1442,9 @@
   "staff_expression_critical": "Edizione critica",
   "staff_expression_audio": "Audio",
   "staff_expression_other": "Altro",
-  "staff_field_title_plain": "Titolo"
+  "staff_field_title_plain": "Titolo",
+  "digital_locked_login": "Accedi per aprirlo",
+  "digital_locked_loan": "Per chi ha il libro in prestito",
+  "digital_locked_other": "Non disponibile per il tuo account",
+  "digital_link_refreshed": "Collegamento aggiornato: tocca di nuovo per aprire."
 }

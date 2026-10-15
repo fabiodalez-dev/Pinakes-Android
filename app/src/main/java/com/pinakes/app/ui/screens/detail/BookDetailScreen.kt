@@ -40,6 +40,7 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.LocalOffer
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -76,6 +77,7 @@ import com.pinakes.app.R
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.CirculationRequestKind
+import com.pinakes.app.data.model.DigitalAttachment
 import com.pinakes.app.data.model.PersonalHistory
 import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.common.OfflinePolicy
@@ -200,6 +202,7 @@ fun BookDetailScreen(
                     onReserve = vm::openLoanSheet,
                     onToggleWishlist = vm::toggleWishlist,
                     onFindWorks = onFindWorks,
+                    onRefreshLinks = vm::load,
                     onShowMessage = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } },
                     offlineNotice = if (state.offlineNow) stringResource(R.string.offline_actions_unavailable) else null,
                     offlineSyncedAt = state.syncedAt,
@@ -338,6 +341,8 @@ internal fun DetailContent(
     onToggleWishlist: () -> Unit,
     onShowMessage: (String) -> Unit,
     onFindWorks: (String, Int?) -> Unit = { _, _ -> },
+    /** Fetches the record again: its signed file links last a day (issue #480). */
+    onRefreshLinks: () -> Unit = {},
     /** Set when the page is built from the offline cache: shown above the cover. */
     offlineNotice: String? = null,
     /** Last sync time of the offline copy: availability is shown as "last known", never current. */
@@ -516,11 +521,17 @@ internal fun DetailContent(
             DigitalFileCard(type = file.format.ifBlank { if (audio) "Audio" else "eBook" },
                 name = file.label.ifBlank { digitalFilename(file.url, book.title) },
                 kind = stringResource(if (audio) R.string.book_section_audiobook else if (file.kind == "supplement") R.string.book_section_related_documents else R.string.book_section_ebook)) {
-                if (audio && selectedAudio == file.url) {
+                if (file.locked) {
+                    LockedDigitalFile(file.access)
+                } else if (audio && selectedAudio == file.url) {
                     androidx.compose.runtime.key(file.url) { AudioPlayer(audioUrl = file.url) }
                 } else PrimaryButton(label = stringResource(if (audio) R.string.collection_play else if (file.isPdf) R.string.book_read else R.string.ebook_open_external),
                     onClick = {
-                        if (audio) selectedAudio = file.url
+                        // A signed link lasts a day: past that, fetch the record again for a fresh one.
+                        if (file.linkExpired()) {
+                            onRefreshLinks()
+                            onShowMessage(context.getString(R.string.digital_link_refreshed))
+                        } else if (audio) selectedAudio = file.url
                         else if (file.isPdf) selectedPdf = file.url
                         else runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(file.url))) }
                             .onFailure { onShowMessage(context.getString(R.string.ebook_error)) }
@@ -599,6 +610,24 @@ internal fun DetailContent(
             pdfUrl = pdf,
             onDismiss = { selectedPdf = null },
         )
+    }
+}
+
+/**
+ * A file this reader may not open yet: no button, and the reason instead (issue #480).
+ * The server leaves staff-only files out of the list, so only the other reasons reach here.
+ */
+@Composable
+private fun LockedDigitalFile(access: String?) {
+    val colors = LocalPinakesColors.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().testTag("digital-locked")) {
+        Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(18.dp))
+        Text(stringResource(when (access) {
+            DigitalAttachment.ACCESS_LOGIN_REQUIRED -> R.string.digital_locked_login
+            DigitalAttachment.ACCESS_LOAN_REQUIRED -> R.string.digital_locked_loan
+            else -> R.string.digital_locked_other
+        }), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
     }
 }
 
