@@ -4,6 +4,7 @@ import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.BookReviews
 import com.pinakes.app.data.model.BookSummary
+import com.pinakes.app.data.model.CalendarStatus
 import com.pinakes.app.data.model.CatalogLanguage
 import com.pinakes.app.data.model.ChangePasswordRequest
 import com.pinakes.app.data.model.CirculationRequestResult
@@ -27,6 +28,7 @@ import com.pinakes.app.data.model.RegisterRequest
 import com.pinakes.app.data.model.RegistrationFieldsPayload
 import com.pinakes.app.data.model.ReservationItem
 import com.pinakes.app.data.model.ReservationRequest
+import com.pinakes.app.data.model.SyncPage
 import com.pinakes.app.data.model.UpdateProfileRequest
 import com.pinakes.app.data.model.UserProfile
 import com.pinakes.app.data.model.WishlistAddRequest
@@ -198,6 +200,25 @@ interface PinakesApi {
 
     @PUT("me/push/prefs")
     suspend fun setPushPrefs(@Body body: PushPrefs): Envelope<Unit>
+
+    // ---- Delta catalogue sync (Mobile API 1.6.0, `catalog_sync`) ----
+    @GET("catalog/sync")
+    suspend fun catalogSync(
+        @Query("since") since: String? = null,
+        @Query("cursor") cursor: String? = null,
+        @Query("limit") limit: Int? = null,
+    ): Envelope<SyncPage>
+
+    // ---- Personal loans calendar feed (Mobile API 1.6.0, `calendar_feed`) ----
+    @GET("me/calendar")
+    suspend fun calendarStatus(): Envelope<CalendarStatus>
+
+    /** Creates the feed or rotates it: the previous URL stops working immediately. */
+    @POST("me/calendar/token")
+    suspend fun rotateCalendarToken(): Envelope<CalendarStatus>
+
+    @DELETE("me/calendar/token")
+    suspend fun revokeCalendarToken(): Envelope<CalendarStatus>
 
     companion object {
         /** Header marker (value-less) the [AuthInterceptor] uses to skip bearer injection. */

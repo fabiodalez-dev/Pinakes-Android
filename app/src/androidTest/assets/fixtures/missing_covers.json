@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "id": 5,
+      "title": "Orlando",
+      "isbn13": "9780156701600"
+    },
+    {
+      "id": 6,
+      "title": "Il barone rampante",
+      "isbn13": "9788804668237"
+    }
+  ],
+  "meta": {
+    "total_count": 2,
+    "next_cursor": null,
+    "has_more": false
+  },
+  "error": null
+}

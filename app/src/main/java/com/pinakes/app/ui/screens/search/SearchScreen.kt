@@ -1,5 +1,6 @@
 package com.pinakes.app.ui.screens.search
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
@@ -49,7 +50,11 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.ui.common.AppViewModel
+import com.pinakes.app.ui.common.OfflinePolicy
+import com.pinakes.app.ui.common.uiText
 import com.pinakes.app.ui.components.BookCover
 import com.pinakes.app.ui.screens.periodicals.StandaloneArticleRow
 import com.pinakes.app.R
@@ -61,13 +66,16 @@ import com.pinakes.app.ui.components.BookCard
 import com.pinakes.app.ui.components.BookCardSkeleton
 import com.pinakes.app.ui.components.EmptyState
 import com.pinakes.app.ui.components.ErrorState
+import com.pinakes.app.ui.components.InlineErrorBanner
 import com.pinakes.app.ui.components.SearchField
 import com.pinakes.app.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQueryConsumed: () -> Unit = {},
-    onArticleClick: (Int) -> Unit = {}, onWantedClick: (Int) -> Unit = {}, onArchiveClick: (Int) -> Unit = {}, initialAuthor: String? = null, initialAuthorId: Int? = null) {
+    onArticleClick: (Int) -> Unit = {}, onWantedClick: (Int) -> Unit = {}, onArchiveClick: (Int) -> Unit = {}, initialAuthor: String? = null, initialAuthorId: Int? = null,
+    /** Shown above the results (the author page): receives the titles loaded and whether more exist. */
+    header: (@Composable (count: Int, hasMore: Boolean) -> Unit)? = null) {
     val vm: SearchViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val app: AppViewModel = hiltViewModel()
@@ -84,7 +92,9 @@ fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQue
         else collectionVm.search(state.appliedFilters, features)
     }
     androidx.compose.runtime.LaunchedEffect(initialAuthor) { initialAuthor?.let { vm.setAuthorIdentity(it, initialAuthorId?.takeIf { id -> id > 0 }); vm.applyFilters() } }
-    val otherResults = (showArticles && (articles.items.isNotEmpty() || articles.error != null)) || (showWanted && (wanted.items.isNotEmpty() || wanted.error != null)) || (showArchives && (archives.items.isNotEmpty() || archives.error != null))
+    // A collection that failed only for lack of a connection is hidden, not shown as an error.
+    fun ApiResult.Failure?.visible() = this != null && code != ErrorCodes.NETWORK
+    val otherResults = (showArticles && (articles.items.isNotEmpty() || articles.error.visible())) || (showWanted && (wanted.items.isNotEmpty() || wanted.error.visible())) || (showArchives && (archives.items.isNotEmpty() || archives.error.visible()))
     val otherLoading = (showArticles && articles.loading) || (showWanted && wanted.loading) || (showArchives && archives.loading)
     var gridView by rememberSaveable { mutableStateOf(true) }
     androidx.compose.runtime.LaunchedEffect(initialQuery) {
@@ -165,6 +175,14 @@ fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQue
                 modifier = Modifier.padding(vertical = Spacing.sm))
         }
 
+        if (state.offline || !state.connected) {
+            InlineErrorBanner(
+                message = stringResource(if (state.offline) R.string.offline_results else R.string.offline_availability_hidden),
+                onRetry = vm::retry,
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+            )
+        }
+
         Box(Modifier.fillMaxSize()) {
             // Crossfade between the high-level UI states for a smooth load→loaded swap.
             val phase = when {
@@ -222,6 +240,7 @@ fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQue
                             ),
                             verticalArrangement = Arrangement.spacedBy(if (gridView) 28.dp else Spacing.md),
                         ) {
+                            if (header != null) item(key = "page-header") { header(state.items.size, state.hasMore) }
                             item {
                                 val browsingAll = state.query.isBlank() && !state.hasActiveFilters
                                 val header = when {
@@ -250,22 +269,22 @@ fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQue
                                     CatalogViewToggle(gridView, onChange = { gridView = it })
                                 }
                             }
-                            if (showArticles) {
+                            if (showArticles && (articles.items.isNotEmpty() || articles.loading || articles.error.visible())) {
                                 item { Text(stringResource(R.string.standalone_articles_title), style = MaterialTheme.typography.titleMedium) }
                                 if (articles.loading) item { CircularProgressIndicator(Modifier.size(20.dp)) }
-                                articles.error?.let { error -> item { Text(error.message.ifBlank { stringResource(if (error.code == "upgrade_required") R.string.collection_upgrade_required else R.string.standalone_articles_error) }, color = MaterialTheme.colorScheme.error) } }
+                                articles.error?.takeUnless { it.code == ErrorCodes.NETWORK }?.let { error -> item { Text(error.uiText(if (error.code == "upgrade_required") R.string.collection_upgrade_required else R.string.standalone_articles_error), color = MaterialTheme.colorScheme.error) } }
                                 items(articles.items, key = { "article-${it.id}" }) { article -> StandaloneArticleRow(article) { onArticleClick(article.id) } }
                                 if (articles.nextCursor != null) item { TextButton(collectionVm::moreArticles, enabled = !articles.loadingMore) { Text(stringResource(R.string.collection_more)) } }
                             }
-                            if (showWanted) {
+                            if (showWanted && (wanted.items.isNotEmpty() || wanted.loading || wanted.error.visible())) {
                                 item { Text(stringResource(R.string.desiderata_title), style = MaterialTheme.typography.titleMedium) }
-                                wanted.error?.let { error -> item { Text(error.message.ifBlank { stringResource(if (error.code == "upgrade_required") R.string.collection_upgrade_required else R.string.standalone_articles_error) }, color = MaterialTheme.colorScheme.error) } }
+                                wanted.error?.takeUnless { it.code == ErrorCodes.NETWORK }?.let { error -> item { Text(error.uiText(if (error.code == "upgrade_required") R.string.collection_upgrade_required else R.string.standalone_articles_error), color = MaterialTheme.colorScheme.error) } }
                                 items(wanted.items, key = { "wanted-${it.id}" }) { book -> SearchCollectionRow(book.title, book.author.orEmpty(), book.coverUrl, stringResource(R.string.desiderata_wanted)) { onWantedClick(book.id) } }
                                 if (wanted.nextCursor != null) item { TextButton(collectionVm::moreWanted, enabled = !wanted.loadingMore) { Text(stringResource(R.string.collection_more)) } }
                             }
-                            if (showArchives) {
+                            if (showArchives && (archives.items.isNotEmpty() || archives.loading || archives.error.visible())) {
                                 item { Text(stringResource(R.string.archives_title), style = MaterialTheme.typography.titleMedium) }
-                                archives.error?.let { error -> item { Text(error.message.ifBlank { stringResource(if (error.code == "upgrade_required") R.string.collection_upgrade_required else R.string.standalone_articles_error) }, color = MaterialTheme.colorScheme.error) } }
+                                archives.error?.takeUnless { it.code == ErrorCodes.NETWORK }?.let { error -> item { Text(error.uiText(if (error.code == "upgrade_required") R.string.collection_upgrade_required else R.string.standalone_articles_error), color = MaterialTheme.colorScheme.error) } }
                                 items(archives.items, key = { "archive-${it.id}" }) { record -> SearchCollectionRow(record.title, record.referenceCode, record.coverUrl, record.datesLabel.orEmpty()) { onArchiveClick(record.id) } }
                                 if (archives.nextCursor != null) item { TextButton(collectionVm::moreArchives, enabled = !archives.loadingMore) { Text(stringResource(R.string.collection_more)) } }
                             }
@@ -274,7 +293,7 @@ fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQue
                                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                         row.forEach { book ->
                                             BookCardGrid(title = book.title, author = book.authorsLabel, coverUrl = book.coverUrl,
-                                                status = book.availabilityStatus(), subtitle = book.subtitle, publisher = book.publisher,
+                                                status = if (OfflinePolicy.showCurrentAvailability(!state.availabilityCurrent)) book.availabilityStatus() else null, subtitle = book.subtitle, publisher = book.publisher,
                                                 year = book.year?.toString(), mediaType = book.mediaType,
                                                 onClick = { onBookClick(book.id) }, modifier = Modifier.weight(1f))
                                         }
@@ -284,7 +303,7 @@ fun SearchScreen(onBookClick: (Int) -> Unit, initialQuery: String? = null, onQue
                             } else {
                                 items(state.items, key = { it.id }) { book ->
                                     BookCard(title = book.title, author = book.authorsLabel, coverUrl = book.coverUrl,
-                                        status = book.availabilityStatus(), year = book.year?.toString(), publisher = book.publisher,
+                                        status = if (OfflinePolicy.showCurrentAvailability(!state.availabilityCurrent)) book.availabilityStatus() else null, year = book.year?.toString(), publisher = book.publisher,
                                         subtitle = book.subtitle, mediaType = book.mediaType,
                                         onClick = { onBookClick(book.id) }, modifier = Modifier.animateItem())
                                 }
@@ -373,6 +392,28 @@ private fun SearchCollectionRow(title: String, metadata: String, cover: String?,
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Text(title, style = MaterialTheme.typography.titleMedium)
             Text(metadata, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+/**
+ * The author page header in the catalogue: a padded card with the name and how many titles the
+ * library has (a lower bound with "+" while more pages exist). The results below use the
+ * regular cards, which always show the whole cover.
+ */
+@Composable
+fun AuthorInfoCard(name: String, count: Int, hasMore: Boolean) {
+    androidx.compose.material3.Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.sm).testTag("author-info-card"),
+    ) {
+        Column(Modifier.padding(com.pinakes.app.ui.theme.CardPadding)) {
+            Text(name, style = MaterialTheme.typography.headlineSmall.copy(fontFamily = com.pinakes.app.ui.theme.Fraunces))
+            com.pinakes.app.ui.components.MetadataRow(
+                stringResource(R.string.staff_record_books_count),
+                count.toString() + if (hasMore) "+" else "",
+            )
         }
     }
 }

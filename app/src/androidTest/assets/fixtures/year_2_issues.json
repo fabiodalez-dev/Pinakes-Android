@@ -1,0 +1,18 @@
+{
+  "data": [
+    {
+      "id": 4,
+      "number": "12",
+      "status": "atteso",
+      "publication_date": "2026-10-09"
+    },
+    {
+      "id": 5,
+      "number": "11",
+      "status": "posseduto",
+      "publication_date": "2026-10-02"
+    }
+  ],
+  "meta": {},
+  "error": null
+}

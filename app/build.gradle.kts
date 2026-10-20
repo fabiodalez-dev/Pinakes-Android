@@ -166,8 +166,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 26
         targetSdk = 35
-        versionCode = 19
-        versionName = "1.6.2"
+        versionCode = 22
+        versionName = "1.8.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -287,6 +287,8 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.okhttp.mockwebserver)
+    // System permission dialogs (camera) and airplane mode in the staff/offline device tests.
+    androidTestImplementation(libs.androidx.test.uiautomator)
 
     implementation(libs.androidx.navigation.compose)
 
@@ -316,6 +318,13 @@ dependencies {
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.work.runtime.ktx)
+
+    // Staff ISBN scanning: CameraX preview/analysis + ZXing EAN-13 decoding.
+    // ZXing is pure Java and needs no Google Play services.
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.zxing.core)
 
     // Hilt — dependency injection (trial: Home slice migrated, ServiceLocator bridges the rest).
     implementation(libs.hilt.android)

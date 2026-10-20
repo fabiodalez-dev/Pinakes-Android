@@ -3,9 +3,6 @@ package com.pinakes.app
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
@@ -88,7 +85,7 @@ class LoanRequestSheetUiTest {
         compose.onNodeWithTag("loan-cancel").assertIsEnabled()
     }
 
-    @Test fun fallbackPickerKeepsItsSeventhColumnInsideTheSheet() {
+    @Test fun fallbackGridKeepsItsSeventhColumnInsideTheSheet() {
         // The sheet's content in a 360dp column, the narrowest common phone, on any emulator:
         // the Dialog itself is a window with the device density, so it cannot be narrowed here.
         compose.setContent {
@@ -99,20 +96,15 @@ class LoanRequestSheetUiTest {
             }
         }
         val sheet = compose.onNodeWithTag("loan-sheet").getBoundsInRoot()
-        val days = compose.onAllNodes(
-            // Material announces each day as one button whose text is the full date.
-            SemanticsMatcher("a day of the month") { node ->
-                node.config.getOrNull(SemanticsProperties.Role) == Role.Button &&
-                    node.config.getOrNull(SemanticsProperties.Text)?.joinToString { it.text }
-                        ?.let { Regex("\\b\\d{1,2}\\b").containsMatchIn(it) && it.contains(today.year.toString()) } == true
-            },
-        ).fetchSemanticsNodes()
+        val month = java.time.YearMonth.from(today)
+        val days = (1..month.lengthOfMonth()).map { day ->
+            compose.onNodeWithTag("calendar-day-${month.atDay(day)}", useUnmergedTree = true).fetchSemanticsNode()
+        }
         assertEquals("Every day of the month is laid out", today.lengthOfMonth(), days.size)
-        // boundsInRoot is clipped by the sheet: a cut seventh column shows up as narrow days.
-        // Each day must keep its 40dp circle in view (without the bleed, 24dp of it is left).
+        // The fallback now uses the same weighted grid as the availability calendar.
         val density = compose.density.density
         val narrowest = days.minOf { it.boundsInRoot.width } / density
-        assertTrue("A day is cut by the sheet: ${narrowest}dp of its 40dp circle in view", narrowest >= 39.5f)
+        assertTrue("A day is clipped by the sheet: ${narrowest}dp", narrowest >= 30f)
         assertTrue("A day overflows the sheet", days.maxOf { it.boundsInRoot.right } / density <= sheet.right.value + .5f)
     }
 }

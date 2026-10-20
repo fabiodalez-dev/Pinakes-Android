@@ -1,0 +1,17 @@
+{
+  "data": [
+    {
+      "id": 3,
+      "name": "Virginia Woolf",
+      "pseudonym": null,
+      "label": "Virginia Woolf (1882–1941)",
+      "born": "1882-01-25",
+      "died": "1941-03-28"
+    }
+  ],
+  "meta": {
+    "count": 1,
+    "limit": 20
+  },
+  "error": null
+}

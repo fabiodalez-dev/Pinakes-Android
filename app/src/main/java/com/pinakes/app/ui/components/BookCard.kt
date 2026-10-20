@@ -100,7 +100,8 @@ fun BookCover(title: String, coverUrl: String?, modifier: Modifier = Modifier, c
 /** Compact catalog row. Account lists keep their separate MediaRow actions. */
 @Composable
 fun BookCard(
-    title: String, author: String, coverUrl: String?, status: AvailabilityStatus = AvailabilityStatus.Available,
+    // null hides the pill (offline: cached availability is never shown as current).
+    title: String, author: String, coverUrl: String?, status: AvailabilityStatus? = AvailabilityStatus.Available,
     year: String? = null, publisher: String? = null, onClick: () -> Unit = {}, modifier: Modifier = Modifier,
     subtitle: String? = null, mediaType: String? = null,
 ) {
@@ -116,7 +117,7 @@ fun BookCard(
             if (meta.isNotEmpty()) Text(meta, style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AvailabilityChip(status)
+                status?.let { AvailabilityChip(it) }
                 MediaTypeIcon(mediaType)
             }
         }
@@ -126,7 +127,8 @@ fun BookCard(
 /** The classic web card: book, status pill, title and metadata, with no outer card. */
 @Composable
 fun BookCardGrid(
-    title: String, author: String, coverUrl: String?, status: AvailabilityStatus = AvailabilityStatus.Available,
+    // null hides the pill (offline: cached availability is never shown as current).
+    title: String, author: String, coverUrl: String?, status: AvailabilityStatus? = AvailabilityStatus.Available,
     onClick: () -> Unit = {}, modifier: Modifier = Modifier, subtitle: String? = null,
     publisher: String? = null, year: String? = null, mediaType: String? = null,
 ) {
@@ -142,7 +144,7 @@ fun BookCardGrid(
             Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).graphicsLayer { translationY = lift.dp.toPx() }) {
                 BookCover(title, coverUrl, Modifier.fillMaxSize(), onTone = if (colors.cardStyle == CardStyle.Tinted) ({ coverTone = it }) else null,
                     author = author, publisher = publisher)
-                AvailabilityChip(status, modifier = Modifier.align(Alignment.TopStart).padding(8.dp))
+                status?.let { AvailabilityChip(it, modifier = Modifier.align(Alignment.TopStart).padding(8.dp)) }
                 Box(Modifier.align(Alignment.BottomEnd).padding(10.dp)) { MediaTypeIcon(mediaType, onCover = true) }
             }
         }

@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "id": 5,
+      "title": "Orlando",
+      "author": "Virginia Woolf",
+      "isbn13": "9780156701600",
+      "copies_total": 2,
+      "copies_available": 2,
+      "is_wanted": false,
+      "updated_at": "2026-10-13 09:00:00"
+    }
+  ],
+  "meta": {
+    "count": 1,
+    "limit": 30,
+    "next_cursor": null,
+    "has_more": false
+  },
+  "error": null
+}

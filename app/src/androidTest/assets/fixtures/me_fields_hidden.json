@@ -1,0 +1,17 @@
+{
+  "data": {
+    "id": 1,
+    "nome": "Ada",
+    "cognome": "Admin",
+    "email": "ada@example.org",
+    "tipo_utente": "admin",
+    "email_verificata": true,
+    "data_nascita": "1980-01-01",
+    "hidden_fields": [
+      "sesso",
+      "cod_fiscale"
+    ]
+  },
+  "meta": {},
+  "error": null
+}

@@ -17,12 +17,13 @@ import java.util.Locale
  */
 object DateFormat {
 
-    private val dateFormatter: DateTimeFormatter =
-        DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())
+    // Built per call: the app language can change while the process runs (AppLocale).
+    private val dateFormatter: DateTimeFormatter
+        get() = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(AppLocale.current())
 
-    private val dateTimeFormatter: DateTimeFormatter =
-        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-            .withLocale(Locale.getDefault())
+    private val dateTimeFormatter: DateTimeFormatter
+        get() = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+            .withLocale(AppLocale.current())
 
     private val wallClockSeconds = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     private val wallClockMinutes = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")

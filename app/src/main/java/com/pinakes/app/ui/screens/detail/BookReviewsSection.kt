@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -177,6 +178,15 @@ private fun ReviewsBody(
             onClick = vm::openEditor,
             leadingIcon = Icons.Outlined.RateReview,
             modifier = Modifier.fillMaxWidth(),
+        )
+    } else {
+        // Only borrowers may review: say so instead of leaving the reader looking for a button.
+        Spacer(Modifier.height(Spacing.lg))
+        Text(
+            stringResource(R.string.reviews_borrow_first),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag("reviews-borrow-first"),
         )
     }
 

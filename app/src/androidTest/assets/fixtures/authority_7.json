@@ -1,0 +1,19 @@
+{
+  "data": {
+    "id": 7,
+    "type": "person",
+    "authorised_form": "Rossi, Mario",
+    "dates_of_existence": "1880-1950",
+    "history": "Notaio.",
+    "units": [
+      {
+        "id": 3,
+        "title": "Fondo Rossi",
+        "role": "creator"
+      }
+    ],
+    "authors": []
+  },
+  "meta": {},
+  "error": null
+}

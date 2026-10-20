@@ -1,0 +1,31 @@
+{
+  "data": [
+    {
+      "id": 4,
+      "name": "Discworld",
+      "type": "universo",
+      "book_count": 3,
+      "complete": false,
+      "children": [
+        {
+          "id": 5,
+          "name": "Rincewind",
+          "type": "serie",
+          "parent_id": 4,
+          "book_count": 2,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Gialli Mondadori",
+      "type": "serie",
+      "book_count": 1,
+      "complete": true,
+      "children": []
+    }
+  ],
+  "meta": {},
+  "error": null
+}

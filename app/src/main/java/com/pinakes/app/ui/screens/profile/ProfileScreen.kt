@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.LibraryAdd
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Newspaper
@@ -97,9 +98,18 @@ fun ProfileScreen(
     onOpenArticles: () -> Unit,
     onOpenDesiderata: () -> Unit,
     onOpenArchives: () -> Unit,
+    onOpenStaff: () -> Unit = {},
+    app: AppViewModel = hiltViewModel(),
+    vm: ProfileViewModel = hiltViewModel(),
 ) {
-    val app: AppViewModel = hiltViewModel()
-    val vm: ProfileViewModel = hiltViewModel()
+    val isStaff by app.isStaff.collectAsStateWithLifecycle()
+    val role by app.role.collectAsStateWithLifecycle()
+    // Back on Profile (e.g. after the role changed on the server): re-read GET /me quietly.
+    var resumedOnce by remember { mutableStateOf(false) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        if (resumedOnce) vm.refreshQuietly() else resumedOnce = true
+        onPauseOrDispose { }
+    }
     val state by vm.state.collectAsStateWithLifecycle()
     val features by app.features.collectAsStateWithLifecycle()
     val snackbarHost = remember { SnackbarHostState() }
@@ -115,7 +125,9 @@ fun ProfileScreen(
                 is UiState.Loading -> LoadingState(label = stringResource(R.string.profile_loading))
                 is UiState.Error -> ErrorState(message = p.resolvedMessage(), onRetry = vm::load)
                 is UiState.Success -> ProfileContent(
-                    profile = p.data,
+                    // The stored role is refreshed by every GET /me (and the foreground refresh), so
+                    // it wins over the profile snapshot loaded when the screen opened.
+                    profile = role?.let { r -> p.data.copy(tipoUtente = r) } ?: p.data,
                     devices = state.devices,
                     loggingOut = state.loggingOut,
                     onEdit = vm::startEdit,
@@ -130,6 +142,11 @@ fun ProfileScreen(
                     onOpenArticles = onOpenArticles,
                     onOpenDesiderata = onOpenDesiderata,
                     onOpenArchives = onOpenArchives,
+                    onOpenStaff = onOpenStaff,
+                    onOpenCalendar = vm::openCalendar,
+                    showStaff = isStaff,
+                    // The feed lists loans, so it needs the loans feature (off in catalogue mode).
+                    showCalendar = features.calendarFeedAvailable && features.loans,
                     showDesiderata = features.desiderataAvailable,
                     showArchives = features.archivesAvailable,
                     showNotifications = features.notifications,
@@ -152,6 +169,8 @@ fun ProfileScreen(
             dataNascita = state.editDataNascita,
             codFiscale = state.editCodFiscale,
             sesso = state.editSesso,
+            showTaxCode = state.showTaxCode,
+            showGender = state.showGender,
             telefonoRequired = vm.builtinRequired("telefono"),
             indirizzoRequired = vm.builtinRequired("indirizzo"),
             customFields = editingProfile?.customFields.orEmpty(),
@@ -168,6 +187,18 @@ fun ProfileScreen(
             onCustomField = vm::onEditCustomField,
             onSave = vm::saveEdit,
             onDismiss = vm::cancelEdit,
+        )
+    }
+
+    if (state.calendarOpen) {
+        CalendarSubscribeSheet(
+            calendar = state.calendar,
+            busy = state.calendarBusy,
+            onEnable = vm::rotateCalendar,
+            onRegenerate = vm::rotateCalendar,
+            onDisable = vm::disableCalendar,
+            onRetry = vm::openCalendar,
+            onDismiss = vm::closeCalendar,
         )
     }
 
@@ -204,6 +235,10 @@ private fun ProfileContent(
     onOpenArticles: () -> Unit,
     onOpenDesiderata: () -> Unit,
     onOpenArchives: () -> Unit,
+    onOpenStaff: () -> Unit,
+    onOpenCalendar: () -> Unit,
+    showStaff: Boolean,
+    showCalendar: Boolean,
     showNotifications: Boolean,
     showContact: Boolean,
     showReviews: Boolean,
@@ -277,6 +312,12 @@ private fun ProfileContent(
         ActionRow(Icons.Outlined.Lock, stringResource(R.string.profile_action_change_password), onClick = onChangePassword)
         if (showReviews) {
             ActionRow(Icons.Outlined.RateReview, stringResource(R.string.profile_action_my_reviews), onClick = onOpenMyReviews)
+        }
+        if (showCalendar) {
+            ActionRow(Icons.Outlined.CalendarMonth, stringResource(R.string.profile_action_calendar), onClick = onOpenCalendar)
+        }
+        if (showStaff) {
+            ActionRow(Icons.Outlined.LibraryAdd, stringResource(R.string.profile_action_staff), onClick = onOpenStaff)
         }
         if (showBookClub) {
             ActionRow(Icons.Outlined.Groups, stringResource(R.string.profile_action_book_club), onClick = onOpenBookClub)
@@ -537,6 +578,8 @@ private fun EditProfileDialog(
     dataNascita: String,
     codFiscale: String,
     sesso: String,
+    showTaxCode: Boolean,
+    showGender: Boolean,
     telefonoRequired: Boolean,
     indirizzoRequired: Boolean,
     customFields: List<CustomFieldValue>,
@@ -584,8 +627,11 @@ private fun EditProfileDialog(
                     label = stringResource(R.string.profile_birth_date),
                     onValueChange = onDataNascita,
                 )
-                PinakesTextField(value = codFiscale, onValueChange = onCodFiscale, label = stringResource(R.string.profile_tax_code), modifier = Modifier.fillMaxWidth())
-                GenderField(value = sesso, onValueChange = onSesso)
+                // Hidden by the library: not rendered (and not sent, see ProfileViewModel.saveEdit).
+                if (showTaxCode) {
+                    PinakesTextField(value = codFiscale, onValueChange = onCodFiscale, label = stringResource(R.string.profile_tax_code), modifier = Modifier.fillMaxWidth())
+                }
+                if (showGender) GenderField(value = sesso, onValueChange = onSesso)
                 // Instance-defined custom fields, pre-filled from the user's current values.
                 // Rendered with required=false on purpose: the server accepts blank custom
                 // values on PATCH /me for existing members (see ProfileUiState

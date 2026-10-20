@@ -1,0 +1,13 @@
+{
+  "data": {
+    "stats": {
+      "total_with_isbn": 120,
+      "missing_cover": 2,
+      "missing_description": 7,
+      "pending": 9
+    },
+    "cron_enabled": false
+  },
+  "meta": {},
+  "error": null
+}

@@ -1,0 +1,73 @@
+{
+  "data": {
+    "languages": [
+      {
+        "code": "it",
+        "label": "Italiano"
+      }
+    ],
+    "media_types": [
+      {
+        "value": "libro",
+        "label": "Libro"
+      },
+      {
+        "value": "altro",
+        "label": "Altro"
+      }
+    ],
+    "formats": [
+      {
+        "value": "Brossura",
+        "label": "Brossura"
+      }
+    ],
+    "acquisition_types": [
+      {
+        "value": "Acquisto",
+        "label": "Acquisto"
+      }
+    ],
+    "contributor_roles": [],
+    "copy_states": [
+      {
+        "value": "disponibile",
+        "label": "Disponibile",
+        "editable": true
+      },
+      {
+        "value": "prestato",
+        "label": "In prestito",
+        "editable": false
+      },
+      {
+        "value": "manutenzione",
+        "label": "In manutenzione",
+        "editable": true
+      },
+      {
+        "value": "perso",
+        "label": "Perso",
+        "editable": true
+      }
+    ],
+    "series_types": [
+      {
+        "value": "serie",
+        "label": "Serie"
+      },
+      {
+        "value": "universo",
+        "label": "Universo"
+      }
+    ],
+    "return_outcomes": [
+      {
+        "value": "restituito",
+        "label": "Restituito"
+      }
+    ]
+  },
+  "meta": {},
+  "error": null
+}

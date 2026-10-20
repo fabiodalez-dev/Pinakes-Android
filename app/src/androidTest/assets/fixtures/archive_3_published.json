@@ -1,0 +1,54 @@
+{
+  "data": {
+    "id": 3,
+    "parent_id": null,
+    "title": "Fondo Rossi",
+    "reference_code": "IT-PIN-1",
+    "level": "fonds",
+    "cover_url": null,
+    "published": true,
+    "fields": {
+      "reference_code": "IT-PIN-1",
+      "institution_code": "PINAKES",
+      "level": "fonds",
+      "formal_title": "",
+      "constructed_title": "Fondo Rossi",
+      "date_start": 1920,
+      "date_end": 1950,
+      "extent": "3 buste",
+      "scope_content": "Carte di famiglia",
+      "language_codes": "ita",
+      "parent_id": null,
+      "specific_material": "text",
+      "dimensions": "",
+      "color_mode": "",
+      "photographer": "",
+      "publisher": "",
+      "collection_name": "",
+      "local_classification": "",
+      "iiif_manifest_url": "",
+      "rights_statement_url": "",
+      "ark_identifier": "",
+      "version_note": "",
+      "published": 1
+    },
+    "files": [
+      {
+        "id": 9,
+        "url": "/uploads/archives/9.pdf",
+        "mime": "application/pdf",
+        "label": "inventario.pdf"
+      }
+    ],
+    "authorities": [
+      {
+        "id": 2,
+        "type": "person",
+        "name": "Rossi, Mario",
+        "role": "creator"
+      }
+    ]
+  },
+  "meta": {},
+  "error": null
+}

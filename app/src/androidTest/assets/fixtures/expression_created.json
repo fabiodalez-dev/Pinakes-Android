@@ -1,0 +1,13 @@
+{
+  "data": {
+    "id": 3,
+    "work_id": 2,
+    "type": "testo",
+    "language": "ita",
+    "title": "Odissea (trad. Calzecchi Onesti)",
+    "year": 1963,
+    "notes": null
+  },
+  "meta": {},
+  "error": null
+}

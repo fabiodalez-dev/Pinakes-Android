@@ -5,7 +5,9 @@ import com.pinakes.app.ui.screens.search.BookSort
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.BookSummary
+import com.pinakes.app.data.connectivity.ConnectivityObserver
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.repository.CatalogRepository
 import com.pinakes.app.data.repository.SearchFilters
 import com.pinakes.app.data.store.FeatureStore
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -31,7 +34,16 @@ data class HomeUiState(
     val loading: Boolean = true,
     val error: String? = null,
     val sort: BookSort = BookSort.NEWEST,
+    /** The shelf comes from the offline cache: no availability pills, no "available now" claim. */
+    val fromCache: Boolean = false,
+    /** Device connectivity (ConnectivityObserver): a shelf loaded online stops being current when it drops. */
+    val connected: Boolean = true,
+    /** The last refresh failed for lack of a connection (localized message, never the raw exception). */
+    val offlineError: Boolean = false,
 ) {
+    /** Availability on the shelf may be presented as current only online and from the server. */
+    val availabilityCurrent: Boolean get() = connected && !fromCache
+
     val isEmpty: Boolean get() = !loading && error == null && available.isEmpty()
 }
 
@@ -41,6 +53,7 @@ class HomeViewModel @Inject constructor(
     private val session: SessionStore,
     private val features: FeatureStore,
     private val saved: SavedStateHandle,
+    private val connectivity: ConnectivityObserver,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -57,8 +70,20 @@ class HomeViewModel @Inject constructor(
     private var generation = 0
 
     init {
+        _state.update { it.copy(connected = connectivity.isOnline.value) }
         observeCache()
         observeCatalogueMode()
+        observeConnectivity()
+    }
+
+    /** Going offline hides availability at once; coming back refreshes the shelf (and the sync). */
+    private fun observeConnectivity() {
+        viewModelScope.launch {
+            connectivity.isOnline.drop(1).collect { online ->
+                _state.update { it.copy(connected = online) }
+                if (online) refresh()
+            }
+        }
     }
 
     /**
@@ -83,10 +108,9 @@ class HomeViewModel @Inject constructor(
 
     /**
      * Offline fallback: render the home shelf from the locally-cached catalog snapshot
-     * immediately. Loan mode keeps the "Available now" shelf filtered to currently-loanable
-     * copies; catalogue-only mode labels the shelf "Recently added", so the cache fallback
-     * must stay unfiltered. Only a partial answer — the cache holds the first unfiltered page —
-     * so it is superseded as soon as [refresh] gets the server-side query through.
+     * immediately: the newest cached titles, labelled "Recently added" and without status pills,
+     * because cached availability may be stale (never presented as current). Superseded as
+     * soon as [refresh] gets the server-side query through.
      */
     private fun observeCache() {
         viewModelScope.launch {
@@ -96,14 +120,15 @@ class HomeViewModel @Inject constructor(
             combine(
                 catalog.observeCachedCatalog(),
                 catalogueMode(),
-            ) { books, catalogueMode -> books to catalogueMode }.collectLatest { (books, catalogueMode) ->
+            ) { books, catalogueMode -> books to catalogueMode }.collectLatest { (books, _) ->
                 if (hasFreshShelf || _state.value.sort != BookSort.NEWEST) return@collectLatest
-                val shelfBooks =
-                    if (catalogueMode) books
-                    else books.filter { it.available }
+                // Cached availability may be stale, so the cached shelf is never filtered on it:
+                // it shows the newest cached titles, labelled as such, without status pills.
+                val shelfBooks = books
                 _state.update {
                     it.copy(
                         available = shelfBooks,
+                        fromCache = books.isNotEmpty(),
                         // Keep the loading skeleton until the first [refresh]
                         // resolves when the cache is still empty (cold start):
                         // an empty first emission must not flash the
@@ -136,22 +161,25 @@ class HomeViewModel @Inject constructor(
                 if (features.features.value.catalogueMode) SearchFilters()
                 else SearchFilters(availableOnly = true)
             val shelf = async { catalog.search(shelfFilters, limit = SHELF_LIMIT, sort = sort.apiValue) }
-            launch { catalog.refreshCatalog() }
+            launch { catalog.syncCatalog() }
             val res = shelf.await()
             if (request != generation) return@launch
             when (res) {
                 is ApiResult.Success -> {
                     hasFreshShelf = true
                     _state.update {
-                        it.copy(available = res.data.items, loading = false, error = null)
+                        it.copy(available = res.data.items, loading = false, error = null, fromCache = false, offlineError = false)
                     }
                 }
                 is ApiResult.Failure -> {
                     val hasCache = catalog.hasCachedCatalog()
+                    val offline = res.code == ErrorCodes.NETWORK
                     _state.update {
                         it.copy(
                             loading = false,
-                            error = if (hasCache && _state.value.available.isNotEmpty()) null else res.message,
+                            // Never the raw IOException text: offline gets a localized message.
+                            error = if (hasCache && _state.value.available.isNotEmpty()) null else if (offline) "" else res.message,
+                            offlineError = offline,
                         )
                     }
                 }

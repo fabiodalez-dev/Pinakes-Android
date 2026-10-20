@@ -1,5 +1,8 @@
 package com.pinakes.app.ui.screens.detail
 
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Dialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
@@ -38,23 +41,16 @@ import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -82,12 +78,17 @@ import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.CirculationRequestKind
 import com.pinakes.app.data.model.PersonalHistory
 import com.pinakes.app.ui.common.AppViewModel
+import com.pinakes.app.ui.common.OfflinePolicy
+import com.pinakes.app.ui.components.PinakesBottomBar
+import com.pinakes.app.ui.components.PinakesTab
+import com.pinakes.app.ui.common.DateFormat
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.common.resolvedMessage
 import com.pinakes.app.ui.components.AudioPlayer
 import com.pinakes.app.ui.components.AvailabilityChip
 import com.pinakes.app.ui.components.AvailabilityStatus
 import com.pinakes.app.ui.components.ErrorState
+import com.pinakes.app.ui.components.InlineErrorBanner
 import com.pinakes.app.ui.components.HtmlText
 import com.pinakes.app.ui.components.LoadingState
 import com.pinakes.app.ui.components.CitationButton
@@ -96,10 +97,7 @@ import com.pinakes.app.ui.components.PinakesTopBar
 import com.pinakes.app.ui.components.PrimaryButton
 import com.pinakes.app.ui.components.SecondaryButton
 import com.pinakes.app.ui.theme.Spacing
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -110,6 +108,8 @@ import kotlinx.coroutines.launch
 fun BookDetailScreen(
     onNavigateUp: () -> Unit,
     onFindWorks: (String, Int?) -> Unit = { _, _ -> },
+    selectedTab: PinakesTab = PinakesTab.Catalog,
+    onTabSelected: ((PinakesTab) -> Unit)? = null,
 ) {
     val app: AppViewModel = hiltViewModel()
     val features by app.features.collectAsStateWithLifecycle()
@@ -157,8 +157,8 @@ fun BookDetailScreen(
                 title = stringResource(R.string.title_book),
                 onNavigateUp = onNavigateUp,
                 actions = {
-                    // Wishlist toggle is hidden when the wishlist feature is disabled.
-                    if (features.showWishlist) {
+                    // Wishlist toggle is hidden when the wishlist feature is disabled, and offline.
+                    if (features.showWishlist && !state.offlineNow) {
                         IconButton(onClick = vm::toggleWishlist, enabled = !state.wishlistBusy) {
                             Icon(
                                 imageVector = if (state.wishlisted) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
@@ -172,6 +172,17 @@ fun BookDetailScreen(
             )
         },
         snackbarHost = { SnackbarHost(snackbarHost) },
+        bottomBar = {
+            // The same bottom navigation as the tabs: one tap goes back to any of them.
+            if (onTabSelected != null) {
+                PinakesBottomBar(
+                    selectedTab = selectedTab,
+                    onTabSelected = onTabSelected,
+                    showLibrary = features.showLibrary,
+                    showWishlist = features.showWishlist,
+                )
+            }
+        },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (val content = state.content) {
@@ -181,20 +192,24 @@ fun BookDetailScreen(
                     book = content.data,
                     wishlisted = state.wishlisted,
                     reserveBusy = state.reserveBusy,
-                    canBorrow = features.canBorrow,
-                    showWishlist = features.showWishlist,
-                    showReviews = features.showReviews,
+                    // Offline (cached summary): no loan/reservation affordance at all (availability
+                    // cannot be guaranteed), and wishlist and reviews need the server too.
+                    canBorrow = OfflinePolicy.showLoanActions(features.canBorrow, state.offlineNow),
+                    showWishlist = features.showWishlist && !state.offlineNow,
+                    showReviews = features.showReviews && !state.offlineNow,
                     onReserve = vm::openLoanSheet,
                     onToggleWishlist = vm::toggleWishlist,
                     onFindWorks = onFindWorks,
                     onShowMessage = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } },
+                    offlineNotice = if (state.offlineNow) stringResource(R.string.offline_actions_unavailable) else null,
+                    offlineSyncedAt = state.syncedAt,
                 )
             }
         }
     }
 
     // Loan/reservation sheet is only ever shown when borrowing is enabled.
-    if (state.showLoanSheet && features.canBorrow) {
+    if (state.showLoanSheet && OfflinePolicy.showLoanActions(features.canBorrow, state.offlineNow)) {
         LoanRequestSheet(
             loading = state.availabilityLoading,
             calendar = state.availability,
@@ -209,9 +224,8 @@ fun BookDetailScreen(
 /**
  * Loan-request sheet. While [loading], shows a spinner. With a [calendar], renders the colored
  * [LoanCalendar] (availability-tinted month grid). If [fallback] (availability fetch failed),
- * shows a plain today-or-future [DatePicker] and a note. Returns the chosen date as yyyy-MM-dd.
+ * uses the same month grid for any future day and a note. Returns the chosen date as yyyy-MM-dd.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LoanRequestSheet(
     loading: Boolean,
@@ -231,7 +245,9 @@ internal fun LoanRequestSheet(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        LoanRequestSheetContent(loading, calendar, fallback, submitting, onDismiss, onConfirm)
+        Box(Modifier.testTag("loan-dialog")) {
+            LoanRequestSheetContent(loading, calendar, fallback, submitting, onDismiss, onConfirm)
+        }
     }
 }
 
@@ -239,7 +255,6 @@ internal fun LoanRequestSheet(
  * The sheet itself, without its [Dialog]: a Dialog is a window of its own and takes the device
  * density, so the tests lay this out in a fixed width to check a narrow phone on any emulator.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LoanRequestSheetContent(
     loading: Boolean,
@@ -249,7 +264,6 @@ internal fun LoanRequestSheetContent(
     onDismiss: () -> Unit,
     onConfirm: (isoDate: String) -> Unit,
 ) {
-    val today = LocalDate.now()
     // Pre-select earliest_available when offered, else null until the user picks.
     var selectedIso by remember(calendar) {
         mutableStateOf(calendar?.earliestAvailable?.takeIf { it.isNotBlank() })
@@ -304,14 +318,12 @@ internal fun LoanRequestSheetContent(
                 }
 
                 else -> {
-                    // Fallback: plain today-or-future picker.
-                    FallbackDatePicker(
-                        today = today,
-                        selectedIso = selectedIso,
+                    // Unknown availability: preserve main's selectable, localised month grid.
+                    LoanCalendar(
+                        calendar = AvailabilityCalendar(),
+                        selected = selectedIso,
                         onSelect = { selectedIso = it },
-                        // Material's picker lays out seven 48dp columns: let it use the sheet's
-                        // side padding too, so the last column is never clipped on a phone.
-                        modifier = Modifier.bleedHorizontally(Spacing.lg),
+                        anyFutureDay = true,
                     )
                     Text(
                         stringResource(R.string.book_loan_availability_error),
@@ -354,43 +366,6 @@ internal fun LoanRequestSheetContent(
     }
 }
 
-/** Plain Material3 date picker limited to today-or-future, used only when availability load fails. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FallbackDatePicker(
-    today: LocalDate,
-    selectedIso: String?,
-    onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val todayUtcMillis = today.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-    val initialMillis = selectedIso?.let {
-        runCatching { LocalDate.parse(it).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() }.getOrNull()
-    } ?: todayUtcMillis
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialMillis,
-        selectableDates = object : SelectableDates {
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis >= todayUtcMillis
-        },
-    )
-    LaunchedEffect(datePickerState.selectedDateMillis) {
-        datePickerState.selectedDateMillis?.let { onSelect(millisToIsoDate(it)) }
-    }
-    DatePicker(state = datePickerState, modifier = modifier, title = null, headline = null, showModeToggle = false)
-}
-
-/** Measures the content [amount] wider on each side and centres it, over the parent's padding. */
-private fun Modifier.bleedHorizontally(amount: Dp): Modifier = layout { measurable, constraints ->
-    val extra = amount.roundToPx() * 2
-    val wide = constraints.copy(
-        minWidth = constraints.minWidth + extra,
-        maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + extra else constraints.maxWidth,
-    )
-    val placeable = measurable.measure(wide)
-    val width = (placeable.width - extra).coerceAtLeast(0)
-    layout(width, placeable.height) { placeable.place(-extra / 2, 0) }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun DetailContent(
@@ -404,7 +379,12 @@ internal fun DetailContent(
     onToggleWishlist: () -> Unit,
     onShowMessage: (String) -> Unit,
     onFindWorks: (String, Int?) -> Unit = { _, _ -> },
+    /** Set when the page is built from the offline cache: shown above the cover. */
+    offlineNotice: String? = null,
+    /** Last sync time of the offline copy: availability is shown as "last known", never current. */
+    offlineSyncedAt: String? = null,
 ) {
+    val offline = offlineNotice != null
     val context = LocalContext.current
     var showCover by remember { mutableStateOf(false) }
     var selectedPdf by remember(book.id) { mutableStateOf<String?>(null) }
@@ -418,6 +398,10 @@ internal fun DetailContent(
             .padding(Spacing.lg),
     ) {
         val colors = LocalPinakesColors.current
+        if (offlineNotice != null) {
+            InlineErrorBanner(message = offlineNotice)
+            Spacer(Modifier.height(Spacing.lg))
+        }
         BookCover(book.title, book.coverUrl, Modifier.widthIn(max = 340.dp).fillMaxWidth().aspectRatio(2f / 3f)
             .align(Alignment.CenterHorizontally).then(if (bookCoverImageUrl(book.coverUrl) != null)
                 Modifier.clickable(onClickLabel = stringResource(R.string.cd_cover_zoom)) { showCover = true } else Modifier),
@@ -485,10 +469,20 @@ internal fun DetailContent(
             }
             // No side inset: "Available" / "On loan" lines up with the copies line and the
             // buttons below it, as on the web book page.
-            AvailabilityChip(availStatus, availLabel, Modifier.testTag("detail-availability"),
-                contentPadding = PaddingValues(vertical = 4.dp))
-            if (!book.digitalOnly) Text(availableLabel, style = MaterialTheme.typography.bodyMedium, color = colors.muted,
-                modifier = Modifier.testTag("detail-copies"))
+            if (OfflinePolicy.showCurrentAvailability(offline)) {
+                AvailabilityChip(availStatus, availLabel, Modifier.testTag("detail-availability"),
+                    contentPadding = PaddingValues(vertical = 4.dp))
+                if (!book.digitalOnly) Text(availableLabel, style = MaterialTheme.typography.bodyMedium, color = colors.muted,
+                    modifier = Modifier.testTag("detail-copies"))
+            } else {
+                // Offline: a neutral, dated statement instead of a status pill.
+                Text(
+                    if (offlineSyncedAt.isNullOrBlank()) stringResource(R.string.offline_availability_unknown)
+                    else stringResource(R.string.offline_availability_last_known, DateFormat.dateTime(offlineSyncedAt), book.copiesAvailable, book.copiesTotal),
+                    style = MaterialTheme.typography.bodyMedium, color = colors.muted,
+                    modifier = Modifier.testTag("detail-offline-availability"),
+                )
+            }
             Spacer(Modifier.height(16.dp))
 
         // Personal-status banner: makes the user's own relationship to this book explicit,
@@ -613,7 +607,7 @@ internal fun DetailContent(
                 book.ean?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_ean), it) }
                 book.condition?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_condition), it) }
                 book.locationLabel?.takeIf { it.isNotBlank() }?.let { MetadataRow(stringResource(R.string.book_meta_shelf), it) }
-                MetadataRow(stringResource(R.string.book_meta_copies), stringResource(R.string.book_copies_value, book.copiesAvailable, book.copiesTotal))
+                if (!offline) MetadataRow(stringResource(R.string.book_meta_copies), stringResource(R.string.book_copies_value, book.copiesAvailable, book.copiesTotal))
             }
         }
 
@@ -751,13 +745,9 @@ private fun SectionTitle(text: String) {
 private fun digitalFilename(url: String, fallback: String): String =
     Uri.parse(url).lastPathSegment?.takeIf { it.isNotBlank() } ?: fallback
 
-private val displayDateFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())
+private val displayDateFormatter: DateTimeFormatter
+    get() = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(com.pinakes.app.ui.common.AppLocale.current())
 
 /** "2026-06-20" (yyyy-MM-dd) → locale-formatted date for display. Falls back to the raw input. */
 private fun formatDisplayDate(iso: String): String =
     runCatching { LocalDate.parse(iso).format(displayDateFormatter) }.getOrDefault(iso)
-
-/** DatePicker UTC-midnight millis → yyyy-MM-dd. */
-private fun millisToIsoDate(millis: Long): String =
-    Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate().toString()

@@ -1,7 +1,9 @@
 package com.pinakes.app.data.network
 
 import com.pinakes.app.data.store.SessionStore
+import com.pinakes.app.ui.common.AppLocale
 import okhttp3.Interceptor
+import okhttp3.Request
 import okhttp3.Response
 
 /**
@@ -12,7 +14,7 @@ import okhttp3.Response
 class AuthInterceptor(private val session: SessionStore) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
-        val original = chain.request()
+        val original = withLanguage(chain.request())
 
         // Public endpoints carry the no-auth marker — drop it and send as-is.
         if (original.header(NO_AUTH_HEADER) != null) {
@@ -42,5 +44,14 @@ class AuthInterceptor(private val session: SessionStore) : Interceptor {
 
     companion object {
         private const val NO_AUTH_HEADER = "X-Pinakes-No-Auth"
+
+        /**
+         * Ask the server for labels and messages in the language the app is showing (Profile
+         * language or the device one); the API falls back to its own when it does not have it.
+         * A header set explicitly on the request wins.
+         */
+        internal fun withLanguage(request: Request, tag: String = AppLocale.current().toLanguageTag()): Request =
+            if (request.header("Accept-Language") != null || tag.isBlank() || tag == "und") request
+            else request.newBuilder().header("Accept-Language", tag).build()
     }
 }

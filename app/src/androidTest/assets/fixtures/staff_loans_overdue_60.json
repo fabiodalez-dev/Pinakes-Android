@@ -1,0 +1,2831 @@
+{
+  "data": [
+    {
+      "id": 1000,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2000,
+        "title": "Overdue 00",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1001,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2001,
+        "title": "Overdue 01",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1002,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2002,
+        "title": "Overdue 02",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1003,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2003,
+        "title": "Overdue 03",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1004,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2004,
+        "title": "Overdue 04",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1005,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2005,
+        "title": "Overdue 05",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1006,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2006,
+        "title": "Overdue 06",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1007,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2007,
+        "title": "Overdue 07",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1008,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2008,
+        "title": "Overdue 08",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1009,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2009,
+        "title": "Overdue 09",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1010,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2010,
+        "title": "Overdue 10",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1011,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2011,
+        "title": "Overdue 11",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1012,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2012,
+        "title": "Overdue 12",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1013,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2013,
+        "title": "Overdue 13",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1014,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2014,
+        "title": "Overdue 14",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1015,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2015,
+        "title": "Overdue 15",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1016,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2016,
+        "title": "Overdue 16",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1017,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2017,
+        "title": "Overdue 17",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1018,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2018,
+        "title": "Overdue 18",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1019,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2019,
+        "title": "Overdue 19",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1020,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2020,
+        "title": "Overdue 20",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1021,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2021,
+        "title": "Overdue 21",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1022,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2022,
+        "title": "Overdue 22",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1023,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2023,
+        "title": "Overdue 23",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1024,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2024,
+        "title": "Overdue 24",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1025,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2025,
+        "title": "Overdue 25",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1026,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2026,
+        "title": "Overdue 26",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1027,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2027,
+        "title": "Overdue 27",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1028,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2028,
+        "title": "Overdue 28",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1029,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2029,
+        "title": "Overdue 29",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1030,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2030,
+        "title": "Overdue 30",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1031,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2031,
+        "title": "Overdue 31",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1032,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2032,
+        "title": "Overdue 32",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1033,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2033,
+        "title": "Overdue 33",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1034,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2034,
+        "title": "Overdue 34",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1035,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2035,
+        "title": "Overdue 35",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1036,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2036,
+        "title": "Overdue 36",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1037,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2037,
+        "title": "Overdue 37",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1038,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2038,
+        "title": "Overdue 38",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1039,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2039,
+        "title": "Overdue 39",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1040,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2040,
+        "title": "Overdue 40",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1041,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2041,
+        "title": "Overdue 41",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1042,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2042,
+        "title": "Overdue 42",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1043,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2043,
+        "title": "Overdue 43",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1044,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2044,
+        "title": "Overdue 44",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1045,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2045,
+        "title": "Overdue 45",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1046,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2046,
+        "title": "Overdue 46",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1047,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2047,
+        "title": "Overdue 47",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1048,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2048,
+        "title": "Overdue 48",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1049,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2049,
+        "title": "Overdue 49",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1050,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2050,
+        "title": "Overdue 50",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1051,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2051,
+        "title": "Overdue 51",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1052,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2052,
+        "title": "Overdue 52",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1053,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2053,
+        "title": "Overdue 53",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1054,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2054,
+        "title": "Overdue 54",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1055,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2055,
+        "title": "Overdue 55",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1056,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2056,
+        "title": "Overdue 56",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1057,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2057,
+        "title": "Overdue 57",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1058,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2058,
+        "title": "Overdue 58",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    },
+    {
+      "id": 1059,
+      "status": "in_ritardo",
+      "status_label": "In corso",
+      "origin": "diretto",
+      "book": {
+        "id": 2059,
+        "title": "Overdue 59",
+        "cover_url": null,
+        "isbn13": "9780156701600"
+      },
+      "copy": {
+        "id": 11,
+        "inventory_number": "INV-0011",
+        "status": "prestato"
+      },
+      "user": {
+        "id": 3,
+        "name": "Ada Rossi",
+        "email": "ada@example.org",
+        "card_number": "C-0012",
+        "status": "attivo"
+      },
+      "processed_by": {
+        "id": 1,
+        "name": "Admin"
+      },
+      "requested_at": "2026-09-30",
+      "loaned_at": "2026-10-01",
+      "due_at": "2026-10-31",
+      "pickup_deadline": null,
+      "returned_at": null,
+      "returned_late": false,
+      "days_overdue": 3,
+      "renewals": 0,
+      "max_renewals": 2,
+      "penalty": null,
+      "notes": null,
+      "recall_count": 0,
+      "last_recall_at": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-01 10:00:00",
+      "actions": [
+        "return",
+        "recall"
+      ]
+    }
+  ],
+  "meta": {
+    "count": 60,
+    "limit": 100,
+    "next_cursor": null,
+    "has_more": false
+  },
+  "error": null
+}

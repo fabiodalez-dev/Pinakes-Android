@@ -1,0 +1,17 @@
+{
+  "data": {
+    "identifier": {
+      "input": "4006381333931",
+      "ean": "4006381333931",
+      "kind": "ean"
+    },
+    "found": false,
+    "existing": null,
+    "preview": null,
+    "sources_checked": [
+      "test"
+    ]
+  },
+  "meta": {},
+  "error": null
+}

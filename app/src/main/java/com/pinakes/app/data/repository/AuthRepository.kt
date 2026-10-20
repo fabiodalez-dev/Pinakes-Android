@@ -1,6 +1,7 @@
 package com.pinakes.app.data.repository
 
 import android.os.Build
+import com.pinakes.app.data.local.LibraryDao
 import com.pinakes.app.data.model.ForgotRequest
 import com.pinakes.app.data.model.HealthPayload
 import com.pinakes.app.data.model.LoginRequest
@@ -25,6 +26,8 @@ class AuthRepository(
     private val bookClub: BookClubRepository,
     private val periodicals: PeriodicalsRepository,
     private val catalog: CatalogRepository,
+    /** Personal offline cache (loans, wishlist); purged whenever the signed-in user changes. */
+    private val libraryCache: LibraryDao? = null,
 ) {
 
     /**
@@ -118,12 +121,35 @@ class AuthRepository(
         )
         return when (val res = apiCall { api.login(request) }) {
             is ApiResult.Success -> {
+                // A different account may sign in on this device: never show the previous
+                // user's cached loans or wishlist.
+                runCatching { libraryCache?.clearAll() }
                 session.saveToken(res.data.token)
+                session.saveRole(res.data.user.tipoUtente)
                 ApiResult.Success(Unit, res.meta)
             }
             is ApiResult.Failure -> res
         }
     }
+
+    /**
+     * Re-read the signed-in user (`GET /me`) to pick up a role change made on the server
+     * (promoted to staff, or demoted). A 401 is already handled app-wide by the
+     * AuthInterceptor; other failures keep the last known role.
+     */
+    suspend fun refreshSession() {
+        if (!session.isLoggedIn()) return
+        when (val res = apiCall { network.api().me() }) {
+            is ApiResult.Success -> session.saveRole(res.data.tipoUtente)
+            is ApiResult.Failure -> Unit
+        }
+    }
+
+    /** Remember the role from a profile fetched elsewhere (Profile screen). */
+    fun rememberRole(role: String?) = session.saveRole(role)
+
+    /** The server refused a staff call (403): the role was revoked, hide the staff area. */
+    fun forgetStaffRole() = session.saveRole(null)
 
     /**
      * Public discovery of the sign-up form schema (built-in required flags + custom fields) for
@@ -173,6 +199,7 @@ class AuthRepository(
         val api = network.api()
         val result = apiCall { api.logout() }
         session.clearToken()
+        runCatching { libraryCache?.clearAll() }
         // Drop the cached HTTP responses of the session that just ended: they were fetched
         // with a bearer token that no longer exists, and the cache is keyed by URL only.
         network.clearHttpCache()
@@ -186,6 +213,7 @@ class AuthRepository(
         // Purge the offline catalog cache (Room + in-memory ETags): it belongs to the old
         // instance and must never surface under the next library's name.
         catalog.clearCache()
+        runCatching { libraryCache?.clearAll() }
         network.invalidate()
         // Same reasoning as the Room purge: a URL-keyed HTTP cache entry from the old
         // instance could otherwise be revalidated against the next library's server.

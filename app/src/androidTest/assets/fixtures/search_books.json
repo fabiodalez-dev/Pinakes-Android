@@ -1,0 +1,41 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "title": "Il barone rampante",
+      "author": "Italo Calvino",
+      "publisher": "Einaudi",
+      "genre": "Romanzo",
+      "year": 1957,
+      "language": "Italiano",
+      "media_type": "libro",
+      "isbn13": "9788804668237",
+      "cover_url": null,
+      "copies_total": 2,
+      "copies_available": 1,
+      "loanable_now": true
+    },
+    {
+      "id": 2,
+      "title": "La città invisibile",
+      "author": "Anna Rossi",
+      "publisher": "Adelphi",
+      "genre": "Saggio",
+      "year": 2001,
+      "language": "Italiano",
+      "media_type": "libro",
+      "isbn13": "9780140186475",
+      "cover_url": null,
+      "copies_total": 1,
+      "copies_available": 0,
+      "loanable_now": false
+    }
+  ],
+  "meta": {
+    "count": 2,
+    "limit": 20,
+    "next_cursor": null,
+    "has_more": false
+  },
+  "error": null
+}

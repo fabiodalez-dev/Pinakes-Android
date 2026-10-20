@@ -1,0 +1,20 @@
+{
+  "data": {
+    "found": true,
+    "match": "issue",
+    "action": "receive",
+    "issue": {
+      "id": 4,
+      "numero": "12",
+      "stato": "atteso",
+      "annata_id": 2,
+      "anno": 2026,
+      "testata_id": 16,
+      "titolo": "Internazionale",
+      "url": "x"
+    },
+    "message": "Fascicolo n. 12 in attesa"
+  },
+  "meta": {},
+  "error": null
+}

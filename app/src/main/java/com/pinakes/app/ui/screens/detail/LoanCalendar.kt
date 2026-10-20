@@ -1,5 +1,10 @@
 package com.pinakes.app.ui.screens.detail
 
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,12 +15,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -107,8 +110,10 @@ private class CalendarModel(calendar: AvailabilityCalendar) {
         }
     }
 
-    fun isSelectable(date: LocalDate, today: LocalDate): Boolean {
+    fun isSelectable(date: LocalDate, today: LocalDate, anyFutureDay: Boolean = false): Boolean {
         if (date.isBefore(today)) return false
+        // Availability unknown (fetch failed): every future day can be requested; the server decides.
+        if (anyFutureDay) return true
         return when (kind(date, today)) {
             DayKind.Free, DayKind.Partial -> true
             else -> false
@@ -127,6 +132,8 @@ fun LoanCalendar(
     selected: String?,
     onSelect: (isoDate: String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Availability could not be loaded: every future day is selectable, no colour legend. */
+    anyFutureDay: Boolean = false,
 ) {
     val dark = LocalPinakesColors.current.darkMode
     val today = remember { LocalDate.now() }
@@ -156,9 +163,12 @@ fun LoanCalendar(
             selected = selected,
             dark = dark,
             onSelect = onSelect,
+            anyFutureDay = anyFutureDay,
         )
-        Spacer(Modifier.height(Spacing.md))
-        Legend(dark = dark)
+        if (!anyFutureDay) {
+            Spacer(Modifier.height(Spacing.md))
+            Legend(dark = dark)
+        }
     }
 }
 
@@ -192,13 +202,14 @@ private fun MonthHeader(month: YearMonth, onPrev: () -> Unit, onNext: () -> Unit
 
 @Composable
 private fun WeekdayHeader() {
-    val locale = Locale.getDefault()
+    val locale = com.pinakes.app.ui.common.AppLocale.current()
     // Mon-first week order.
     val days = listOf(
         DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY,
         DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY,
     )
-    Row(Modifier.fillMaxWidth()) {
+    // Same 7 weighted columns and gaps as the grid below, so headers sit over their days.
+    Row(Modifier.fillMaxWidth().testTag("calendar-weekdays"), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         days.forEach { dow ->
             Text(
                 text = dow.getDisplayName(TextStyle.NARROW, locale),
@@ -219,6 +230,7 @@ private fun MonthGrid(
     selected: String?,
     dark: Boolean,
     onSelect: (String) -> Unit,
+    anyFutureDay: Boolean = false,
 ) {
     val firstOfMonth = month.atDay(1)
     // Mon=1 .. Sun=7 → leading blanks before day 1.
@@ -227,7 +239,7 @@ private fun MonthGrid(
     val totalCells = leadingBlanks + daysInMonth
     val rows = (totalCells + 6) / 7
 
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+    Column(Modifier.testTag("calendar-grid"), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         for (row in 0 until rows) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -246,6 +258,7 @@ private fun MonthGrid(
                                 selected = selected == date.toString(),
                                 dark = dark,
                                 onSelect = onSelect,
+                                anyFutureDay = anyFutureDay,
                             )
                         }
                     }
@@ -263,11 +276,13 @@ private fun DayCell(
     selected: Boolean,
     dark: Boolean,
     onSelect: (String) -> Unit,
+    anyFutureDay: Boolean = false,
 ) {
     val iso = date.toString()
     val kind = model.kind(date, today)
-    val selectable = model.isSelectable(date, today)
-    val tint = tintFor(kind, dark)
+    val selectable = model.isSelectable(date, today, anyFutureDay)
+    // Unknown availability: future days look plain but selectable (no false "unavailable" tint).
+    val tint = if (anyFutureDay && selectable) DayTint(Color.Transparent, MaterialTheme.colorScheme.onSurface) else tintFor(kind, dark)
 
     // The pick is the theme's button colour, as the "Request loan" button that opened the sheet.
     val tokens = LocalPinakesColors.current
@@ -279,11 +294,13 @@ private fun DayCell(
         else -> tint.rule
     }
 
-    // 40dp where the column allows it, the column itself on the narrowest screens,
-    // so the seven dots of a row never run into each other.
+    // Fills its weighted square cell (at most 44dp) instead of a fixed 40dp: on a 320-360dp
+    // phone a dialog leaves ~38dp per column, and a fixed size overflowed into its neighbours.
     val cellModifier = Modifier
-        .sizeIn(maxWidth = 40.dp, maxHeight = 40.dp)
+        .sizeIn(maxWidth = 44.dp, maxHeight = 44.dp)
         .fillMaxSize()
+        .padding(1.dp)
+        .testTag("calendar-day-$iso")
         .clip(CircleShape)
         .background(container)
         .then(
@@ -303,11 +320,14 @@ private fun DayCell(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Legend(dark: Boolean) {
-    Row(
+    // Wraps on narrow screens and with long translations instead of running off the edge.
+    FlowRow(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         // A free day is an untinted dot, so its key is one too: the surface ringed by the rule.
         LegendItem(MaterialTheme.colorScheme.surface, stringResource(R.string.book_loan_legend_available), MaterialTheme.colorScheme.outline)
@@ -338,7 +358,7 @@ private fun LegendItem(color: Color, label: String, rule: Color = Color.Transpar
 
 /** "June 2026" style month + year title, localized. */
 private fun monthTitle(month: YearMonth): String {
-    val locale = Locale.getDefault()
+    val locale = com.pinakes.app.ui.common.AppLocale.current()
     val name = month.month.getDisplayName(TextStyle.FULL, locale)
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }
     return "$name ${month.year}"

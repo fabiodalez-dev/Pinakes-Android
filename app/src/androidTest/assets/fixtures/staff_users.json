@@ -1,0 +1,26 @@
+{
+  "data": [
+    {
+      "id": 3,
+      "name": "Ada Rossi",
+      "email": "ada@example.org",
+      "card_number": "C-0012",
+      "status": "attivo"
+    },
+    {
+      "id": 4,
+      "name": "Bruno Sospeso",
+      "email": "bruno@example.org",
+      "card_number": "C-0013",
+      "status": "sospeso",
+      "card_expires_at": "2027-01-01",
+      "role": "standard",
+      "active_loans": 0,
+      "active_reservations": 0,
+      "eligible": false,
+      "eligibility_reason": "Suspended"
+    }
+  ],
+  "meta": {},
+  "error": null
+}

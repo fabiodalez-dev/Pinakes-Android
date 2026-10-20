@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The cover-photo scratch directory (shared with the camera app) and the staff exports
+     (loan receipts, label PDFs, import error CSVs) shared with viewers and the share sheet. -->
+<paths>
+    <cache-path name="covers" path="covers/" />
+    <cache-path name="exports" path="exports/" />
+</paths>

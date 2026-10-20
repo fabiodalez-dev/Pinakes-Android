@@ -1,0 +1,28 @@
+{
+  "data": {
+    "id": 41,
+    "status": "received",
+    "status_label": "In attesa",
+    "donor_name": "Carla Bianchi",
+    "donor_email": "carla@example.org",
+    "title": "Orlando",
+    "author": "Virginia Woolf",
+    "publisher": null,
+    "isbn": null,
+    "notes": "Good condition",
+    "book": {
+      "id": 5,
+      "title": "Orlando"
+    },
+    "received_book": {
+      "id": 5,
+      "title": "Orlando"
+    },
+    "copy_id": 77,
+    "source": "mobile",
+    "created_at": "2026-10-12 10:00:00",
+    "received_at": "2026-10-14 11:00:00"
+  },
+  "meta": {},
+  "error": null
+}

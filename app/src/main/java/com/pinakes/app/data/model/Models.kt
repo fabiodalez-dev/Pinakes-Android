@@ -21,6 +21,26 @@ data class Meta(
     // the list was cut short. Nullable with a null default on purpose: servers older than
     // the field simply omit it, and absent must read as "not truncated", never as "true".
     val truncated: Boolean? = null,
+    // Keyset pagination extras (staff list, catalogue sync). Absent on older endpoints.
+    val count: Int? = null,
+    val limit: Int? = null,
+    @SerialName("has_more") val hasMore: Boolean? = null,
+    // Error context: 409 `duplicate` carries the existing record, 409 `conflict` a reason
+    // (e.g. `active_circulation`). Kept as raw JSON so each caller decodes its own shape.
+    val existing: kotlinx.serialization.json.JsonElement? = null,
+    val reason: String? = null,
+    // Mobile API 1.7.0 error/result context: the offending field of a 422, the next expected
+    // chunk start of a 409 `out_of_order`, a rename that merged into an existing series, a
+    // server message accompanying a successful action, the seconds of a 429.
+    val field: String? = null,
+    val processed: Int? = null,
+    val merged: Boolean? = null,
+    val message: String? = null,
+    @SerialName("retry_after") val retryAfter: Int? = null,
+    // A create replayed through its Idempotency-Key: the original resource, nothing new made.
+    val replayed: Boolean? = null,
+    // 409 `merge_error` on an author/publisher merge: ids that no longer exist (already merged).
+    val missing: List<Int>? = null,
 )
 
 @Serializable
@@ -46,6 +66,15 @@ data class HealthPayload(
     @SerialName("registration_enabled") val registrationEnabled: Boolean = false,
     @SerialName("private_mode") val privateMode: Boolean = false,
     @SerialName("vapid_public_key") val vapidPublicKey: String? = null,
+    /** Registration settings mirror (server 0.8.5+); absent on older servers. */
+    val registration: HealthRegistration? = null,
+)
+
+/** `data.registration` of `/health`: which optional profile fields the library shows. */
+@Serializable
+data class HealthRegistration(
+    @SerialName("show_sesso") val showSesso: Boolean? = null,
+    @SerialName("show_cod_fiscale") val showCodFiscale: Boolean? = null,
 )
 
 @Serializable
@@ -61,6 +90,27 @@ data class HealthFeatures(
     val reviews: Boolean = false,
     val archives: Boolean = false,
     val desiderata: Boolean = false,
+    // Mobile API 1.6.0: staff content management, delta catalogue sync and the personal
+    // loans calendar feed. Older servers omit them, so they default to off.
+    @SerialName("staff_catalog") val staffCatalog: Boolean = false,
+    @SerialName("catalog_sync") val catalogSync: Boolean = false,
+    @SerialName("calendar_feed") val calendarFeed: Boolean = false,
+    // Mobile API 1.7.0 staff areas. Each is a server decision (plugin active, catalogue mode
+    // off, legacy schema); older servers omit them, so every area stays hidden by default.
+    @SerialName("staff_circulation") val staffCirculation: Boolean = false,
+    @SerialName("staff_copies") val staffCopies: Boolean = false,
+    @SerialName("staff_series") val staffSeries: Boolean = false,
+    @SerialName("staff_merges") val staffMerges: Boolean = false,
+    @SerialName("staff_labels") val staffLabels: Boolean = false,
+    @SerialName("staff_imports") val staffImports: Boolean = false,
+    @SerialName("staff_covers") val staffCovers: Boolean = false,
+    @SerialName("staff_desiderata") val staffDesiderata: Boolean = false,
+    @SerialName("staff_archives") val staffArchives: Boolean = false,
+    @SerialName("staff_periodicals") val staffPeriodicals: Boolean = false,
+    @SerialName("staff_bookclub") val staffBookClub: Boolean = false,
+    @SerialName("staff_frbr") val staffFrbr: Boolean = false,
+    @SerialName("staff_digital_library") val staffDigitalLibrary: Boolean = false,
+    @SerialName("staff_librarything") val staffLibraryThing: Boolean = false,
 )
 
 // ---------- Auth ----------
@@ -106,6 +156,17 @@ data class RegistrationFieldsPayload(
     // Config-driven built-ins only: keys are "cognome" | "telefono" | "indirizzo".
     @SerialName("builtin_fields") val builtinFields: Map<String, BuiltinFieldRule> = emptyMap(),
     @SerialName("custom_fields") val customFields: List<CustomFieldDef> = emptyList(),
+    /**
+     * Profile-only fields (`data_nascita`, `sesso`, `cod_fiscale`) and whether the library shows
+     * them. Absent on servers before 0.8.5: every field stays visible there.
+     */
+    @SerialName("profile_fields") val profileFields: Map<String, ProfileFieldRule> = emptyMap(),
+)
+
+@Serializable
+data class ProfileFieldRule(
+    val visible: Boolean = true,
+    val configurable: Boolean = false,
 )
 
 @Serializable
@@ -162,6 +223,8 @@ data class UserProfile(
     val locale: String? = null,
     // Instance-defined custom fields with the user's current values.
     @SerialName("custom_fields") val customFields: List<CustomFieldValue> = emptyList(),
+    /** Fields the library hides (`sesso`, `cod_fiscale`); their keys are omitted from `/me`. */
+    @SerialName("hidden_fields") val hiddenFields: List<String> = emptyList(),
 ) {
     val fullName: String get() = listOf(nome, cognome).filter { it.isNotBlank() }.joinToString(" ")
 }

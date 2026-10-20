@@ -1,0 +1,10 @@
+{
+  "data": null,
+  "meta": {
+    "processed": 20
+  },
+  "error": {
+    "code": "out_of_order",
+    "message": "Chunk out of order"
+  }
+}

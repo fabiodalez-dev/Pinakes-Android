@@ -3,6 +3,9 @@ package com.pinakes.app.ui.screens.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.BuiltinFieldRule
+import com.pinakes.app.data.model.ProfileFieldRule
+import com.pinakes.app.data.model.CalendarStatus
+import com.pinakes.app.data.repository.CalendarRepository
 import com.pinakes.app.data.model.DeviceItem
 import com.pinakes.app.data.model.UpdateProfileRequest
 import com.pinakes.app.data.model.UserProfile
@@ -12,6 +15,8 @@ import com.pinakes.app.data.repository.AuthRepository
 import com.pinakes.app.data.repository.ProfileRepository
 import com.pinakes.app.R
 import com.pinakes.app.ui.common.UiState
+import com.pinakes.app.ui.common.isOffline
+import com.pinakes.app.ui.common.serverMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +42,8 @@ data class ProfileUiState(
     val editCustomValues: Map<Int, String> = emptyMap(),
     // Required-ness for telefono/indirizzo comes from the registration schema.
     val builtinFields: Map<String, BuiltinFieldRule> = emptyMap(),
+    // Profile-only field visibility from the registration schema (gender, tax code).
+    val profileFields: Map<String, ProfileFieldRule> = emptyMap(),
     // Inline validation error shown in the edit dialog (e.g. a required field
     // left blank) — surfaced client-side instead of relying on a server 422.
     val editErrorRes: Int? = null,
@@ -52,7 +59,19 @@ data class ProfileUiState(
     val loggingOut: Boolean = false,
     val snackbar: String? = null,
     val snackbarRes: Int? = null,
+    // Personal loans calendar feed sheet (Mobile API 1.6.0).
+    val calendarOpen: Boolean = false,
+    val calendar: UiState<CalendarStatus> = UiState.Loading,
+    val calendarBusy: Boolean = false,
 ) {
+    private val hiddenFields: List<String> get() = (profile as? UiState.Success)?.data?.hiddenFields.orEmpty()
+
+    /** Gender is shown unless the library hides it (`hidden_fields` or the schema). */
+    val showGender: Boolean get() = ProfileFieldVisibility.isVisible(ProfileFieldVisibility.GENDER, hiddenFields, profileFields)
+
+    /** Tax code is shown unless the library hides it. */
+    val showTaxCode: Boolean get() = ProfileFieldVisibility.isVisible(ProfileFieldVisibility.TAX_CODE, hiddenFields, profileFields)
+
     /** Profile-side required-ness defaults to false until discovery succeeds. */
     fun builtinRequired(key: String): Boolean = builtinFields[key]?.required ?: false
 
@@ -77,6 +96,7 @@ internal fun isCanonicalProfileGender(value: String): Boolean = value in PROFILE
 class ProfileViewModel @Inject constructor(
     private val profile: ProfileRepository,
     private val auth: AuthRepository,
+    private val calendarRepo: CalendarRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProfileUiState())
@@ -88,7 +108,9 @@ class ProfileViewModel @Inject constructor(
     fun loadSchema() {
         viewModelScope.launch {
             when (val res = auth.registrationFields()) {
-                is ApiResult.Success -> _state.update { it.copy(builtinFields = res.data.builtinFields) }
+                is ApiResult.Success -> _state.update {
+                    it.copy(builtinFields = res.data.builtinFields, profileFields = res.data.profileFields)
+                }
                 is ApiResult.Failure -> { /* keep defaults */ }
             }
         }
@@ -108,10 +130,29 @@ class ProfileViewModel @Inject constructor(
         _state.update { it.copy(profile = UiState.Loading) }
         viewModelScope.launch {
             when (val res = profile.me()) {
-                is ApiResult.Success -> _state.update { it.copy(profile = UiState.Success(res.data)) }
+                is ApiResult.Success -> {
+                    // GET /me is authoritative for the role: keep the staff area in step.
+                    auth.rememberRole(res.data.tipoUtente)
+                    _state.update { it.copy(profile = UiState.Success(res.data)) }
+                }
                 is ApiResult.Failure -> _state.update {
                     it.copy(profile = UiState.Error(res.message, res.code, R.string.profile_error_load))
                 }
+            }
+        }
+    }
+
+    /** Re-read the profile without the loading state (on resume); failures keep what is shown. */
+    fun refreshQuietly() {
+        // The field-visibility settings may have changed on the server too.
+        loadSchema()
+        viewModelScope.launch {
+            when (val res = profile.me()) {
+                is ApiResult.Success -> {
+                    auth.rememberRole(res.data.tipoUtente)
+                    _state.update { it.copy(profile = UiState.Success(res.data)) }
+                }
+                is ApiResult.Failure -> Unit
             }
         }
     }
@@ -187,8 +228,9 @@ class ProfileViewModel @Inject constructor(
             telefono = changed(s.editTelefono, original?.telefono),
             indirizzo = changed(s.editIndirizzo, original?.indirizzo),
             dataNascita = changed(s.editDataNascita, original?.dataNascita),
-            codFiscale = changed(s.editCodFiscale, original?.codFiscale),
-            sesso = changed(s.editSesso, original?.sesso),
+            // A field the library hides is never sent (the server would ignore it anyway).
+            codFiscale = if (s.showTaxCode) changed(s.editCodFiscale, original?.codFiscale) else null,
+            sesso = if (s.showGender) changed(s.editSesso, original?.sesso) else null,
             customFields = customPatch.takeIf { it.isNotEmpty() },
         )
 
@@ -199,8 +241,8 @@ class ProfileViewModel @Inject constructor(
                     it.copy(profile = UiState.Success(res.data), savingProfile = false, editing = false, snackbar = null, snackbarRes = R.string.profile_updated)
                 }
                 is ApiResult.Failure -> _state.update {
-                    if (res.message.isNotBlank()) it.copy(savingProfile = false, snackbar = res.message, snackbarRes = null)
-                    else it.copy(savingProfile = false, snackbar = null, snackbarRes = R.string.profile_save_error)
+                    if (res.serverMessage() != null) it.copy(savingProfile = false, snackbar = res.serverMessage(), snackbarRes = null)
+                    else it.copy(savingProfile = false, snackbar = null, snackbarRes = if (res.isOffline) R.string.offline_generic else R.string.profile_save_error)
                 }
             }
         }
@@ -231,10 +273,13 @@ class ProfileViewModel @Inject constructor(
                     when {
                         res.code == ErrorCodes.INVALID_CREDENTIALS || res.code == ErrorCodes.VALIDATION ->
                             _state.update { it.copy(savingPassword = false, pwError = null, pwErrorRes = R.string.profile_current_password_incorrect) }
-                        res.message.isNotBlank() ->
-                            _state.update { it.copy(savingPassword = false, pwError = res.message, pwErrorRes = null) }
+                        res.serverMessage() != null ->
+                            _state.update { it.copy(savingPassword = false, pwError = res.serverMessage(), pwErrorRes = null) }
                         else ->
-                            _state.update { it.copy(savingPassword = false, pwError = null, pwErrorRes = R.string.profile_change_password_error) }
+                            _state.update {
+                                it.copy(savingPassword = false, pwError = null,
+                                    pwErrorRes = if (res.isOffline) R.string.offline_generic else R.string.profile_change_password_error)
+                            }
                     }
                 }
             }
@@ -260,4 +305,46 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun consumeSnackbar() = _state.update { it.copy(snackbar = null, snackbarRes = null) }
+
+    // ---- Calendar subscription ----
+
+    fun openCalendar() {
+        _state.update { it.copy(calendarOpen = true, calendar = UiState.Loading) }
+        viewModelScope.launch {
+            val res = calendarRepo.status()
+            _state.update { it.copy(calendar = res.toCalendarState()) }
+        }
+    }
+
+    fun closeCalendar() = _state.update { it.copy(calendarOpen = false) }
+
+    /** Create the feed, or rotate it: the old URL stops working immediately. */
+    fun rotateCalendar() = calendarAction(R.string.calendar_link_ready) { calendarRepo.rotate() }
+
+    fun disableCalendar() = calendarAction(R.string.calendar_disabled) { calendarRepo.revoke() }
+
+    private fun calendarAction(successRes: Int, call: suspend () -> ApiResult<CalendarStatus>) {
+        if (_state.value.calendarBusy) return
+        _state.update { it.copy(calendarBusy = true) }
+        viewModelScope.launch {
+            when (val res = call()) {
+                is ApiResult.Success -> _state.update {
+                    it.copy(calendarBusy = false, calendar = UiState.Success(res.data), snackbarRes = successRes, snackbar = null)
+                }
+                is ApiResult.Failure -> _state.update {
+                    // Never the raw IOException text: offline gets the localized wording.
+                    it.copy(
+                        calendarBusy = false,
+                        snackbar = res.serverMessage(),
+                        snackbarRes = if (res.isOffline) R.string.offline_generic else R.string.calendar_error,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun ApiResult<CalendarStatus>.toCalendarState(): UiState<CalendarStatus> = when (this) {
+        is ApiResult.Success -> UiState.Success(data)
+        is ApiResult.Failure -> UiState.Error(message, code, R.string.calendar_error)
+    }
 }

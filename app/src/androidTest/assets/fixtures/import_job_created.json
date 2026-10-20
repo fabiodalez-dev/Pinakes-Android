@@ -1,0 +1,25 @@
+{
+  "data": {
+    "id": "6f1c2a",
+    "kind": "csv",
+    "file_name": "libri.csv",
+    "status": "ready",
+    "total_rows": 30,
+    "processed": 0,
+    "chunk_size": 10,
+    "enable_scraping": false,
+    "imported": 0,
+    "updated": 0,
+    "scraped": 0,
+    "authors_created": 0,
+    "publishers_created": 0,
+    "errors": 0,
+    "error_details": [],
+    "complete": false,
+    "created_at": "2026-10-14 09:00:00",
+    "updated_at": "2026-10-14 09:00:00",
+    "expires_at": "2026-10-15 09:00:00"
+  },
+  "meta": {},
+  "error": null
+}
