@@ -160,8 +160,8 @@ class BookDetailViewModel @Inject constructor(
 
     /**
      * Submit a loan/reservation request for [desiredDate] (yyyy-MM-dd, today-or-future). The
-     * backend computes the return as +1 month. On success we surface the chosen date so the UI
-     * can confirm exactly what was requested.
+     * backend sets the return from the library's configured loan duration. On success we surface
+     * the chosen date so the UI can confirm exactly what was requested.
      */
     fun reserve(desiredDate: String) {
         if (_state.value.reserveBusy) return
