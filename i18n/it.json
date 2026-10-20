@@ -251,6 +251,7 @@
   "book_loan_dialog_title": "Scegli una data di inizio",
   "book_loan_pick_date": "Scegli una data",
   "book_loan_period_hint": "Dal %1$s, per la durata di prestito standard della biblioteca",
+  "book_loan_period_range": "Inizio: %1$s · Restituzione: %2$s",
   "book_loan_confirm": "Richiedi prestito",
   "book_loan_cancel": "Annulla",
   "book_loan_legend_available": "Disponibile",
