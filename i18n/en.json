@@ -1446,5 +1446,5 @@
   "digital_locked_login": "Sign in to open it",
   "digital_locked_loan": "For readers who have this book on loan",
   "digital_locked_other": "Not available to your account",
-  "digital_link_refreshed": "Link refreshed: tap again to open it."
+  "digital_link_refresh_error": "Could not refresh the link. Please try again."
 }

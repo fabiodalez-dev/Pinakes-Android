@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
+import com.pinakes.app.data.model.DigitalAttachment
 import com.pinakes.app.data.model.CirculationRequestKind
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.connectivity.ConnectivityObserver
@@ -103,6 +104,24 @@ class BookDetailViewModel @Inject constructor(
                         else it.copy(content = UiState.Error(res.message, res.code, R.string.book_error_load))
                     }
                 }
+            }
+        }
+    }
+
+    /** Refresh in place: a failed renewal must not replace the page or reuse a cached URL. */
+    suspend fun refreshDigitalFile(file: DigitalAttachment): ApiResult<DigitalAttachment> {
+        return when (val result = catalog.book(bookId, forceRefresh = true)) {
+            is ApiResult.Failure -> result
+            is ApiResult.Success -> {
+                _state.update {
+                    it.copy(content = UiState.Success(result.data), offline = false,
+                        wishlisted = result.data.personalHistory?.hasWishlisted ?: it.wishlisted)
+                }
+                val renewed = result.data.digitalFiles.firstOrNull {
+                    it.resourceKey == file.resourceKey && it.kind == file.kind && !it.locked && it.safeUrl != null
+                }
+                if (renewed != null) ApiResult.Success(renewed)
+                else ApiResult.Failure(ErrorCodes.FORBIDDEN, "", 403)
             }
         }
     }

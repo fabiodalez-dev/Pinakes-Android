@@ -380,9 +380,14 @@ data class DigitalAttachment(
     val expiresAt: Long? get() = runCatching { java.net.URI(url).rawQuery }.getOrNull()
         ?.split('&')?.firstOrNull { it.startsWith("pk_exp=") }?.substringAfter('=')?.toLongOrNull()
 
-    /** The signed link has expired, or will within a minute: the record must be fetched again first. */
-    fun linkExpired(nowSeconds: Long = System.currentTimeMillis() / 1000): Boolean =
-        expiresAt?.let { it <= nowSeconds + 60 } == true
+    /** Identity of the file across signature renewals; keep every non-signature query parameter. */
+    val resourceKey: String get() {
+        val base = url.substringBefore('#').substringBefore('?')
+        val query = runCatching { java.net.URI(url).rawQuery }.getOrNull()
+            ?.split('&')?.filterNot { it.substringBefore('=') in setOf("pk_exp", "pk_uid", "pk_sig") }
+            ?.filter { it.isNotEmpty() }?.sorted().orEmpty()
+        return base + if (query.isEmpty()) "" else "?" + query.joinToString("&")
+    }
 
     val format: String get() = runCatching { java.net.URI(url).path.substringAfterLast('.').uppercase() }.getOrDefault("")
     val isPdf: Boolean get() = format == "PDF"

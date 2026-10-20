@@ -1446,5 +1446,5 @@
   "digital_locked_login": "Accedi per aprirlo",
   "digital_locked_loan": "Per chi ha il libro in prestito",
   "digital_locked_other": "Non disponibile per il tuo account",
-  "digital_link_refreshed": "Collegamento aggiornato: tocca di nuovo per aprire."
+  "digital_link_refresh_error": "Impossibile aggiornare il collegamento. Riprova."
 }

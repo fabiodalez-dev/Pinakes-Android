@@ -118,24 +118,23 @@ class DigitalAvailabilityTest {
         val book = api.decodeFromString<BookDetail>("""{"title":"Old","digital_attachments":[{"url":"https://library.example/a.pdf","label":"A","kind":"ebook"}]}""")
         val file = book.digitalFiles.single()
         org.junit.Assert.assertFalse(file.locked)
-        org.junit.Assert.assertFalse(file.linkExpired())
+        org.junit.Assert.assertNull(file.expiresAt)
     }
 
-    @Test fun anExpiredSignedLinkFetchesTheRecordAgainInsteadOfOpening() {
+    @Test fun anExpiredSignedLinkDoesNotOpenOrClaimSuccessWhenRenewalFails() {
         var refreshes = 0
         val messages = mutableListOf<String>()
         val expired = DigitalAttachment("https://library.example/uploads/digital/x.pdf?pk_exp=1000&pk_uid=3&pk_sig=ab", label = "Old link", access = "granted")
-        org.junit.Assert.assertTrue(expired.linkExpired())
-        org.junit.Assert.assertFalse(expired.copy(url = "https://library.example/uploads/digital/x.pdf?pk_exp=4102444800").linkExpired())
+        assertEquals(1000L, expired.expiresAt)
         compose.setContent { PinakesTheme {
             DetailContent(BookDetail(title = "Expired", digitalAttachments = listOf(expired)), wishlisted = false, reserveBusy = false,
                 canBorrow = true, showWishlist = false, showReviews = false, onReserve = {}, onToggleWishlist = {},
-                onShowMessage = { messages += it }, onRefreshLinks = { refreshes++ })
+                onShowMessage = { messages += it }, onRefreshFile = { refreshes++; com.pinakes.app.data.network.ApiResult.Failure("network", "") })
         } }
         compose.onNodeWithText("Read").performScrollTo().performClick()
         compose.waitForIdle()
         assertEquals(1, refreshes)
-        assertEquals(listOf("Link refreshed: tap again to open it."), messages)
+        assertEquals(listOf("Could not refresh the link. Please try again."), messages)
     }
 
     @Test fun wantedCreditsKeepTranslatorSeparateAndSupportOlderServers() {

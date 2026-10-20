@@ -79,6 +79,8 @@ import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.CirculationRequestKind
 import com.pinakes.app.data.model.DigitalAttachment
 import com.pinakes.app.data.model.PersonalHistory
+import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.common.OfflinePolicy
 import com.pinakes.app.ui.components.PinakesBottomBar
@@ -202,7 +204,7 @@ fun BookDetailScreen(
                     onReserve = vm::openLoanSheet,
                     onToggleWishlist = vm::toggleWishlist,
                     onFindWorks = onFindWorks,
-                    onRefreshLinks = vm::load,
+                    onRefreshFile = vm::refreshDigitalFile,
                     onShowMessage = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } },
                     offlineNotice = if (state.offlineNow) stringResource(R.string.offline_actions_unavailable) else null,
                     offlineSyncedAt = state.syncedAt,
@@ -341,8 +343,10 @@ internal fun DetailContent(
     onToggleWishlist: () -> Unit,
     onShowMessage: (String) -> Unit,
     onFindWorks: (String, Int?) -> Unit = { _, _ -> },
-    /** Fetches the record again: its signed file links last a day (issue #480). */
-    onRefreshLinks: () -> Unit = {},
+    /** Revalidates a signed file on the server, preserving this page while the request runs. */
+    onRefreshFile: suspend (DigitalAttachment) -> ApiResult<DigitalAttachment> = {
+        ApiResult.Failure(ErrorCodes.NETWORK, "")
+    },
     /** Set when the page is built from the offline cache: shown above the cover. */
     offlineNotice: String? = null,
     /** Last sync time of the offline copy: availability is shown as "last known", never current. */
@@ -350,9 +354,20 @@ internal fun DetailContent(
 ) {
     val offline = offlineNotice != null
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var refreshingFile by remember(book.id) { mutableStateOf<String?>(null) }
     var showCover by remember { mutableStateOf(false) }
     var selectedPdf by remember(book.id) { mutableStateOf<String?>(null) }
-    var selectedAudio by remember(book.id) { mutableStateOf<String?>(book.audioUrl?.takeIf { book.hasAudio }) }
+    var selectedAudio by remember(book.id) { mutableStateOf<String?>(null) }
+
+    fun openFile(file: DigitalAttachment) {
+        if (file.locked || file.safeUrl == null) {
+            onShowMessage(context.getString(R.string.digital_locked_other))
+        } else if (file.kind == "audio") selectedAudio = file.url
+        else if (file.isPdf) selectedPdf = file.url
+        else runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(file.url))) }
+            .onFailure { onShowMessage(context.getString(R.string.ebook_error)) }
+    }
 
     Column(
         Modifier
@@ -527,15 +542,28 @@ internal fun DetailContent(
                     androidx.compose.runtime.key(file.url) { AudioPlayer(audioUrl = file.url) }
                 } else PrimaryButton(label = stringResource(if (audio) R.string.collection_play else if (file.isPdf) R.string.book_read else R.string.ebook_open_external),
                     onClick = {
-                        // A signed link lasts a day: past that, fetch the record again for a fresh one.
-                        if (file.linkExpired()) {
-                            onRefreshLinks()
-                            onShowMessage(context.getString(R.string.digital_link_refreshed))
-                        } else if (audio) selectedAudio = file.url
-                        else if (file.isPdf) selectedPdf = file.url
-                        else runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(file.url))) }
-                            .onFailure { onShowMessage(context.getString(R.string.ebook_error)) }
-                    }, modifier = Modifier.fillMaxWidth(), dark = true)
+                        // The server's clock and access decision are authoritative. Always renew
+                        // a signed URL on demand, then open it in this same tap (no clock-skew loop).
+                        if (refreshingFile == null) {
+                            if (file.expiresAt == null) openFile(file)
+                            else {
+                                refreshingFile = file.resourceKey
+                                scope.launch {
+                                    try {
+                                        when (val result = onRefreshFile(file)) {
+                                            is ApiResult.Success -> openFile(result.data)
+                                            is ApiResult.Failure -> onShowMessage(context.getString(
+                                                if (result.code == ErrorCodes.FORBIDDEN) R.string.digital_locked_other
+                                                else R.string.digital_link_refresh_error))
+                                        }
+                                    } finally {
+                                        refreshingFile = null
+                                    }
+                                }
+                            }
+                        }
+                    }, enabled = refreshingFile == null, loading = refreshingFile == file.resourceKey,
+                    modifier = Modifier.fillMaxWidth().testTag("digital-open"), dark = true)
             }
             Spacer(Modifier.height(16.dp))
         }
