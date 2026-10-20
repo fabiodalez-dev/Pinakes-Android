@@ -43,6 +43,7 @@ class LoanRequestReturnDateTest {
         }
     }).around(compose)
 
+    /** Renders the loan-request dialog for [calendar], with no-op callbacks. */
     private fun show(calendar: AvailabilityCalendar) {
         compose.setContent { PinakesTheme {
             LoanRequestSheet(loading = false, calendar = calendar, fallback = false, submitting = false,
@@ -50,6 +51,7 @@ class LoanRequestReturnDateTest {
         } }
     }
 
+    /** The server adds the duration to the start; a duration below 1 or a bad start gives no date. */
     @Test fun returnDateIsTheStartPlusTheLoanDuration() {
         assertEquals("2030-03-18", loanReturnDate("2030-03-04", 14))
         assertEquals("2030-04-03", loanReturnDate("2030-03-04", 30))
@@ -57,18 +59,21 @@ class LoanRequestReturnDateTest {
         assertNull(loanReturnDate("not a date", 14))
     }
 
+    /** Mobile API 1.8.1 sends loan_duration_days; an older server leaves it out and the field is null. */
     @Test fun availabilityCarriesTheLoanDurationAndOlderServersOmitIt() {
         val json = Json { ignoreUnknownKeys = true }
         assertEquals(21, json.decodeFromString<AvailabilityCalendar>("""{"total_copies":1,"loan_duration_days":21}""").loanDurationDays)
         assertNull(json.decodeFromString<AvailabilityCalendar>("""{"total_copies":1}""").loanDurationDays)
     }
 
+    /** With the duration, the dialog names the start and the return date of the preselected day. */
     @Test fun dialogShowsTheReturnDateForThePreselectedStart() {
         show(AvailabilityCalendar(totalCopies = 1, earliestAvailable = "2030-03-04", loanDurationDays = 14))
         compose.onNodeWithText("Start: ${DateFormat.date("2030-03-04")} · Return by: ${DateFormat.date("2030-03-18")}")
             .performScrollTo().assertIsDisplayed()
     }
 
+    /** Without it, the dialog falls back to the library's standard loan period, with no date. */
     @Test fun withoutTheDurationTheDialogNamesTheStandardPeriod() {
         show(AvailabilityCalendar(totalCopies = 1, earliestAvailable = "2030-03-04"))
         compose.onNodeWithText("From ${DateFormat.date("2030-03-04")}, for the library’s standard loan period")
