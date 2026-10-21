@@ -40,6 +40,7 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.LocalOffer
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -76,7 +77,10 @@ import com.pinakes.app.R
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.CirculationRequestKind
+import com.pinakes.app.data.model.DigitalAttachment
 import com.pinakes.app.data.model.PersonalHistory
+import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.common.OfflinePolicy
 import com.pinakes.app.ui.components.PinakesBottomBar
@@ -200,6 +204,7 @@ fun BookDetailScreen(
                     onReserve = vm::openLoanSheet,
                     onToggleWishlist = vm::toggleWishlist,
                     onFindWorks = onFindWorks,
+                    onRefreshFile = vm::refreshDigitalFile,
                     onShowMessage = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } },
                     offlineNotice = if (state.offlineNow) stringResource(R.string.offline_actions_unavailable) else null,
                     offlineSyncedAt = state.syncedAt,
@@ -379,6 +384,10 @@ internal fun DetailContent(
     onToggleWishlist: () -> Unit,
     onShowMessage: (String) -> Unit,
     onFindWorks: (String, Int?) -> Unit = { _, _ -> },
+    /** Revalidates a signed file on the server, preserving this page while the request runs. */
+    onRefreshFile: suspend (DigitalAttachment) -> ApiResult<DigitalAttachment> = {
+        ApiResult.Failure(ErrorCodes.NETWORK, "")
+    },
     /** Set when the page is built from the offline cache: shown above the cover. */
     offlineNotice: String? = null,
     /** Last sync time of the offline copy: availability is shown as "last known", never current. */
@@ -386,9 +395,22 @@ internal fun DetailContent(
 ) {
     val offline = offlineNotice != null
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var refreshingFile by remember(book.id) { mutableStateOf<String?>(null) }
     var showCover by remember { mutableStateOf(false) }
     var selectedPdf by remember(book.id) { mutableStateOf<String?>(null) }
-    var selectedAudio by remember(book.id) { mutableStateOf<String?>(book.audioUrl?.takeIf { book.hasAudio }) }
+    // The audio file the reader started: renewing any file re-signs every URL, so the card
+    // is matched by resourceKey and the player keeps the URL it started with.
+    var selectedAudio by remember(book.id) { mutableStateOf<DigitalAttachment?>(null) }
+
+    fun openFile(file: DigitalAttachment) {
+        if (file.locked || file.safeUrl == null) {
+            onShowMessage(context.getString(R.string.digital_locked_other))
+        } else if (file.kind == "audio") selectedAudio = file
+        else if (file.isPdf) selectedPdf = file.url
+        else runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(file.url))) }
+            .onFailure { onShowMessage(context.getString(R.string.ebook_error)) }
+    }
 
     Column(
         Modifier
@@ -557,15 +579,35 @@ internal fun DetailContent(
             DigitalFileCard(type = file.format.ifBlank { if (audio) "Audio" else "eBook" },
                 name = file.label.ifBlank { digitalFilename(file.url, book.title) },
                 kind = stringResource(if (audio) R.string.book_section_audiobook else if (file.kind == "supplement") R.string.book_section_related_documents else R.string.book_section_ebook)) {
-                if (audio && selectedAudio == file.url) {
-                    androidx.compose.runtime.key(file.url) { AudioPlayer(audioUrl = file.url) }
+                if (file.locked) {
+                    LockedDigitalFile(file.access)
+                } else if (audio && playingAudioUrl(selectedAudio, file) != null) {
+                    val playingUrl = playingAudioUrl(selectedAudio, file)!!
+                    androidx.compose.runtime.key(playingUrl) { AudioPlayer(audioUrl = playingUrl) }
                 } else PrimaryButton(label = stringResource(if (audio) R.string.collection_play else if (file.isPdf) R.string.book_read else R.string.ebook_open_external),
                     onClick = {
-                        if (audio) selectedAudio = file.url
-                        else if (file.isPdf) selectedPdf = file.url
-                        else runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(file.url))) }
-                            .onFailure { onShowMessage(context.getString(R.string.ebook_error)) }
-                    }, modifier = Modifier.fillMaxWidth(), dark = true)
+                        // The server's clock and access decision are authoritative. Always renew
+                        // a signed URL on demand, then open it in this same tap (no clock-skew loop).
+                        if (refreshingFile == null) {
+                            if (file.expiresAt == null) openFile(file)
+                            else {
+                                refreshingFile = file.resourceKey
+                                scope.launch {
+                                    try {
+                                        when (val result = onRefreshFile(file)) {
+                                            is ApiResult.Success -> openFile(result.data)
+                                            is ApiResult.Failure -> onShowMessage(context.getString(
+                                                if (result.code == ErrorCodes.FORBIDDEN) R.string.digital_locked_other
+                                                else R.string.digital_link_refresh_error))
+                                        }
+                                    } finally {
+                                        refreshingFile = null
+                                    }
+                                }
+                            }
+                        }
+                    }, enabled = refreshingFile == null, loading = refreshingFile == file.resourceKey,
+                    modifier = Modifier.fillMaxWidth().testTag("digital-open"), dark = true)
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -640,6 +682,24 @@ internal fun DetailContent(
             pdfUrl = pdf,
             onDismiss = { selectedPdf = null },
         )
+    }
+}
+
+/**
+ * A file this reader may not open yet: no button, and the reason instead (issue #480).
+ * The server leaves staff-only files out of the list, so only the other reasons reach here.
+ */
+@Composable
+private fun LockedDigitalFile(access: String?) {
+    val colors = LocalPinakesColors.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().testTag("digital-locked")) {
+        Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(18.dp))
+        Text(stringResource(when (access) {
+            DigitalAttachment.ACCESS_LOGIN_REQUIRED -> R.string.digital_locked_login
+            DigitalAttachment.ACCESS_LOAN_REQUIRED -> R.string.digital_locked_loan
+            else -> R.string.digital_locked_other
+        }), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
     }
 }
 
@@ -741,6 +801,14 @@ private fun SectionTitle(text: String) {
         color = MaterialTheme.colorScheme.onSurface,
     )
 }
+
+/**
+ * The URL the player started with when [file] is the audio the reader chose, else null.
+ * Matched by [DigitalAttachment.resourceKey], so a renewal of another file, which re-signs
+ * every URL of the record, does not stop or restart a playing audiobook.
+ */
+internal fun playingAudioUrl(selected: DigitalAttachment?, file: DigitalAttachment): String? =
+    selected?.takeIf { it.resourceKey == file.resourceKey }?.url
 
 private fun digitalFilename(url: String, fallback: String): String =
     Uri.parse(url).lastPathSegment?.takeIf { it.isNotBlank() } ?: fallback

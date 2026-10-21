@@ -1444,5 +1444,9 @@
   "staff_expression_critical": "Critical edition",
   "staff_expression_audio": "Audio",
   "staff_expression_other": "Other",
-  "staff_field_title_plain": "Title"
+  "staff_field_title_plain": "Title",
+  "digital_locked_login": "Sign in to open it",
+  "digital_locked_loan": "For readers who have this book on loan",
+  "digital_locked_other": "Not available to your account",
+  "digital_link_refresh_error": "Could not refresh the link. Please try again."
 }

@@ -1444,5 +1444,9 @@
   "staff_expression_critical": "Kritische Ausgabe",
   "staff_expression_audio": "Audio",
   "staff_expression_other": "Andere",
-  "staff_field_title_plain": "Titel"
+  "staff_field_title_plain": "Titel",
+  "digital_locked_login": "Zum Öffnen anmelden",
+  "digital_locked_loan": "Für Leser, die dieses Buch ausgeliehen haben",
+  "digital_locked_other": "Für dein Konto nicht verfügbar",
+  "digital_link_refresh_error": "Der Link konnte nicht aktualisiert werden. Bitte versuche es erneut."
 }

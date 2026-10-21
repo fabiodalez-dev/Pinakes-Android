@@ -71,8 +71,11 @@ class FakePinakes {
         }
     }
 
-    fun body(route: String, status: Int, body: String) {
-        routes[route] = { MockResponse().setResponseCode(status).setHeader("Content-Type", "application/json").setBody(body) }
+    fun body(route: String, status: Int, body: String, headers: Map<String, String> = emptyMap()) {
+        routes[route] = {
+            MockResponse().setResponseCode(status).setHeader("Content-Type", "application/json").setBody(body)
+                .apply { headers.forEach { (name, value) -> setHeader(name, value) } }
+        }
     }
 
     fun recorded(method: String, path: String): List<RecordedRequest> =

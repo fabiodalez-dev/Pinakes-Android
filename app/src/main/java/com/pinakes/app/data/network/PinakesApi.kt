@@ -116,6 +116,7 @@ interface PinakesApi {
     suspend fun book(
         @Path("id") id: Int,
         @Header("If-None-Match") etag: String? = null, // -> 304 cache
+        @Header("Cache-Control") cacheControl: String? = null,
     ): Response<Envelope<BookDetail>> // Response<> to read ETag header + 304
 
     @GET("catalog/books/{id}/availability")
