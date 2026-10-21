@@ -222,16 +222,41 @@ fun BookDetailScreen(
 }
 
 /**
- * Loan-request dialog. While [loading], shows a spinner. With a [calendar], renders the colored
+ * Loan-request sheet. While [loading], shows a spinner. With a [calendar], renders the colored
  * [LoanCalendar] (availability-tinted month grid). If [fallback] (availability fetch failed),
- * the same month grid lets the user pick any future day, with a note. Returns yyyy-MM-dd.
- *
- * A plain [Dialog] sized to the screen (max 420dp, 16dp side margins, scrollable) replaces the
- * Material DatePickerDialog, whose fixed 360dp width and capped height clipped the month on
- * 320-360dp phones.
+ * uses the same month grid for any future day and a note. Returns the chosen date as yyyy-MM-dd.
  */
 @Composable
 internal fun LoanRequestSheet(
+    loading: Boolean,
+    calendar: AvailabilityCalendar?,
+    fallback: Boolean,
+    submitting: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (isoDate: String) -> Unit,
+) {
+    // Same sheet as the web's loan request: the card shape of the availability box (20dp), a
+    // serif title, and two buttons stacked at full width in the page's own styles — the filled
+    // confirm and the outlined cancel — instead of Material's text-button row.
+    // A plain Dialog, not DatePickerDialog: that one caps its height at 568dp, which cut the
+    // month in half and pushed the legend and the buttons below the fold. This one is as tall
+    // as its content and scrolls only on a screen too short for it.
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(Modifier.testTag("loan-dialog")) {
+            LoanRequestSheetContent(loading, calendar, fallback, submitting, onDismiss, onConfirm)
+        }
+    }
+}
+
+/**
+ * The sheet itself, without its [Dialog]: a Dialog is a window of its own and takes the device
+ * density, so the tests lay this out in a fixed width to check a narrow phone on any emulator.
+ */
+@Composable
+internal fun LoanRequestSheetContent(
     loading: Boolean,
     calendar: AvailabilityCalendar?,
     fallback: Boolean,
@@ -244,82 +269,98 @@ internal fun LoanRequestSheet(
         mutableStateOf(calendar?.earliestAvailable?.takeIf { it.isNotBlank() })
     }
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-                .padding(horizontal = Spacing.lg, vertical = Spacing.xl)
-                .widthIn(max = 420.dp)
-                .fillMaxWidth()
-                .testTag("loan-dialog"),
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier
+            // 8dp from the screen edges, as the web sheet on a phone (100vw - 1rem).
+            .padding(horizontal = Spacing.sm, vertical = Spacing.lg)
+            .widthIn(max = 480.dp)
+            .fillMaxWidth()
+            .testTag("loan-sheet"),
+    ) {
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.lg)
+                .fillMaxWidth(),
         ) {
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(Spacing.lg)) {
-                Text(
-                    stringResource(R.string.book_loan_dialog_title),
-                    modifier = Modifier.padding(bottom = Spacing.sm),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                when {
-                    loading -> {
-                        Row(
-                            Modifier.fillMaxWidth().padding(vertical = Spacing.xxl),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                            Spacer(Modifier.width(Spacing.md))
-                            Text(
-                                stringResource(R.string.book_loan_availability_loading),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-
-                    calendar != null && !fallback -> {
-                        LoanCalendar(
-                            calendar = calendar,
-                            selected = selectedIso,
-                            onSelect = { selectedIso = it },
-                        )
-                    }
-
-                    else -> {
-                        // Availability unknown: any future day, the server decides.
-                        LoanCalendar(
-                            calendar = AvailabilityCalendar(),
-                            selected = selectedIso,
-                            onSelect = { selectedIso = it },
-                            anyFutureDay = true,
-                        )
+            Text(
+                stringResource(R.string.book_loan_dialog_title),
+                modifier = Modifier.padding(top = Spacing.lg, bottom = Spacing.md),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            when {
+                loading -> {
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = Spacing.xxl),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(Spacing.md))
                         Text(
-                            stringResource(R.string.book_loan_availability_error),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(top = Spacing.sm),
+                            stringResource(R.string.book_loan_availability_loading),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
 
-                // Period hint / prompt.
-                val hint = selectedIso?.let {
-                    stringResource(R.string.book_loan_period_hint, formatDisplayDate(it))
-                } ?: stringResource(R.string.book_loan_pick_prompt)
-                Text(
-                    text = hint,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = Spacing.md),
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.book_loan_cancel)) }
-                    TextButton(
-                        onClick = { selectedIso?.let(onConfirm) },
-                        enabled = selectedIso != null && !submitting,
-                    ) { Text(stringResource(R.string.book_loan_confirm)) }
+                calendar != null && !fallback -> {
+                    LoanCalendar(
+                        calendar = calendar,
+                        selected = selectedIso,
+                        onSelect = { selectedIso = it },
+                    )
                 }
+
+                else -> {
+                    // Unknown availability: preserve main's selectable, localised month grid.
+                    LoanCalendar(
+                        calendar = AvailabilityCalendar(),
+                        selected = selectedIso,
+                        onSelect = { selectedIso = it },
+                        anyFutureDay = true,
+                    )
+                    Text(
+                        stringResource(R.string.book_loan_availability_error),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = Spacing.sm),
+                    )
+                }
+            }
+
+            // Period hint / prompt.
+            val hint = selectedIso?.let {
+                stringResource(R.string.book_loan_period_hint, formatDisplayDate(it))
+            } ?: stringResource(R.string.book_loan_pick_prompt)
+            Text(
+                text = hint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = Spacing.md),
+            )
+
+            Column(
+                Modifier.padding(bottom = Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                PrimaryButton(
+                    label = stringResource(R.string.book_loan_confirm),
+                    onClick = { selectedIso?.let(onConfirm) },
+                    enabled = selectedIso != null,
+                    loading = submitting,
+                    modifier = Modifier.fillMaxWidth().testTag("loan-confirm"),
+                )
+                SecondaryButton(
+                    label = stringResource(R.string.book_loan_cancel),
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().testTag("loan-cancel"),
+                )
             }
         }
     }

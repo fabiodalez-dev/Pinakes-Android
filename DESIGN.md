@@ -224,6 +224,15 @@ The reference layout (top to bottom on a phone):
     - then dark "Copia negli appunti", outline "Scarica RIS" and outline "Cita" (all styles).
 15. **Potrebbero interessarti:** white band with a top `line` border, Fraunces 40 heading, a horizontal row of book cards.
 
+### Loan request sheet
+
+The sheet the "Richiedi prestito" button opens, as the web's loan request:
+
+- A plain dialog, not Material's `DatePickerDialog` (that one caps its height and cut the month in half): 20dp corners, 8dp from the screen edges, at most 480dp wide, a Fraunces title, scrolling only on a screen too short for it.
+- The month as the web's loan calendar: a free day is a plain number in `onSurface`; only the days that need a word carry a tint, amber for limited and `errorContainer` for unavailable, each ringed by a faint rule of its own text colour. Today has an accent ring; the chosen day is filled with the theme's `button` colour and `buttonText`, as the button that opened the sheet. The legend uses dots, like the days it explains.
+- Confirm (filled) and cancel (outline) stacked at full width, never Material's text-button row. Confirm waits for a day and shows a spinner while the request is sent.
+- When availability cannot be loaded, the same responsive month grid lets the reader select any future day. It omits the availability legend and shows a warning: the server checks the request. Weekday and month names follow the chosen app language; the legend wraps on narrow screens.
+
 ### Other screens
 Wishlist, loans and reservations, profile, events, periodicals (Emeroteca), archive, static pages:
 
