@@ -358,12 +358,14 @@ internal fun DetailContent(
     var refreshingFile by remember(book.id) { mutableStateOf<String?>(null) }
     var showCover by remember { mutableStateOf(false) }
     var selectedPdf by remember(book.id) { mutableStateOf<String?>(null) }
-    var selectedAudio by remember(book.id) { mutableStateOf<String?>(null) }
+    // The audio file the reader started: renewing any file re-signs every URL, so the card
+    // is matched by resourceKey and the player keeps the URL it started with.
+    var selectedAudio by remember(book.id) { mutableStateOf<DigitalAttachment?>(null) }
 
     fun openFile(file: DigitalAttachment) {
         if (file.locked || file.safeUrl == null) {
             onShowMessage(context.getString(R.string.digital_locked_other))
-        } else if (file.kind == "audio") selectedAudio = file.url
+        } else if (file.kind == "audio") selectedAudio = file
         else if (file.isPdf) selectedPdf = file.url
         else runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(file.url))) }
             .onFailure { onShowMessage(context.getString(R.string.ebook_error)) }
@@ -538,8 +540,9 @@ internal fun DetailContent(
                 kind = stringResource(if (audio) R.string.book_section_audiobook else if (file.kind == "supplement") R.string.book_section_related_documents else R.string.book_section_ebook)) {
                 if (file.locked) {
                     LockedDigitalFile(file.access)
-                } else if (audio && selectedAudio == file.url) {
-                    androidx.compose.runtime.key(file.url) { AudioPlayer(audioUrl = file.url) }
+                } else if (audio && playingAudioUrl(selectedAudio, file) != null) {
+                    val playingUrl = playingAudioUrl(selectedAudio, file)!!
+                    androidx.compose.runtime.key(playingUrl) { AudioPlayer(audioUrl = playingUrl) }
                 } else PrimaryButton(label = stringResource(if (audio) R.string.collection_play else if (file.isPdf) R.string.book_read else R.string.ebook_open_external),
                     onClick = {
                         // The server's clock and access decision are authoritative. Always renew
@@ -757,6 +760,14 @@ private fun SectionTitle(text: String) {
         color = MaterialTheme.colorScheme.onSurface,
     )
 }
+
+/**
+ * The URL the player started with when [file] is the audio the reader chose, else null.
+ * Matched by [DigitalAttachment.resourceKey], so a renewal of another file, which re-signs
+ * every URL of the record, does not stop or restart a playing audiobook.
+ */
+internal fun playingAudioUrl(selected: DigitalAttachment?, file: DigitalAttachment): String? =
+    selected?.takeIf { it.resourceKey == file.resourceKey }?.url
 
 private fun digitalFilename(url: String, fallback: String): String =
     Uri.parse(url).lastPathSegment?.takeIf { it.isNotBlank() } ?: fallback
