@@ -87,12 +87,10 @@ private fun ruled(container: Color, onContainer: Color) =
     DayTint(container, onContainer, mix(onContainer, container, .22f))
 
 /** Index per-day data by ISO date for O(1) lookup, and the set of unavailable dates. */
-private class CalendarModel(calendar: AvailabilityCalendar) {
+private class CalendarModel(private val source: AvailabilityCalendar) {
     private val byDate: Map<String, String> =
-        calendar.days.associate { it.date to it.state } // date -> state
-    private val available: Map<String, Int> =
-        calendar.days.associate { it.date to it.available }
-    private val unavailable: Set<String> = calendar.unavailableDates.toSet()
+        source.days.associate { it.date to it.state } // date -> state
+    private val unavailable: Set<String> = source.unavailableDates.toSet()
     private val knownDates: Set<String> = byDate.keys
 
     /** True only when we have fetched data covering this day at all. */
@@ -101,11 +99,11 @@ private class CalendarModel(calendar: AvailabilityCalendar) {
     fun kind(date: LocalDate, today: LocalDate): DayKind {
         val iso = date.toString()
         if (date.isBefore(today)) return DayKind.PastOrUnknown
-        if (unavailable.contains(iso)) return DayKind.Full
+        // Same predicate as loanWindowFrom(): a red day is a day that caps the loan.
+        if (source.isFullyBooked(iso)) return DayKind.Full
         return when (byDate[iso]) {
-            "free" -> if ((available[iso] ?: 1) > 0) DayKind.Free else DayKind.Full
+            "free" -> DayKind.Free
             "partial" -> DayKind.Partial
-            "full" -> DayKind.Full
             else -> DayKind.PastOrUnknown // beyond the fetched window → unknown/disabled
         }
     }

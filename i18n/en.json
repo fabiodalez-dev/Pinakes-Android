@@ -261,6 +261,7 @@
   "book_loan_availability_error": "Couldn't load the availability calendar; pick any future date.",
   "book_loan_pick_prompt": "Select an available day",
   "book_loan_limit_note": "Maximum loan length: %1$d days (return by %2$s). The book is already booked from %3$s.",
+  "book_loan_limit_note_one": "Maximum loan length: 1 day (return by %1$s). The book is already booked from %2$s.",
   "book_loan_blocked_day": "Day not available (%1$s): every copy is already on loan or booked.",
   "book_loan_no_window": "No loan is possible from this start date: the book is already booked from %1$s. Choose another date.",
   "cd_prev_month": "Previous month",

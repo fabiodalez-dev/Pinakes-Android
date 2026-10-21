@@ -29,6 +29,17 @@ data class LoanWindow(
 }
 
 /**
+ * A day the grid paints red and refuses to pick: listed in `unavailable_dates`, marked `full`,
+ * or labelled `free` with no free copy (a stale label the server can send). One predicate for
+ * the calendar and the window, so what the reader sees as blocked is what caps the loan.
+ */
+internal fun AvailabilityCalendar.isFullyBooked(isoDate: String): Boolean {
+    if (unavailableDates.contains(isoDate)) return true
+    val day = days.firstOrNull { it.date == isoDate } ?: return false
+    return day.state == "full" || (day.state == "free" && day.available <= 0)
+}
+
+/**
  * The window from [startIso] (yyyy-MM-dd), or null when the duration is unknown (an older
  * server omits `loan_duration_days`) or the start is not a date: then the server's default
  * applies and nothing can be said about it.
@@ -36,12 +47,10 @@ data class LoanWindow(
 internal fun loanWindowFrom(startIso: String, calendar: AvailabilityCalendar?, loanDurationDays: Int?): LoanWindow? {
     if (loanDurationDays == null || loanDurationDays < 1) return null
     val start = runCatching { LocalDate.parse(startIso) }.getOrNull() ?: return null
-    val states = calendar?.days?.associate { it.date to it.state }.orEmpty()
-    val unavailable = calendar?.unavailableDates?.toSet().orEmpty()
     var firstBlocked: String? = null
     for (offset in 1..loanDurationDays) {
         val day = start.plusDays(offset.toLong()).toString()
-        if (unavailable.contains(day) || states[day] == "full") {
+        if (calendar?.isFullyBooked(day) == true) {
             firstBlocked = day
             break
         }

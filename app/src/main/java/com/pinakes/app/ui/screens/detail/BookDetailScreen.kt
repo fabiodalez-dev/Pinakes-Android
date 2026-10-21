@@ -372,6 +372,9 @@ internal fun LoanRequestSheetContent(
                 if (!w.possible) {
                     // The next day is blocked: no loan of at least one day from this start.
                     stringResource(R.string.book_loan_no_window, formatDisplayDate(w.firstBlocked ?: w.endDate))
+                } else if (w.maxDays == 1) {
+                    // The string generator has no plurals: a singular variant instead of "1 days".
+                    stringResource(R.string.book_loan_limit_note_one, formatDisplayDate(w.endDate), formatDisplayDate(w.firstBlocked ?: w.endDate))
                 } else {
                     stringResource(
                         R.string.book_loan_limit_note,

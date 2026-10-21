@@ -2,6 +2,7 @@ package com.pinakes.app
 
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.AvailabilityDay
+import com.pinakes.app.ui.screens.detail.isFullyBooked
 import com.pinakes.app.ui.screens.detail.loanWindowFrom
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -52,6 +53,16 @@ class LoanWindowTest {
         // A window shorter than a day is no loan: the sheet says so and disables the request.
         assertFalse(window!!.possible)
         assertTrue(loanWindowFrom("2030-03-04", calendar("2030-03-06"), 14)!!.possible)
+    }
+
+    @Test fun aFreeLabelWithNoFreeCopyIsBlockedLikeTheCalendarPaintsIt() {
+        // CalendarModel paints state "free" with available 0 red and unpickable: the window agrees.
+        val stale = AvailabilityCalendar(totalCopies = 1, days = listOf(AvailabilityDay(date = "2030-03-07", available = 0, state = "free")))
+        val window = loanWindowFrom("2030-03-04", stale, 14)
+        assertEquals("2030-03-06", window?.endDate)
+        assertTrue(window!!.capped)
+        assertTrue(stale.isFullyBooked("2030-03-07"))
+        assertFalse(stale.isFullyBooked("2030-03-06"))
     }
 
     @Test fun aPartialDayStillHasAFreeCopy() {
