@@ -282,7 +282,8 @@ class StaffDesiderataViewModel @Inject constructor(
                 when (res) {
                     is ApiResult.Success -> it.copy(
                         busy = false, message = StaffMessage(R.string.staff_wanted_received, args = listOf(book.title)),
-                        openCopy = res.data.copyId?.takeIf { c -> c > 0 }?.let { c -> res.data.bookId to c },
+                        // A response without book_id still names the title being received.
+                        openCopy = res.data.copyId?.takeIf { c -> c > 0 }?.let { c -> (res.data.bookId.takeIf { b -> b > 0 } ?: book.id) to c },
                     )
                     is ApiResult.Failure -> it.copy(
                         busy = false, forbidden = res.isForbidden(),
@@ -301,7 +302,7 @@ class StaffDesiderataViewModel @Inject constructor(
     /** The record and copy a received offer produced, when the server names both. */
     private fun receivedCopy(offer: StaffOffer): Pair<Int, Int>? {
         if (offer.status != "received") return null
-        val book = offer.receivedBook?.id ?: offer.book?.id ?: return null
+        val book = offer.receivedBook?.id?.takeIf { it > 0 } ?: offer.book?.id?.takeIf { it > 0 } ?: return null
         val copy = offer.copyId?.takeIf { it > 0 } ?: return null
         return book to copy
     }

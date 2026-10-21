@@ -250,7 +250,8 @@ fun StaffCopiesSection(
         val copy = state.copies.firstOrNull { it.id == openCopyId } ?: return@LaunchedEffect
         onCopyOpened()
         bringIntoView.bringIntoView()
-        vm.startEdit(copy)
+        // Labels alone show the section but not the per-copy editor: open it only with copies.
+        if (areas.copies) vm.startEdit(copy)
     }
     LaunchedEffect(state.forbidden) { if (state.forbidden) onForbidden() }
     val message = state.message?.resolve()
