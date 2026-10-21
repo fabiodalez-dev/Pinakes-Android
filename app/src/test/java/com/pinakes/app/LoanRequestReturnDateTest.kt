@@ -48,7 +48,7 @@ class LoanRequestReturnDateTest {
     private fun show(calendar: AvailabilityCalendar) {
         compose.setContent { PinakesTheme {
             LoanRequestSheet(loading = false, calendar = calendar, fallback = false, submitting = false,
-                onDismiss = {}, onConfirm = {})
+                onDismiss = {}, onConfirm = { _, _ -> })
         } }
     }
 

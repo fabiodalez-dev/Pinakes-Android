@@ -221,7 +221,7 @@ fun BookDetailScreen(
             fallback = state.availabilityFallback,
             submitting = state.reserveBusy,
             onDismiss = vm::dismissLoanSheet,
-            onConfirm = vm::reserve,
+            onConfirm = { start, end -> vm.reserve(start, end) },
         )
     }
 }
@@ -238,7 +238,8 @@ internal fun LoanRequestSheet(
     fallback: Boolean,
     submitting: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: (isoDate: String) -> Unit,
+    /** The chosen start and, when a fully-booked day shortens the default duration, the return date. */
+    onConfirm: (isoDate: String, endIso: String?) -> Unit,
     /** Passed to [LoanCalendar]; null reads the device clock. */
     today: LocalDate? = null,
 ) {
@@ -269,7 +270,8 @@ internal fun LoanRequestSheetContent(
     fallback: Boolean,
     submitting: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: (isoDate: String) -> Unit,
+    /** The chosen start and, when a fully-booked day shortens the default duration, the return date. */
+    onConfirm: (isoDate: String, endIso: String?) -> Unit,
     /** Passed to [LoanCalendar]; null reads the device clock. */
     today: LocalDate? = null,
 ) {
@@ -277,6 +279,11 @@ internal fun LoanRequestSheetContent(
     var selectedIso by remember(calendar) {
         mutableStateOf(calendar?.earliestAvailable?.takeIf { it.isNotBlank() })
     }
+    // A fully-booked day the reader tapped: explained under the calendar until the next pick.
+    var blockedIso by remember(calendar) { mutableStateOf<String?>(null) }
+    // The loan still possible from the chosen start: the default duration, or shorter when a
+    // scheduled loan or reservation begins inside it (then the request carries end_date).
+    val window = selectedIso?.let { loanWindowFrom(it, calendar, calendar?.loanDurationDays) }
 
     Surface(
         shape = RoundedCornerShape(20.dp),
@@ -322,8 +329,9 @@ internal fun LoanRequestSheetContent(
                     LoanCalendar(
                         calendar = calendar,
                         selected = selectedIso,
-                        onSelect = { selectedIso = it },
+                        onSelect = { selectedIso = it; blockedIso = null },
                         today = today,
+                        onBlockedTap = { blockedIso = it },
                     )
                 }
 
@@ -345,18 +353,47 @@ internal fun LoanRequestSheetContent(
                 }
             }
 
-            // The return date uses the server's configured duration (#51).
+            // The return date uses the server's configured duration (#51), stopped the day
+            // before a fully-booked day when one falls inside it.
             val hint = selectedIso?.let { start ->
-                calendar?.loanDurationDays?.let { loanReturnDate(start, it) }?.let { end ->
-                    stringResource(R.string.book_loan_period_range, formatDisplayDate(start), formatDisplayDate(end))
+                window?.let { w ->
+                    stringResource(R.string.book_loan_period_range, formatDisplayDate(start), formatDisplayDate(w.endDate))
                 } ?: stringResource(R.string.book_loan_period_hint, formatDisplayDate(start))
             } ?: stringResource(R.string.book_loan_pick_prompt)
             Text(
                 text = hint,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = Spacing.md),
+                modifier = Modifier.padding(top = Spacing.md, bottom = if (window?.capped == true || blockedIso != null) Spacing.xs else Spacing.md),
             )
+            // Why the loan is shorter than the library's standard duration, and why a tapped
+            // red day cannot be chosen: the same explanation the website gives.
+            val limitText = window?.takeIf { it.capped }?.let { w ->
+                if (!w.possible) {
+                    // The next day is blocked: no loan of at least one day from this start.
+                    stringResource(R.string.book_loan_no_window, formatDisplayDate(w.firstBlocked ?: w.endDate))
+                } else if (w.maxDays == 1) {
+                    // The string generator has no plurals: a singular variant instead of "1 days".
+                    stringResource(R.string.book_loan_limit_note_one, formatDisplayDate(w.endDate), formatDisplayDate(w.firstBlocked ?: w.endDate))
+                } else {
+                    stringResource(
+                        R.string.book_loan_limit_note,
+                        w.maxDays,
+                        formatDisplayDate(w.endDate),
+                        formatDisplayDate(w.firstBlocked ?: w.endDate),
+                    )
+                }
+            }
+            val blockedText = blockedIso?.let { stringResource(R.string.book_loan_blocked_day, formatDisplayDate(it)) }
+            val explanation = listOfNotNull(blockedText, limitText).joinToString(" ")
+            if (explanation.isNotEmpty()) {
+                Text(
+                    text = explanation,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.padding(bottom = Spacing.md).testTag("loan-limit"),
+                )
+            }
 
             Column(
                 Modifier.padding(bottom = Spacing.lg),
@@ -364,8 +401,8 @@ internal fun LoanRequestSheetContent(
             ) {
                 PrimaryButton(
                     label = stringResource(R.string.book_loan_confirm),
-                    onClick = { selectedIso?.let(onConfirm) },
-                    enabled = selectedIso != null,
+                    onClick = { selectedIso?.let { start -> onConfirm(start, window?.takeIf { it.requiresEndDate }?.endDate) } },
+                    enabled = selectedIso != null && window?.possible != false,
                     loading = submitting,
                     modifier = Modifier.fillMaxWidth().testTag("loan-confirm"),
                 )
