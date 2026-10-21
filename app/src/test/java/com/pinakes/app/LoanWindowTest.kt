@@ -16,8 +16,10 @@ import org.junit.Test
  * website calendar and the server's LoanWindow (Mobile API 1.8.2).
  */
 class LoanWindowTest {
+    /** A Pinakes 0.8.7 calendar: it always sends max_loan_duration_days (90 by default). */
     private fun calendar(vararg full: String, partial: List<String> = emptyList()) = AvailabilityCalendar(
         totalCopies = 1,
+        maxLoanDurationDays = 90,
         days = (full.map { AvailabilityDay(date = it, available = 0, state = "full") } +
             partial.map { AvailabilityDay(date = it, available = 1, state = "partial") }),
     )
@@ -57,7 +59,7 @@ class LoanWindowTest {
 
     @Test fun aFreeLabelWithNoFreeCopyIsBlockedLikeTheCalendarPaintsIt() {
         // CalendarModel paints state "free" with available 0 red and unpickable: the window agrees.
-        val stale = AvailabilityCalendar(totalCopies = 1, days = listOf(AvailabilityDay(date = "2030-03-07", available = 0, state = "free")))
+        val stale = AvailabilityCalendar(totalCopies = 1, maxLoanDurationDays = 90, days = listOf(AvailabilityDay(date = "2030-03-07", available = 0, state = "free")))
         val window = loanWindowFrom("2030-03-04", stale, 14)
         assertEquals("2030-03-06", window?.endDate)
         assertTrue(window!!.capped)
@@ -71,7 +73,7 @@ class LoanWindowTest {
     }
 
     @Test fun unavailableDatesCountAsBlockedEvenWithoutADayRow() {
-        val window = loanWindowFrom("2030-03-04", AvailabilityCalendar(totalCopies = 1, unavailableDates = listOf("2030-03-07")), 14)
+        val window = loanWindowFrom("2030-03-04", AvailabilityCalendar(totalCopies = 1, maxLoanDurationDays = 90, unavailableDates = listOf("2030-03-07")), 14)
         assertEquals("2030-03-06", window?.endDate)
         assertTrue(window!!.capped)
     }
@@ -105,5 +107,24 @@ class LoanWindowTest {
         val window = loanWindowFrom("2030-03-04", calendar().copy(maxLoanDurationDays = 7), 7)!!
         assertEquals("2030-03-11", window.endDate)
         assertFalse(window.requiresEndDate)
+    }
+
+    @Test fun aServerThatIgnoresEndDateKeepsTheDefaultWindow() {
+        // Pinakes 0.8.6 (Mobile API 1.8.1): loan_duration_days but no max_loan_duration_days,
+        // and POST /reservations ignores end_date. A booked day inside the window caps nothing.
+        val old = calendar("2030-03-09").copy(maxLoanDurationDays = null)
+        val window = loanWindowFrom("2030-03-04", old, 14)!!
+        assertEquals("2030-03-18", window.endDate)
+        assertFalse(window.capped)
+        assertFalse(window.requiresEndDate)
+        assertNull(window.firstBlocked)
+        assertEquals(14, window.maxDays)
+        assertTrue(window.possible)
+    }
+
+    @Test fun aServerThatIgnoresEndDateNeverSaysNoLoanIsPossible() {
+        // A blocked next day would make the 0.8.7 sheet refuse the start; 0.8.6 decides itself.
+        val old = calendar("2030-03-05").copy(maxLoanDurationDays = null)
+        assertTrue(loanWindowFrom("2030-03-04", old, 14)!!.possible)
     }
 }

@@ -45,10 +45,25 @@ internal fun AvailabilityCalendar.isFullyBooked(isoDate: String): Boolean {
  * The window from [startIso] (yyyy-MM-dd), or null when the duration is unknown (an older
  * server omits `loan_duration_days`) or the start is not a date: then the server's default
  * applies and nothing can be said about it.
+ *
+ * Only a server that reads `end_date` (Mobile API 1.8.2, Pinakes 0.8.7) can grant a shortened
+ * window, and it is the one that sends `max_loan_duration_days`. Pinakes 0.8.6 (Mobile API
+ * 1.8.1) sends `loan_duration_days` but ignores `end_date`: there the window stays the default
+ * one, uncapped and without `end_date`, as in 1.9.0, instead of promising a shorter loan the
+ * server would refuse or end on another day.
  */
 internal fun loanWindowFrom(startIso: String, calendar: AvailabilityCalendar?, loanDurationDays: Int?): LoanWindow? {
     if (loanDurationDays == null || loanDurationDays < 1) return null
     val start = runCatching { LocalDate.parse(startIso) }.getOrNull() ?: return null
+    if (calendar?.maxLoanDurationDays == null) {
+        return LoanWindow(
+            endDate = start.plusDays(loanDurationDays.toLong()).toString(),
+            firstBlocked = null,
+            maxDays = loanDurationDays,
+            capped = false,
+            requiresEndDate = false,
+        )
+    }
     val durationDays = calendar?.maxLoanDurationDays?.takeIf { it > 0 }
         ?.let { minOf(loanDurationDays, it) } ?: loanDurationDays
     var firstBlocked: String? = null

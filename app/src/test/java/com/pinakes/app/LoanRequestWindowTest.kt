@@ -56,6 +56,7 @@ class LoanRequestWindowTest {
         totalCopies = 1,
         earliestAvailable = "2030-03-04",
         loanDurationDays = duration,
+        maxLoanDurationDays = 90,
         days = (1..40).map { i ->
             val date = java.time.LocalDate.parse("2030-03-04").plusDays(i.toLong() - 1).toString()
             if (date in full) AvailabilityDay(date = date, available = 0, loaned = 1, state = "full")
