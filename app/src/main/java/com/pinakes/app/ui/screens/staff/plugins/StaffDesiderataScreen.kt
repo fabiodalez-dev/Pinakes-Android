@@ -107,6 +107,10 @@ data class DesiderataUiState(
     val forbidden: Boolean = false,
     val selected: StaffOffer? = null,
     val confirmDelete: StaffOffer? = null,
+    /** A wanted title waiting for "mark received" to be confirmed: it adds a copy at once. */
+    val confirmReceive: StaffWantedBook? = null,
+    /** A receipt created this copy of this record: the screen opens its editor (code, place). */
+    val openCopy: Pair<Int, Int>? = null,
     val pickingBookFor: StaffOffer? = null,
     val busy: Boolean = false,
     val message: StaffMessage? = null,
@@ -238,7 +242,7 @@ class StaffDesiderataViewModel @Inject constructor(
             val res = call(offer)
             _state.update {
                 when (res) {
-                    is ApiResult.Success -> it.copy(busy = false, selected = null, message = StaffMessage(success))
+                    is ApiResult.Success -> it.copy(busy = false, selected = null, message = StaffMessage(success), openCopy = receivedCopy(res.data))
                     is ApiResult.Failure -> it.copy(busy = false, forbidden = res.isForbidden(), message = res.toStaffMessage(R.string.staff_error_save))
                 }
             }
@@ -264,15 +268,23 @@ class StaffDesiderataViewModel @Inject constructor(
         }
     }
 
-    /** "Received" on a wanted title: the copy arrived outside an offer (bought, given at the desk). */
-    fun receiveWanted(book: StaffWantedBook) {
+    fun askReceiveWanted(book: StaffWantedBook) = _state.update { it.copy(confirmReceive = book) }
+    fun dismissReceiveWanted() = _state.update { it.copy(confirmReceive = null) }
+
+    /** "Mark received" on a wanted title, once confirmed: the copy arrived outside an offer (bought, given at the desk). */
+    fun receiveWanted() {
+        val book = _state.value.confirmReceive ?: return
         if (_state.value.busy) return
-        _state.update { it.copy(busy = true) }
+        _state.update { it.copy(busy = true, confirmReceive = null) }
         viewModelScope.launch {
             val res = plugins.receiveWanted(book.id)
             _state.update {
                 when (res) {
-                    is ApiResult.Success -> it.copy(busy = false, message = StaffMessage(R.string.staff_wanted_received, args = listOf(book.title)))
+                    is ApiResult.Success -> it.copy(
+                        busy = false, message = StaffMessage(R.string.staff_wanted_received, args = listOf(book.title)),
+                        // A response without book_id still names the title being received.
+                        openCopy = res.data.copyId?.takeIf { c -> c > 0 }?.let { c -> (res.data.bookId.takeIf { b -> b > 0 } ?: book.id) to c },
+                    )
                     is ApiResult.Failure -> it.copy(
                         busy = false, forbidden = res.isForbidden(),
                         message = if (res.meta?.reason == "open_offers") StaffMessage(R.string.staff_wanted_open_offers) else res.toStaffMessage(R.string.staff_error_save),
@@ -284,6 +296,16 @@ class StaffDesiderataViewModel @Inject constructor(
     }
 
     fun consumeMessage() = _state.update { it.copy(message = null) }
+
+    fun consumeOpenCopy() = _state.update { it.copy(openCopy = null) }
+
+    /** The record and copy a received offer produced, when the server names both. */
+    private fun receivedCopy(offer: StaffOffer): Pair<Int, Int>? {
+        if (offer.status != "received") return null
+        val book = offer.receivedBook?.id?.takeIf { it > 0 } ?: offer.book?.id?.takeIf { it > 0 } ?: return null
+        val copy = offer.copyId?.takeIf { it > 0 } ?: return null
+        return book to copy
+    }
 }
 
 internal fun offerStatusLabel(status: String): Int? = when (status) {
@@ -297,7 +319,11 @@ internal fun offerStatusLabel(status: String): Int? = when (status) {
 /** Donation offers (accept, reject, receive into the catalogue, delete) and the wanted titles. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StaffDesiderataScreen(onNavigateUp: () -> Unit, onOpenBook: (Int) -> Unit) {
+fun StaffDesiderataScreen(
+    onNavigateUp: () -> Unit,
+    onOpenBook: (Int) -> Unit,
+    onOpenCopy: (bookId: Int, copyId: Int) -> Unit = { book, _ -> onOpenBook(book) },
+) {
     val vm: StaffDesiderataViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val app: AppViewModel = hiltViewModel()
@@ -306,6 +332,8 @@ fun StaffDesiderataScreen(onNavigateUp: () -> Unit, onOpenBook: (Int) -> Unit) {
     ForbiddenExit(state.forbidden, onNavigateUp)
     LeaveWhen(!areas.desiderata, onNavigateUp)
     StaffSnackbarEffect(state.message, snackbar, vm::consumeMessage)
+    // A receipt made a copy: go straight to it, to give it its code and place.
+    LaunchedEffect(state.openCopy) { state.openCopy?.let { (book, copy) -> vm.consumeOpenCopy(); onOpenCopy(book, copy) } }
 
     Scaffold(
         topBar = { PinakesTopBar(title = stringResource(R.string.staff_desiderata), onNavigateUp = onNavigateUp) },
@@ -333,7 +361,7 @@ fun StaffDesiderataScreen(onNavigateUp: () -> Unit, onOpenBook: (Int) -> Unit) {
                                     title = w.title, coverUrl = w.coverUrl, line1 = w.author,
                                     line2 = stringResource(R.string.staff_wanted_open_offers_count, w.openOffers),
                                     onClick = { onOpenBook(w.id) },
-                                    trailing = { PinakesTextButton(stringResource(R.string.staff_wanted_mark_received), onClick = { vm.receiveWanted(w) }, enabled = !state.busy) },
+                                    trailing = { PinakesTextButton(stringResource(R.string.staff_wanted_mark_received), onClick = { vm.askReceiveWanted(w) }, enabled = !state.busy) },
                                     modifier = Modifier.padding(vertical = Spacing.xs).testTag("wanted-${w.id}"),
                                 )
                             }
@@ -368,6 +396,12 @@ fun StaffDesiderataScreen(onNavigateUp: () -> Unit, onOpenBook: (Int) -> Unit) {
     }
 
     state.selected?.let { offer -> OfferSheet(offer, state.busy, vm, onOpenBook) }
+    state.confirmReceive?.let { book ->
+        ConfirmDialog(
+            title = stringResource(R.string.staff_wanted_receive_confirm_title), body = stringResource(R.string.staff_wanted_receive_confirm_body, book.title),
+            confirmLabel = stringResource(R.string.staff_wanted_mark_received), onConfirm = vm::receiveWanted, onDismiss = vm::dismissReceiveWanted,
+        )
+    }
     state.confirmDelete?.let { offer ->
         ConfirmDialog(
             title = stringResource(R.string.staff_offer_delete), body = stringResource(R.string.staff_offer_delete_body, offer.title),

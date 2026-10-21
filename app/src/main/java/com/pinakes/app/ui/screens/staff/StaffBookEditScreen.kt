@@ -306,6 +306,8 @@ private fun BookForm(state: StaffBookEditUiState, vm: StaffBookEditViewModel) {
                 onBookRefreshed = vm::applyCopies,
                 onMessage = vm::showMessage,
                 onForbidden = vm::markForbidden,
+                openCopyId = vm.openCopyId,
+                onCopyOpened = vm::consumeOpenCopy,
             )
             // Digital Library plugin (`staff_digital_library`): eBook / audiobook upload.
             com.pinakes.app.ui.screens.staff.content.StaffDigitalSection(onMessage = vm::showMessage, onForbidden = vm::markForbidden)
