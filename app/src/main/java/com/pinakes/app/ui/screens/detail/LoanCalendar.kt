@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -44,15 +43,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pinakes.app.R
 import com.pinakes.app.data.model.AvailabilityCalendar
-import com.pinakes.app.ui.theme.AvailableContainerDark
-import com.pinakes.app.ui.theme.AvailableContainerLight
-import com.pinakes.app.ui.theme.AvailableOnContainerDark
-import com.pinakes.app.ui.theme.AvailableOnContainerLight
 import com.pinakes.app.ui.theme.DueSoonContainerDark
 import com.pinakes.app.ui.theme.DueSoonContainerLight
 import com.pinakes.app.ui.theme.DueSoonOnContainerDark
 import com.pinakes.app.ui.theme.DueSoonOnContainerLight
+import com.pinakes.app.ui.theme.LocalPinakesColors
 import com.pinakes.app.ui.theme.Spacing
+import com.pinakes.app.ui.theme.mix
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -60,12 +57,14 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 // ---------------------------------------------------------------------------
-// Day-cell tints. These reuse the ONLY allowed semantic colours: the availability
-// tints from theme/Color.kt (green = free, amber = partial) and the error role
-// (red = full). No invented hexes. (DESIGN.md.)
+// Day-cell tints, as on the web loan calendar: a free day is a plain dot in the
+// ink colour (a coloured month reads as noise), only the days that need a word
+// carry a tint — amber = partial (theme/Color.kt), red = full (the error role) —
+// each ringed by a faint rule of its own text colour. No invented hexes.
+// (DESIGN.md.)
 // ---------------------------------------------------------------------------
 
-private data class DayTint(val container: Color, val onContainer: Color)
+private data class DayTint(val container: Color, val onContainer: Color, val rule: Color = Color.Transparent)
 
 /** Per-day availability state used to colour a calendar cell. */
 private enum class DayKind { Free, Partial, Full, PastOrUnknown }
@@ -73,16 +72,19 @@ private enum class DayKind { Free, Partial, Full, PastOrUnknown }
 @Composable
 private fun tintFor(kind: DayKind, dark: Boolean): DayTint = when (kind) {
     DayKind.Free ->
-        if (dark) DayTint(AvailableContainerDark, AvailableOnContainerDark)
-        else DayTint(AvailableContainerLight, AvailableOnContainerLight)
+        DayTint(Color.Transparent, MaterialTheme.colorScheme.onSurface)
     DayKind.Partial ->
-        if (dark) DayTint(DueSoonContainerDark, DueSoonOnContainerDark)
-        else DayTint(DueSoonContainerLight, DueSoonOnContainerLight)
+        if (dark) ruled(DueSoonContainerDark, DueSoonOnContainerDark)
+        else ruled(DueSoonContainerLight, DueSoonOnContainerLight)
     DayKind.Full ->
-        DayTint(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
+        ruled(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
     DayKind.PastOrUnknown ->
         DayTint(Color.Transparent, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f))
 }
+
+/** A tinted day: its rule is its own text colour, faded into the tint. */
+private fun ruled(container: Color, onContainer: Color) =
+    DayTint(container, onContainer, mix(onContainer, container, .22f))
 
 /** Index per-day data by ISO date for O(1) lookup, and the set of unavailable dates. */
 private class CalendarModel(calendar: AvailabilityCalendar) {
@@ -132,9 +134,12 @@ fun LoanCalendar(
     modifier: Modifier = Modifier,
     /** Availability could not be loaded: every future day is selectable, no colour legend. */
     anyFutureDay: Boolean = false,
+    /** The day the grid treats as today; null reads the device clock once. Tests pin it. */
+    today: LocalDate? = null,
 ) {
-    val dark = com.pinakes.app.ui.theme.LocalPinakesColors.current.darkMode
-    val today = remember { LocalDate.now() }
+    val dark = LocalPinakesColors.current.darkMode
+    val deviceToday = remember { LocalDate.now() }
+    val today = today ?: deviceToday
     val model = remember(calendar) { CalendarModel(calendar) }
 
     // Visible month: start on the selected date's month, else the earliest-available month, else now.
@@ -282,8 +287,15 @@ private fun DayCell(
     // Unknown availability: future days look plain but selectable (no false "unavailable" tint).
     val tint = if (anyFutureDay && selectable) DayTint(Color.Transparent, MaterialTheme.colorScheme.onSurface) else tintFor(kind, dark)
 
-    val container = if (selected) MaterialTheme.colorScheme.primary else tint.container
-    val onContainer = if (selected) MaterialTheme.colorScheme.onPrimary else tint.onContainer
+    // The pick is the theme's button colour, as the "Request loan" button that opened the sheet.
+    val tokens = LocalPinakesColors.current
+    val container = if (selected) tokens.button else tint.container
+    val onContainer = if (selected) tokens.buttonText else tint.onContainer
+    val rule = when {
+        selected -> Color.Transparent
+        date == today -> MaterialTheme.colorScheme.primary
+        else -> tint.rule
+    }
 
     // Fills its weighted square cell (at most 44dp) instead of a fixed 40dp: on a 320-360dp
     // phone a dialog leaves ~38dp per column, and a fixed size overflowed into its neighbours.
@@ -295,9 +307,7 @@ private fun DayCell(
         .clip(CircleShape)
         .background(container)
         .then(
-            if (date == today && !selected)
-                Modifier.border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
-            else Modifier
+            if (rule != Color.Transparent) Modifier.border(1.dp, rule, CircleShape) else Modifier
         )
         .then(
             if (selectable) Modifier.clickable { onSelect(iso) } else Modifier
@@ -322,20 +332,23 @@ private fun Legend(dark: Boolean) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        LegendItem(tintFor(DayKind.Free, dark).container, stringResource(R.string.book_loan_legend_available))
-        LegendItem(tintFor(DayKind.Partial, dark).container, stringResource(R.string.book_loan_legend_limited))
-        LegendItem(tintFor(DayKind.Full, dark).container, stringResource(R.string.book_loan_legend_unavailable))
+        // A free day is an untinted dot, so its key is one too: the surface ringed by the rule.
+        LegendItem(MaterialTheme.colorScheme.surface, stringResource(R.string.book_loan_legend_available), MaterialTheme.colorScheme.outline)
+        tintFor(DayKind.Partial, dark).let { LegendItem(it.container, stringResource(R.string.book_loan_legend_limited), it.rule) }
+        tintFor(DayKind.Full, dark).let { LegendItem(it.container, stringResource(R.string.book_loan_legend_unavailable), it.rule) }
     }
 }
 
 @Composable
-private fun LegendItem(color: Color, label: String) {
+private fun LegendItem(color: Color, label: String, rule: Color = Color.Transparent) {
     Row(verticalAlignment = Alignment.CenterVertically) {
+        // Dots, like the days they explain.
         Box(
             Modifier
                 .size(12.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(color),
+                .clip(CircleShape)
+                .background(color)
+                .border(1.dp, rule, CircleShape),
         )
         Spacer(Modifier.width(Spacing.xs))
         Text(

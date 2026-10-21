@@ -316,7 +316,11 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
         }
         // ---- Staff plugin content (Mobile API 1.7.0) ----
         composable(Routes.STAFF_DESIDERATA, enterTransition = slideIn, popExitTransition = slideOut) {
-            StaffDesiderataScreen(onNavigateUp = { navController.popBackStack() }, onOpenBook = { navController.navigate(Routes.staffBookEdit(it)) })
+            StaffDesiderataScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onOpenBook = { navController.navigate(Routes.staffBookEdit(it)) },
+                onOpenCopy = { book, copy -> navController.navigate(Routes.staffBookEdit(book, copy)) },
+            )
         }
         composable(Routes.STAFF_ARCHIVES, enterTransition = slideIn, popExitTransition = slideOut) {
             StaffArchivesScreen(
@@ -415,7 +419,10 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
         }
         composable(
             Routes.STAFF_BOOK_EDIT,
-            arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.IntType }),
+            arguments = listOf(
+                navArgument(Routes.ARG_BOOK_ID) { type = NavType.IntType },
+                navArgument(Routes.ARG_COPY_ID) { type = NavType.IntType; defaultValue = 0 },
+            ),
             enterTransition = slideIn, popExitTransition = slideOut,
         ) {
             StaffBookEditScreen(

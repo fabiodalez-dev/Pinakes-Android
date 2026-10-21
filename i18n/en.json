@@ -250,7 +250,8 @@
   "cover_viewer_close": "Close",
   "book_loan_dialog_title": "Choose a start date",
   "book_loan_pick_date": "Pick a date",
-  "book_loan_period_hint": "From %1$s, about 1 month",
+  "book_loan_period_hint": "From %1$s, for the library’s standard loan period",
+  "book_loan_period_range": "Start: %1$s · Return by: %2$s",
   "book_loan_confirm": "Request loan",
   "book_loan_cancel": "Cancel",
   "book_loan_legend_available": "Available",
@@ -1210,7 +1211,9 @@
   "staff_offer_delete_body": "Delete the offer of “%1$s”? This cannot be undone.",
   "staff_offer_deleted": "Offer deleted",
   "staff_wanted_open_offers_count": "Open offers: %1$d",
-  "staff_wanted_mark_received": "Received",
+  "staff_wanted_mark_received": "Receive",
+  "staff_wanted_receive_confirm_title": "Mark as received?",
+  "staff_wanted_receive_confirm_body": "“%1$s” gets a copy in the catalogue and leaves the wanted titles.",
   "staff_wanted_received": "“%1$s” received: copy added",
   "staff_wanted_open_offers": "This title has open offers: receive it from the offer instead.",
   "staff_archives_search": "Title or reference code",
@@ -1442,5 +1445,9 @@
   "staff_expression_critical": "Critical edition",
   "staff_expression_audio": "Audio",
   "staff_expression_other": "Other",
-  "staff_field_title_plain": "Title"
+  "staff_field_title_plain": "Title",
+  "digital_locked_login": "Sign in to open it",
+  "digital_locked_loan": "For readers who have this book on loan",
+  "digital_locked_other": "Not available to your account",
+  "digital_link_refresh_error": "Could not refresh the link. Please try again."
 }

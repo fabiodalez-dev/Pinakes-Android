@@ -347,17 +347,56 @@ data class BookDetail(
             audioUrl?.takeIf { hasAudio && it.isNotBlank() }?.let { DigitalAttachment(it, kind = "audio") },
             ebookUrl?.takeIf { hasEbook && it.isNotBlank() }?.let { DigitalAttachment(it, kind = "ebook") },
         )
-    }.filter { it.safeUrl != null }.distinctBy { it.url }
+    }.filter { it.safeUrl != null || it.locked }.let { files ->
+        // A closed file has no address (the server sends url = null): several of them are
+        // all "", so only the open ones are told apart by their address.
+        val seen = HashSet<String>()
+        files.filter { it.locked || seen.add(it.url) }
+    }
 }
 
+/**
+ * One digital file of a record. Servers from Pinakes 0.8.6 (issue #480) say who may open
+ * it and what this reader may do: a closed file keeps its entry with an empty [url] and
+ * the reason in [access]. Older servers send neither field, and every file is open.
+ */
 @Serializable
-data class DigitalAttachment(val url: String = "", val label: String = "", val kind: String = "ebook") {
+data class DigitalAttachment(
+    val url: String = "",
+    val label: String = "",
+    val kind: String = "ebook",
+    /** public | users | staff | loan, as resolved by the server; null on older servers. */
+    val visibility: String? = null,
+    /** granted | login_required | loan_required | staff_only; null on older servers (= granted). */
+    val access: String? = null,
+) {
+    val locked: Boolean get() = access != null && access != ACCESS_GRANTED
     val safeUrl: String? get() = url.takeIf {
         val uri = runCatching { java.net.URI(it) }.getOrNull()
         uri?.scheme?.lowercase() in listOf("http", "https") && !uri?.host.isNullOrBlank()
     }
+
+    /** When a signed link stops working (its pk_exp, in epoch seconds); null for an unsigned link. */
+    val expiresAt: Long? get() = runCatching { java.net.URI(url).rawQuery }.getOrNull()
+        ?.split('&')?.firstOrNull { it.startsWith("pk_exp=") }?.substringAfter('=')?.toLongOrNull()
+
+    /** Identity of the file across signature renewals; keep every non-signature query parameter. */
+    val resourceKey: String get() {
+        val base = url.substringBefore('#').substringBefore('?')
+        val query = runCatching { java.net.URI(url).rawQuery }.getOrNull()
+            ?.split('&')?.filterNot { it.substringBefore('=') in setOf("pk_exp", "pk_uid", "pk_sig") }
+            ?.filter { it.isNotEmpty() }?.sorted().orEmpty()
+        return base + if (query.isEmpty()) "" else "?" + query.joinToString("&")
+    }
+
     val format: String get() = runCatching { java.net.URI(url).path.substringAfterLast('.').uppercase() }.getOrDefault("")
     val isPdf: Boolean get() = format == "PDF"
+
+    companion object {
+        const val ACCESS_GRANTED = "granted"
+        const val ACCESS_LOGIN_REQUIRED = "login_required"
+        const val ACCESS_LOAN_REQUIRED = "loan_required"
+    }
 }
 
 @Serializable
@@ -474,6 +513,9 @@ data class AvailabilityCalendar(
     @SerialName("earliest_available") val earliestAvailable: String? = null, // "yyyy-MM-dd"
     @SerialName("unavailable_dates") val unavailableDates: List<String> = emptyList(),
     val days: List<AvailabilityDay> = emptyList(),
+    // Days POST /reservations adds to the chosen start to set the return date (Mobile API
+    // 1.8.1). Null on older servers: the dialog then names the standard period without a date.
+    @SerialName("loan_duration_days") val loanDurationDays: Int? = null,
 )
 
 @Serializable
@@ -488,8 +530,9 @@ data class AvailabilityDay(
 @Serializable
 data class ReservationRequest(
     @SerialName("book_id") val bookId: Int,
-    // Single desired start date "yyyy-MM-dd"; the backend computes the return as +1 month
-    // (same as the website). This is the authoritative field the request flow sends.
+    // Single desired start date "yyyy-MM-dd"; the backend sets the return from the library's
+    // configured loan duration (same as the website). This is the authoritative field the
+    // request flow sends.
     @SerialName("desired_date") val desiredDate: String? = null,
     @SerialName("start_date") val startDate: String? = null, // legacy/compat, yyyy-MM-dd
     @SerialName("end_date") val endDate: String? = null,     // legacy/compat, yyyy-MM-dd

@@ -40,6 +40,7 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.LocalOffer
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -76,7 +77,10 @@ import com.pinakes.app.R
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.BookDetail
 import com.pinakes.app.data.model.CirculationRequestKind
+import com.pinakes.app.data.model.DigitalAttachment
 import com.pinakes.app.data.model.PersonalHistory
+import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.common.OfflinePolicy
 import com.pinakes.app.ui.components.PinakesBottomBar
@@ -200,6 +204,7 @@ fun BookDetailScreen(
                     onReserve = vm::openLoanSheet,
                     onToggleWishlist = vm::toggleWishlist,
                     onFindWorks = onFindWorks,
+                    onRefreshFile = vm::refreshDigitalFile,
                     onShowMessage = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } },
                     offlineNotice = if (state.offlineNow) stringResource(R.string.offline_actions_unavailable) else null,
                     offlineSyncedAt = state.syncedAt,
@@ -222,13 +227,9 @@ fun BookDetailScreen(
 }
 
 /**
- * Loan-request dialog. While [loading], shows a spinner. With a [calendar], renders the colored
+ * Loan-request sheet. While [loading], shows a spinner. With a [calendar], renders the colored
  * [LoanCalendar] (availability-tinted month grid). If [fallback] (availability fetch failed),
- * the same month grid lets the user pick any future day, with a note. Returns yyyy-MM-dd.
- *
- * A plain [Dialog] sized to the screen (max 420dp, 16dp side margins, scrollable) replaces the
- * Material DatePickerDialog, whose fixed 360dp width and capped height clipped the month on
- * 320-360dp phones.
+ * uses the same month grid for any future day and a note. Returns the chosen date as yyyy-MM-dd.
  */
 @Composable
 internal fun LoanRequestSheet(
@@ -238,88 +239,141 @@ internal fun LoanRequestSheet(
     submitting: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (isoDate: String) -> Unit,
+    /** Passed to [LoanCalendar]; null reads the device clock. */
+    today: LocalDate? = null,
+) {
+    // Same sheet as the web's loan request: the card shape of the availability box (20dp), a
+    // serif title, and two buttons stacked at full width in the page's own styles — the filled
+    // confirm and the outlined cancel — instead of Material's text-button row.
+    // A plain Dialog, not DatePickerDialog: that one caps its height at 568dp, which cut the
+    // month in half and pushed the legend and the buttons below the fold. This one is as tall
+    // as its content and scrolls only on a screen too short for it.
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(Modifier.testTag("loan-dialog")) {
+            LoanRequestSheetContent(loading, calendar, fallback, submitting, onDismiss, onConfirm, today)
+        }
+    }
+}
+
+/**
+ * The sheet itself, without its [Dialog]: a Dialog is a window of its own and takes the device
+ * density, so the tests lay this out in a fixed width to check a narrow phone on any emulator.
+ */
+@Composable
+internal fun LoanRequestSheetContent(
+    loading: Boolean,
+    calendar: AvailabilityCalendar?,
+    fallback: Boolean,
+    submitting: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (isoDate: String) -> Unit,
+    /** Passed to [LoanCalendar]; null reads the device clock. */
+    today: LocalDate? = null,
 ) {
     // Pre-select earliest_available when offered, else null until the user picks.
     var selectedIso by remember(calendar) {
         mutableStateOf(calendar?.earliestAvailable?.takeIf { it.isNotBlank() })
     }
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-                .padding(horizontal = Spacing.lg, vertical = Spacing.xl)
-                .widthIn(max = 420.dp)
-                .fillMaxWidth()
-                .testTag("loan-dialog"),
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier
+            // 8dp from the screen edges, as the web sheet on a phone (100vw - 1rem).
+            .padding(horizontal = Spacing.sm, vertical = Spacing.lg)
+            .widthIn(max = 480.dp)
+            .fillMaxWidth()
+            .testTag("loan-sheet"),
+    ) {
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.lg)
+                .fillMaxWidth(),
         ) {
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(Spacing.lg)) {
-                Text(
-                    stringResource(R.string.book_loan_dialog_title),
-                    modifier = Modifier.padding(bottom = Spacing.sm),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                when {
-                    loading -> {
-                        Row(
-                            Modifier.fillMaxWidth().padding(vertical = Spacing.xxl),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                            Spacer(Modifier.width(Spacing.md))
-                            Text(
-                                stringResource(R.string.book_loan_availability_loading),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-
-                    calendar != null && !fallback -> {
-                        LoanCalendar(
-                            calendar = calendar,
-                            selected = selectedIso,
-                            onSelect = { selectedIso = it },
-                        )
-                    }
-
-                    else -> {
-                        // Availability unknown: any future day, the server decides.
-                        LoanCalendar(
-                            calendar = AvailabilityCalendar(),
-                            selected = selectedIso,
-                            onSelect = { selectedIso = it },
-                            anyFutureDay = true,
-                        )
+            Text(
+                stringResource(R.string.book_loan_dialog_title),
+                modifier = Modifier.padding(top = Spacing.lg, bottom = Spacing.md),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            when {
+                loading -> {
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = Spacing.xxl),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(Spacing.md))
                         Text(
-                            stringResource(R.string.book_loan_availability_error),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(top = Spacing.sm),
+                            stringResource(R.string.book_loan_availability_loading),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
 
-                // Period hint / prompt.
-                val hint = selectedIso?.let {
-                    stringResource(R.string.book_loan_period_hint, formatDisplayDate(it))
-                } ?: stringResource(R.string.book_loan_pick_prompt)
-                Text(
-                    text = hint,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = Spacing.md),
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.book_loan_cancel)) }
-                    TextButton(
-                        onClick = { selectedIso?.let(onConfirm) },
-                        enabled = selectedIso != null && !submitting,
-                    ) { Text(stringResource(R.string.book_loan_confirm)) }
+                calendar != null && !fallback -> {
+                    LoanCalendar(
+                        calendar = calendar,
+                        selected = selectedIso,
+                        onSelect = { selectedIso = it },
+                        today = today,
+                    )
                 }
+
+                else -> {
+                    // Unknown availability: preserve main's selectable, localised month grid.
+                    LoanCalendar(
+                        calendar = AvailabilityCalendar(),
+                        selected = selectedIso,
+                        onSelect = { selectedIso = it },
+                        anyFutureDay = true,
+                        today = today,
+                    )
+                    Text(
+                        stringResource(R.string.book_loan_availability_error),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = Spacing.sm),
+                    )
+                }
+            }
+
+            // The return date uses the server's configured duration (#51).
+            val hint = selectedIso?.let { start ->
+                calendar?.loanDurationDays?.let { loanReturnDate(start, it) }?.let { end ->
+                    stringResource(R.string.book_loan_period_range, formatDisplayDate(start), formatDisplayDate(end))
+                } ?: stringResource(R.string.book_loan_period_hint, formatDisplayDate(start))
+            } ?: stringResource(R.string.book_loan_pick_prompt)
+            Text(
+                text = hint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = Spacing.md),
+            )
+
+            Column(
+                Modifier.padding(bottom = Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                PrimaryButton(
+                    label = stringResource(R.string.book_loan_confirm),
+                    onClick = { selectedIso?.let(onConfirm) },
+                    enabled = selectedIso != null,
+                    loading = submitting,
+                    modifier = Modifier.fillMaxWidth().testTag("loan-confirm"),
+                )
+                SecondaryButton(
+                    label = stringResource(R.string.book_loan_cancel),
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().testTag("loan-cancel"),
+                )
             }
         }
     }
@@ -338,6 +392,10 @@ internal fun DetailContent(
     onToggleWishlist: () -> Unit,
     onShowMessage: (String) -> Unit,
     onFindWorks: (String, Int?) -> Unit = { _, _ -> },
+    /** Revalidates a signed file on the server, preserving this page while the request runs. */
+    onRefreshFile: suspend (DigitalAttachment) -> ApiResult<DigitalAttachment> = {
+        ApiResult.Failure(ErrorCodes.NETWORK, "")
+    },
     /** Set when the page is built from the offline cache: shown above the cover. */
     offlineNotice: String? = null,
     /** Last sync time of the offline copy: availability is shown as "last known", never current. */
@@ -345,9 +403,22 @@ internal fun DetailContent(
 ) {
     val offline = offlineNotice != null
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var refreshingFile by remember(book.id) { mutableStateOf<String?>(null) }
     var showCover by remember { mutableStateOf(false) }
     var selectedPdf by remember(book.id) { mutableStateOf<String?>(null) }
-    var selectedAudio by remember(book.id) { mutableStateOf<String?>(book.audioUrl?.takeIf { book.hasAudio }) }
+    // The audio file the reader started: renewing any file re-signs every URL, so the card
+    // is matched by resourceKey and the player keeps the URL it started with.
+    var selectedAudio by remember(book.id) { mutableStateOf<DigitalAttachment?>(null) }
+
+    fun openFile(file: DigitalAttachment) {
+        if (file.locked || file.safeUrl == null) {
+            onShowMessage(context.getString(R.string.digital_locked_other))
+        } else if (file.kind == "audio") selectedAudio = file
+        else if (file.isPdf) selectedPdf = file.url
+        else runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(file.url))) }
+            .onFailure { onShowMessage(context.getString(R.string.ebook_error)) }
+    }
 
     Column(
         Modifier
@@ -516,15 +587,35 @@ internal fun DetailContent(
             DigitalFileCard(type = file.format.ifBlank { if (audio) "Audio" else "eBook" },
                 name = file.label.ifBlank { digitalFilename(file.url, book.title) },
                 kind = stringResource(if (audio) R.string.book_section_audiobook else if (file.kind == "supplement") R.string.book_section_related_documents else R.string.book_section_ebook)) {
-                if (audio && selectedAudio == file.url) {
-                    androidx.compose.runtime.key(file.url) { AudioPlayer(audioUrl = file.url) }
+                if (file.locked) {
+                    LockedDigitalFile(file.access)
+                } else if (audio && playingAudioUrl(selectedAudio, file) != null) {
+                    val playingUrl = playingAudioUrl(selectedAudio, file)!!
+                    androidx.compose.runtime.key(playingUrl) { AudioPlayer(audioUrl = playingUrl) }
                 } else PrimaryButton(label = stringResource(if (audio) R.string.collection_play else if (file.isPdf) R.string.book_read else R.string.ebook_open_external),
                     onClick = {
-                        if (audio) selectedAudio = file.url
-                        else if (file.isPdf) selectedPdf = file.url
-                        else runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(file.url))) }
-                            .onFailure { onShowMessage(context.getString(R.string.ebook_error)) }
-                    }, modifier = Modifier.fillMaxWidth(), dark = true)
+                        // The server's clock and access decision are authoritative. Always renew
+                        // a signed URL on demand, then open it in this same tap (no clock-skew loop).
+                        if (refreshingFile == null) {
+                            if (file.expiresAt == null) openFile(file)
+                            else {
+                                refreshingFile = file.resourceKey
+                                scope.launch {
+                                    try {
+                                        when (val result = onRefreshFile(file)) {
+                                            is ApiResult.Success -> openFile(result.data)
+                                            is ApiResult.Failure -> onShowMessage(context.getString(
+                                                if (result.code == ErrorCodes.FORBIDDEN) R.string.digital_locked_other
+                                                else R.string.digital_link_refresh_error))
+                                        }
+                                    } finally {
+                                        refreshingFile = null
+                                    }
+                                }
+                            }
+                        }
+                    }, enabled = refreshingFile == null, loading = refreshingFile == file.resourceKey,
+                    modifier = Modifier.fillMaxWidth().testTag("digital-open"), dark = true)
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -599,6 +690,24 @@ internal fun DetailContent(
             pdfUrl = pdf,
             onDismiss = { selectedPdf = null },
         )
+    }
+}
+
+/**
+ * A file this reader may not open yet: no button, and the reason instead (issue #480).
+ * The server leaves staff-only files out of the list, so only the other reasons reach here.
+ */
+@Composable
+private fun LockedDigitalFile(access: String?) {
+    val colors = LocalPinakesColors.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().testTag("digital-locked")) {
+        Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(18.dp))
+        Text(stringResource(when (access) {
+            DigitalAttachment.ACCESS_LOGIN_REQUIRED -> R.string.digital_locked_login
+            DigitalAttachment.ACCESS_LOAN_REQUIRED -> R.string.digital_locked_loan
+            else -> R.string.digital_locked_other
+        }), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
     }
 }
 
@@ -701,11 +810,27 @@ private fun SectionTitle(text: String) {
     )
 }
 
+/**
+ * The URL the player started with when [file] is the audio the reader chose, else null.
+ * Matched by [DigitalAttachment.resourceKey], so a renewal of another file, which re-signs
+ * every URL of the record, does not stop or restart a playing audiobook.
+ */
+internal fun playingAudioUrl(selected: DigitalAttachment?, file: DigitalAttachment): String? =
+    selected?.takeIf { it.resourceKey == file.resourceKey }?.url
+
 private fun digitalFilename(url: String, fallback: String): String =
     Uri.parse(url).lastPathSegment?.takeIf { it.isNotBlank() } ?: fallback
 
 private val displayDateFormatter: DateTimeFormatter
     get() = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(com.pinakes.app.ui.common.AppLocale.current())
+
+/**
+ * Return date (yyyy-MM-dd) of a loan request starting on [startIso]: the server adds the
+ * library's loan duration to the start. Null for an unparseable start or a duration below 1.
+ */
+internal fun loanReturnDate(startIso: String, loanDurationDays: Int): String? =
+    if (loanDurationDays < 1) null
+    else runCatching { LocalDate.parse(startIso).plusDays(loanDurationDays.toLong()).toString() }.getOrNull()
 
 /** "2026-06-20" (yyyy-MM-dd) → locale-formatted date for display. Falls back to the raw input. */
 private fun formatDisplayDate(iso: String): String =

@@ -256,13 +256,15 @@ class CatalogRepository(
         }
     }
 
-    suspend fun book(id: Int): ApiResult<BookDetail> {
+    /** A signed-file renewal must reach the server and must never fall back to a stale payload. */
+    suspend fun book(id: Int, forceRefresh: Boolean = false): ApiResult<BookDetail> {
         val api = network.api()
         val cached = detailCache[id]
-        val (result, response) = apiResponse { api.book(id, etag = cached?.first) }
+        val (result, response) = apiResponse { api.book(id, etag = if (forceRefresh) null else cached?.first,
+            cacheControl = if (forceRefresh) "no-cache, no-store" else null) }
 
         // 304 Not Modified → reuse the cached payload.
-        if (response?.code() == 304 && cached != null) {
+        if (!forceRefresh && response?.code() == 304 && cached != null) {
             return ApiResult.Success(cached.second)
         }
         return when (result) {
@@ -273,7 +275,7 @@ class CatalogRepository(
             }
             is ApiResult.Failure -> {
                 // If the conditional request errored but we have a cached copy, serve it.
-                if (cached != null && result.code != ErrorCodes.NETWORK) {
+                if (!forceRefresh && cached != null && result.code != ErrorCodes.NETWORK) {
                     ApiResult.Success(cached.second)
                 } else {
                     result

@@ -62,7 +62,8 @@ class LibraryRepository(
 
     /**
      * Request a loan/reservation for [bookId] starting on [desiredDate] (yyyy-MM-dd). The
-     * backend computes the return date as +1 month, matching the website behaviour.
+     * backend sets the return date from the library's configured loan duration
+     * (loan_duration_days), matching the website behaviour.
      */
     suspend fun reserve(
         bookId: Int,

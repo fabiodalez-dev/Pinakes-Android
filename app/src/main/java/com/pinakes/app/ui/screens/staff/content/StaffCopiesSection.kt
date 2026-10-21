@@ -34,6 +34,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -219,7 +223,7 @@ internal fun copyStateLabel(copy: StaffCopy, lookups: StaffLookups): String =
  * (`staff_copies`); label buttons only with `staff_labels`. Messages go to [onMessage] (the
  * editor's snackbar); counter changes to [onBookRefreshed].
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun StaffCopiesSection(
     copies: List<StaffCopy>,
@@ -228,6 +232,8 @@ fun StaffCopiesSection(
     onBookRefreshed: (StaffBook) -> Unit,
     onMessage: (String) -> Unit,
     onForbidden: () -> Unit,
+    openCopyId: Int = 0,
+    onCopyOpened: () -> Unit = {},
 ) {
     val app: AppViewModel = hiltViewModel()
     val areas by app.staffAreas.collectAsStateWithLifecycle()
@@ -238,11 +244,20 @@ fun StaffCopiesSection(
     // The editor's "Add copies" changed the total: read the copies again.
     LaunchedEffect(copiesTotal) { if (copiesTotal != state.copies.size) vm.reload() }
     LaunchedEffect(state.refreshed) { state.refreshed?.let { onBookRefreshed(it); vm.consumeRefreshed() } }
+    // Arriving from a receipt: scroll to the copies and open the new copy's editor at once.
+    val bringIntoView = remember { BringIntoViewRequester() }
+    LaunchedEffect(openCopyId, state.copies) {
+        val copy = state.copies.firstOrNull { it.id == openCopyId } ?: return@LaunchedEffect
+        onCopyOpened()
+        bringIntoView.bringIntoView()
+        // Labels alone show the section but not the per-copy editor: open it only with copies.
+        if (areas.copies) vm.startEdit(copy)
+    }
     LaunchedEffect(state.forbidden) { if (state.forbidden) onForbidden() }
     val message = state.message?.resolve()
     LaunchedEffect(state.message) { if (!message.isNullOrBlank()) { onMessage(message); vm.consumeMessage() } }
 
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.testTag("copies-section")) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.bringIntoViewRequester(bringIntoView).testTag("copies-section")) {
         if (areas.copies) {
             state.copies.forEach { copy ->
                 Surface(
