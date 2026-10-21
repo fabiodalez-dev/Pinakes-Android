@@ -30,7 +30,7 @@ class DesiderataStaffFlowTest : AppFlowTest() {
         clickTag("offer-41")
         clickTag("offer-receive")
         assertEquals("{}", lastBody("POST", "staff/desiderata/offers/41/receive"))
-        // The new copy opens on the record, ready for its code and place.
+        // The new copy opens on the record, on its editor (status, notes, label).
         waitFor(hasTestTag("copy-save"))
     }
 

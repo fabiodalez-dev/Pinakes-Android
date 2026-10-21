@@ -121,7 +121,7 @@ class StaffBookEditViewModel @Inject constructor(
     private var bookId: Int = savedStateHandle.get<Int>(Routes.ARG_BOOK_ID) ?: 0
     private val isbnArg: String = savedStateHandle.get<String>(Routes.ARG_ISBN).orEmpty()
 
-    /** The copy to open on arrival (a copy just received, waiting for its code and place); 0 = none. */
+    /** The copy to open on arrival (a copy just received, for its status, notes and label); 0 = none. */
     var openCopyId: Int = savedStateHandle.get<Int>(Routes.ARG_COPY_ID) ?: 0
         private set
 

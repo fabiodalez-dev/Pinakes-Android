@@ -332,7 +332,8 @@ fun StaffDesiderataScreen(
     ForbiddenExit(state.forbidden, onNavigateUp)
     LeaveWhen(!areas.desiderata, onNavigateUp)
     StaffSnackbarEffect(state.message, snackbar, vm::consumeMessage)
-    // A receipt made a copy: go straight to it, to give it its code and place.
+    // A receipt made a copy: go straight to it, for its status, notes and label (the server
+    // assigned its code).
     LaunchedEffect(state.openCopy) { state.openCopy?.let { (book, copy) -> vm.consumeOpenCopy(); onOpenCopy(book, copy) } }
 
     Scaffold(
