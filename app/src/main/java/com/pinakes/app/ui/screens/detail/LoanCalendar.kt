@@ -136,6 +136,8 @@ fun LoanCalendar(
     anyFutureDay: Boolean = false,
     /** The day the grid treats as today; null reads the device clock once. Tests pin it. */
     today: LocalDate? = null,
+    /** A fully-booked future day cannot be picked; tapping it calls this so the sheet can say why. */
+    onBlockedTap: ((isoDate: String) -> Unit)? = null,
 ) {
     val dark = LocalPinakesColors.current.darkMode
     val deviceToday = remember { LocalDate.now() }
@@ -167,6 +169,7 @@ fun LoanCalendar(
             dark = dark,
             onSelect = onSelect,
             anyFutureDay = anyFutureDay,
+            onBlockedTap = onBlockedTap,
         )
         if (!anyFutureDay) {
             Spacer(Modifier.height(Spacing.md))
@@ -234,6 +237,7 @@ private fun MonthGrid(
     dark: Boolean,
     onSelect: (String) -> Unit,
     anyFutureDay: Boolean = false,
+    onBlockedTap: ((String) -> Unit)? = null,
 ) {
     val firstOfMonth = month.atDay(1)
     // Mon=1 .. Sun=7 → leading blanks before day 1.
@@ -262,6 +266,7 @@ private fun MonthGrid(
                                 dark = dark,
                                 onSelect = onSelect,
                                 anyFutureDay = anyFutureDay,
+                                onBlockedTap = onBlockedTap,
                             )
                         }
                     }
@@ -280,6 +285,7 @@ private fun DayCell(
     dark: Boolean,
     onSelect: (String) -> Unit,
     anyFutureDay: Boolean = false,
+    onBlockedTap: ((String) -> Unit)? = null,
 ) {
     val iso = date.toString()
     val kind = model.kind(date, today)
@@ -310,7 +316,12 @@ private fun DayCell(
             if (rule != Color.Transparent) Modifier.border(1.dp, rule, CircleShape) else Modifier
         )
         .then(
-            if (selectable) Modifier.clickable { onSelect(iso) } else Modifier
+            when {
+                selectable -> Modifier.clickable { onSelect(iso) }
+                // Not pickable, but a tap must still explain why (every copy is booked).
+                onBlockedTap != null && kind == DayKind.Full -> Modifier.clickable { onBlockedTap(iso) }
+                else -> Modifier
+            }
         )
 
     Box(cellModifier, contentAlignment = Alignment.Center) {

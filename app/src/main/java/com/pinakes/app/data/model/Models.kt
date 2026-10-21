@@ -41,6 +41,12 @@ data class Meta(
     val replayed: Boolean? = null,
     // 409 `merge_error` on an author/publisher merge: ids that no longer exist (already merged).
     val missing: List<Int>? = null,
+    // 409 `not_available` on POST /reservations (Mobile API 1.8.2): when the start day is free
+    // but a scheduled loan or reservation begins inside the requested window, the longest loan
+    // still possible, so the app can propose that return date. Absent otherwise and on older servers.
+    @SerialName("max_end_date") val maxEndDate: String? = null,
+    @SerialName("max_duration_days") val maxDurationDays: Int? = null,
+    @SerialName("first_conflict_date") val firstConflictDate: String? = null,
 )
 
 @Serializable
@@ -535,7 +541,9 @@ data class ReservationRequest(
     // request flow sends.
     @SerialName("desired_date") val desiredDate: String? = null,
     @SerialName("start_date") val startDate: String? = null, // legacy/compat, yyyy-MM-dd
-    @SerialName("end_date") val endDate: String? = null,     // legacy/compat, yyyy-MM-dd
+    // Optional return date (Mobile API 1.8.2): the day before a fully-booked day when the
+    // library's duration would cross it (see LoanWindow). Omitted, the server adds the duration.
+    @SerialName("end_date") val endDate: String? = null,     // yyyy-MM-dd
 )
 
 /** Authoritative result of POST /reservations (loan request or FIFO reservation). */

@@ -260,6 +260,8 @@
   "book_loan_availability_loading": "Verfügbarkeit wird geprüft…",
   "book_loan_availability_error": "Verfügbarkeitskalender konnte nicht geladen werden; wählen Sie ein zukünftiges Datum.",
   "book_loan_pick_prompt": "Wählen Sie einen verfügbaren Tag",
+  "book_loan_limit_note": "Maximale Leihdauer: %1$d Tage (Rückgabe bis %2$s). Ab dem %3$s ist das Buch bereits vorgemerkt.",
+  "book_loan_blocked_day": "Tag nicht verfügbar (%1$s): alle Exemplare sind bereits ausgeliehen oder vorgemerkt.",
   "cd_prev_month": "Voriger Monat",
   "cd_next_month": "Nächster Monat",
   "snackbar_request_for_date": "Ausleihe angefragt für %1$s",

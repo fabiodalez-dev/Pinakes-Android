@@ -54,7 +54,7 @@ class CalendarLayoutTest {
     }
 
     @Test fun loanDialogMonthFitsThePhoneScreenAndNavigates() {
-        compose.setContent { PinakesTheme { LoanRequestSheet(loading = false, calendar = calendar(), fallback = false, submitting = false, onDismiss = {}, onConfirm = {}) } }
+        compose.setContent { PinakesTheme { LoanRequestSheet(loading = false, calendar = calendar(), fallback = false, submitting = false, onDismiss = {}, onConfirm = { _, _ -> }) } }
         val metrics = context.resources.displayMetrics
         val screen = Rect(0f, 0f, metrics.widthPixels.toFloat(), metrics.heightPixels.toFloat())
         val dialog = compose.onNodeWithTag("loan-dialog").fetchSemanticsNode().boundsInRoot
@@ -70,7 +70,7 @@ class CalendarLayoutTest {
     }
 
     @Test fun fallbackDialogUsesTheSameFittingGrid() {
-        compose.setContent { PinakesTheme { LoanRequestSheet(loading = false, calendar = null, fallback = true, submitting = false, onDismiss = {}, onConfirm = {}) } }
+        compose.setContent { PinakesTheme { LoanRequestSheet(loading = false, calendar = null, fallback = true, submitting = false, onDismiss = {}, onConfirm = { _, _ -> }) } }
         val dialog = compose.onNodeWithTag("loan-dialog").fetchSemanticsNode().boundsInRoot
         assertMonthInside(YearMonth.now(), dialog)
     }

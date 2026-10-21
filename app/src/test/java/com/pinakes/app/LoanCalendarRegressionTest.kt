@@ -138,7 +138,7 @@ class LoanCalendarRegressionTest {
 
     @Test fun loadingLeavesCancelAvailableAndPreventsAnEmptyRequest() {
         compose.setContent { PinakesTheme {
-            LoanRequestSheetContent(true, null, false, false, {}, { picked = it })
+            LoanRequestSheetContent(true, null, false, false, {}, { start, _ -> picked = start })
         } }
         compose.onNodeWithTag("loan-confirm").assertIsNotEnabled()
         compose.onNodeWithTag("loan-cancel").assertIsEnabled()
@@ -149,7 +149,7 @@ class LoanCalendarRegressionTest {
     @Test fun availabilityArrivingAfterLoadingPreselectsTheServerSuggestedDay() {
         var data by mutableStateOf<AvailabilityCalendar?>(null)
         compose.setContent { PinakesTheme {
-            LoanRequestSheetContent(data == null, data, false, false, {}, { picked = it })
+            LoanRequestSheetContent(data == null, data, false, false, {}, { start, _ -> picked = start })
         } }
         compose.runOnIdle { data = calendar() }
         compose.onNodeWithTag("loan-confirm").performScrollTo().assertIsEnabled().performClick()
@@ -161,7 +161,7 @@ class LoanCalendarRegressionTest {
         val data = calendar().copy(days = listOf(AvailabilityDay(target.toString(), available = 1),
             AvailabilityDay(next.toString(), available = 1)))
         compose.setContent { PinakesTheme {
-            LoanRequestSheetContent(false, data, false, false, {}, { picked = it })
+            LoanRequestSheetContent(false, data, false, false, {}, { start, _ -> picked = start })
         } }
         day(next).performScrollTo().performClick()
         compose.onNodeWithTag("loan-confirm").performScrollTo().performClick()
@@ -171,7 +171,7 @@ class LoanCalendarRegressionTest {
     @Test fun fallbackSelectionIsConfirmedAsAnIsoDate() {
         val today = LocalDate.now()
         compose.setContent { PinakesTheme {
-            LoanRequestSheetContent(false, null, true, false, {}, { picked = it })
+            LoanRequestSheetContent(false, null, true, false, {}, { start, _ -> picked = start })
         } }
         compose.onNodeWithTag("loan-confirm").assertIsNotEnabled()
         day(today).performScrollTo().performClick()
@@ -183,7 +183,7 @@ class LoanCalendarRegressionTest {
         var dismissed = false
         compose.setContent { PinakesTheme {
             Box(Modifier.width(320.dp).height(240.dp)) {
-                LoanRequestSheetContent(false, calendar(), false, false, { dismissed = true }, {})
+                LoanRequestSheetContent(false, calendar(), false, false, { dismissed = true }, { _, _ -> })
             }
         } }
         compose.onNodeWithTag("loan-cancel").performScrollTo().assertIsDisplayed()

@@ -839,7 +839,7 @@
                         "type": "string",
                         "format": "date",
                         "nullable": true,
-                        "deprecated": true
+                        "description": "Optional return date (Mobile API 1.8.2). Omitted, the library's loan_duration_days is added to the start. Send the day before the first fully-booked day of GET /catalog/books/{id}/availability when the default would cross it; must not precede the start nor exceed max_loan_duration_days (422 max_duration_exceeded)."
                     }
                 }
             },

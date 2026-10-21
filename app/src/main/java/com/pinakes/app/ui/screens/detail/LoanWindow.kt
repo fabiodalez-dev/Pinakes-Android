@@ -1,0 +1,54 @@
+package com.pinakes.app.ui.screens.detail
+
+import com.pinakes.app.data.model.AvailabilityCalendar
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
+
+/**
+ * The loan the reader can still ask for from a start day, read off the availability calendar.
+ *
+ * The server adds the library's `loan_duration_days` to the chosen start to set the return
+ * date. When a scheduled loan or a reservation on every copy (a `full` day) begins before that
+ * default return date, the server refuses the whole window, so the request must stop the day
+ * before it instead: that is [endDate], sent as `end_date` of POST /reservations (Mobile API
+ * 1.8.2), and [capped] says the default was shortened, which the sheet explains under the
+ * calendar with [maxDays] and [firstBlocked]. Same rule as the website's calendar.
+ */
+data class LoanWindow(
+    /** The return date to request: start + duration, or the day before [firstBlocked]. */
+    val endDate: String,
+    /** The first fully-booked day inside the default duration, or null. */
+    val firstBlocked: String?,
+    /** Days from the start to [endDate]. */
+    val maxDays: Int,
+    /** True when [firstBlocked] shortened the default duration. */
+    val capped: Boolean,
+)
+
+/**
+ * The window from [startIso] (yyyy-MM-dd), or null when the duration is unknown (an older
+ * server omits `loan_duration_days`) or the start is not a date: then the server's default
+ * applies and nothing can be said about it.
+ */
+internal fun loanWindowFrom(startIso: String, calendar: AvailabilityCalendar?, loanDurationDays: Int?): LoanWindow? {
+    if (loanDurationDays == null || loanDurationDays < 1) return null
+    val start = runCatching { LocalDate.parse(startIso) }.getOrNull() ?: return null
+    val states = calendar?.days?.associate { it.date to it.state }.orEmpty()
+    val unavailable = calendar?.unavailableDates?.toSet().orEmpty()
+    var firstBlocked: String? = null
+    for (offset in 1..loanDurationDays) {
+        val day = start.plusDays(offset.toLong()).toString()
+        if (unavailable.contains(day) || states[day] == "full") {
+            firstBlocked = day
+            break
+        }
+    }
+    val defaultEnd = start.plusDays(loanDurationDays.toLong())
+    val end = firstBlocked?.let { LocalDate.parse(it).minusDays(1) } ?: defaultEnd
+    return LoanWindow(
+        endDate = end.toString(),
+        firstBlocked = firstBlocked,
+        maxDays = ChronoUnit.DAYS.between(start, end).toInt(),
+        capped = firstBlocked != null,
+    )
+}

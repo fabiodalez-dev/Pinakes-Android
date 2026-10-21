@@ -260,6 +260,8 @@
   "book_loan_availability_loading": "Vérification de la disponibilité…",
   "book_loan_availability_error": "Impossible de charger le calendrier de disponibilité; choisissez une date future.",
   "book_loan_pick_prompt": "Sélectionnez un jour disponible",
+  "book_loan_limit_note": "Durée maximale du prêt : %1$d jours (retour avant le %2$s). À partir du %3$s, le livre est déjà réservé.",
+  "book_loan_blocked_day": "Jour non disponible (%1$s) : tous les exemplaires sont déjà empruntés ou réservés.",
   "cd_prev_month": "Mois précédent",
   "cd_next_month": "Mois suivant",
   "snackbar_request_for_date": "Prêt demandé pour le %1$s",
