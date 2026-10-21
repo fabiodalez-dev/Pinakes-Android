@@ -513,6 +513,9 @@ data class AvailabilityCalendar(
     @SerialName("earliest_available") val earliestAvailable: String? = null, // "yyyy-MM-dd"
     @SerialName("unavailable_dates") val unavailableDates: List<String> = emptyList(),
     val days: List<AvailabilityDay> = emptyList(),
+    // Days POST /reservations adds to the chosen start to set the return date (Mobile API
+    // 1.8.1). Null on older servers: the dialog then names the standard period without a date.
+    @SerialName("loan_duration_days") val loanDurationDays: Int? = null,
 )
 
 @Serializable
@@ -527,8 +530,9 @@ data class AvailabilityDay(
 @Serializable
 data class ReservationRequest(
     @SerialName("book_id") val bookId: Int,
-    // Single desired start date "yyyy-MM-dd"; the backend computes the return as +1 month
-    // (same as the website). This is the authoritative field the request flow sends.
+    // Single desired start date "yyyy-MM-dd"; the backend sets the return from the library's
+    // configured loan duration (same as the website). This is the authoritative field the
+    // request flow sends.
     @SerialName("desired_date") val desiredDate: String? = null,
     @SerialName("start_date") val startDate: String? = null, // legacy/compat, yyyy-MM-dd
     @SerialName("end_date") val endDate: String? = null,     // legacy/compat, yyyy-MM-dd

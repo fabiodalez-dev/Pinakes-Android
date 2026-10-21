@@ -339,9 +339,11 @@ internal fun LoanRequestSheetContent(
                 }
             }
 
-            // Period hint / prompt.
-            val hint = selectedIso?.let {
-                stringResource(R.string.book_loan_period_hint, formatDisplayDate(it))
+            // The return date uses the server's configured duration (#51).
+            val hint = selectedIso?.let { start ->
+                calendar?.loanDurationDays?.let { loanReturnDate(start, it) }?.let { end ->
+                    stringResource(R.string.book_loan_period_range, formatDisplayDate(start), formatDisplayDate(end))
+                } ?: stringResource(R.string.book_loan_period_hint, formatDisplayDate(start))
             } ?: stringResource(R.string.book_loan_pick_prompt)
             Text(
                 text = hint,
@@ -815,6 +817,14 @@ private fun digitalFilename(url: String, fallback: String): String =
 
 private val displayDateFormatter: DateTimeFormatter
     get() = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(com.pinakes.app.ui.common.AppLocale.current())
+
+/**
+ * Return date (yyyy-MM-dd) of a loan request starting on [startIso]: the server adds the
+ * library's loan duration to the start. Null for an unparseable start or a duration below 1.
+ */
+internal fun loanReturnDate(startIso: String, loanDurationDays: Int): String? =
+    if (loanDurationDays < 1) null
+    else runCatching { LocalDate.parse(startIso).plusDays(loanDurationDays.toLong()).toString() }.getOrNull()
 
 /** "2026-06-20" (yyyy-MM-dd) → locale-formatted date for display. Falls back to the raw input. */
 private fun formatDisplayDate(iso: String): String =
