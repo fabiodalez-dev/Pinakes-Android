@@ -369,12 +369,17 @@ internal fun LoanRequestSheetContent(
             // Why the loan is shorter than the library's standard duration, and why a tapped
             // red day cannot be chosen: the same explanation the website gives.
             val limitText = window?.takeIf { it.capped }?.let { w ->
-                stringResource(
-                    R.string.book_loan_limit_note,
-                    w.maxDays,
-                    formatDisplayDate(w.endDate),
-                    formatDisplayDate(w.firstBlocked ?: w.endDate),
-                )
+                if (!w.possible) {
+                    // The next day is blocked: no loan of at least one day from this start.
+                    stringResource(R.string.book_loan_no_window, formatDisplayDate(w.firstBlocked ?: w.endDate))
+                } else {
+                    stringResource(
+                        R.string.book_loan_limit_note,
+                        w.maxDays,
+                        formatDisplayDate(w.endDate),
+                        formatDisplayDate(w.firstBlocked ?: w.endDate),
+                    )
+                }
             }
             val blockedText = blockedIso?.let { stringResource(R.string.book_loan_blocked_day, formatDisplayDate(it)) }
             val explanation = listOfNotNull(blockedText, limitText).joinToString(" ")
@@ -394,7 +399,7 @@ internal fun LoanRequestSheetContent(
                 PrimaryButton(
                     label = stringResource(R.string.book_loan_confirm),
                     onClick = { selectedIso?.let { start -> onConfirm(start, window?.takeIf { it.capped }?.endDate) } },
-                    enabled = selectedIso != null,
+                    enabled = selectedIso != null && window?.possible != false,
                     loading = submitting,
                     modifier = Modifier.fillMaxWidth().testTag("loan-confirm"),
                 )

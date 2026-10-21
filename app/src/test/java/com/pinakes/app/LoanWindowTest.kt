@@ -49,6 +49,9 @@ class LoanWindowTest {
         assertEquals("2030-03-05", window?.firstBlocked)
         assertEquals("2030-03-04", window?.endDate)
         assertEquals(0, window?.maxDays)
+        // A window shorter than a day is no loan: the sheet says so and disables the request.
+        assertFalse(window!!.possible)
+        assertTrue(loanWindowFrom("2030-03-04", calendar("2030-03-06"), 14)!!.possible)
     }
 
     @Test fun aPartialDayStillHasAFreeCopy() {

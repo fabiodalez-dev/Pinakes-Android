@@ -262,6 +262,7 @@
   "book_loan_pick_prompt": "Sélectionnez un jour disponible",
   "book_loan_limit_note": "Durée maximale du prêt : %1$d jours (retour avant le %2$s). À partir du %3$s, le livre est déjà réservé.",
   "book_loan_blocked_day": "Jour non disponible (%1$s) : tous les exemplaires sont déjà empruntés ou réservés.",
+  "book_loan_no_window": "Aucun prêt n'est possible à partir de cette date : à partir du %1$s, le livre est déjà réservé. Choisissez une autre date.",
   "cd_prev_month": "Mois précédent",
   "cd_next_month": "Mois suivant",
   "snackbar_request_for_date": "Prêt demandé pour le %1$s",

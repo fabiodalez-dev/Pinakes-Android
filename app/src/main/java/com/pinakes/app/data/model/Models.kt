@@ -522,6 +522,8 @@ data class AvailabilityCalendar(
     // Days POST /reservations adds to the chosen start to set the return date (Mobile API
     // 1.8.1). Null on older servers: the dialog then names the standard period without a date.
     @SerialName("loan_duration_days") val loanDurationDays: Int? = null,
+    // Longest loan POST /reservations accepts through end_date (Mobile API 1.8.2); null on older servers.
+    @SerialName("max_loan_duration_days") val maxLoanDurationDays: Int? = null,
 )
 
 @Serializable

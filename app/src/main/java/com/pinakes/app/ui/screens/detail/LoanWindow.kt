@@ -23,7 +23,10 @@ data class LoanWindow(
     val maxDays: Int,
     /** True when [firstBlocked] shortened the default duration. */
     val capped: Boolean,
-)
+) {
+    /** False when the very next day is blocked: no loan of at least one day exists from this start. */
+    val possible: Boolean get() = maxDays >= 1
+}
 
 /**
  * The window from [startIso] (yyyy-MM-dd), or null when the duration is unknown (an older

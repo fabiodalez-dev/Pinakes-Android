@@ -262,6 +262,7 @@
   "book_loan_pick_prompt": "Wählen Sie einen verfügbaren Tag",
   "book_loan_limit_note": "Maximale Leihdauer: %1$d Tage (Rückgabe bis %2$s). Ab dem %3$s ist das Buch bereits vorgemerkt.",
   "book_loan_blocked_day": "Tag nicht verfügbar (%1$s): alle Exemplare sind bereits ausgeliehen oder vorgemerkt.",
+  "book_loan_no_window": "Ab diesem Startdatum ist keine Ausleihe möglich: ab dem %1$s ist das Buch bereits vorgemerkt. Wählen Sie ein anderes Datum.",
   "cd_prev_month": "Voriger Monat",
   "cd_next_month": "Nächster Monat",
   "snackbar_request_for_date": "Ausleihe angefragt für %1$s",
