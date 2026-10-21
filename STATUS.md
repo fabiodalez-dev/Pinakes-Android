@@ -1,5 +1,16 @@
 # Pinakes Android — Build Status
 
+## 1.9.0 (versionCode 23): digital file access, loan request sheet, wanted-title receipts
+
+Pairs with Pinakes 0.8.6 (Mobile API 1.8.1). Works with older servers: every new field is optional and its absence keeps the 1.8.0 behaviour.
+
+- **Digital files a reader cannot open yet** ([#50](https://github.com/fabiodalez-dev/Pinakes-Android/pull/50), Pinakes #480): a file the server closes (`url: null`, `access` = `login_required` or `loan_required`) keeps its card on the book page with a lock and the reason instead of the Read/Play button. Signed links last a day; a tap revalidates the file on the server and opens the renewed address, whatever the phone clock says, bypassing both caches and never falling back to an expired link. A playing audiobook keeps playing when another file of the record is renewed. Servers before 0.8.6 send neither field and every file stays open as before.
+- **Loan request sheet** ([#46](https://github.com/fabiodalez-dev/Pinakes-Android/pull/46)): a plain dialog styled after the web's loan calendar instead of `DatePickerDialog`, which cut the month in half; free days are plain numbers, limited and unavailable days keep their tint, the fallback calendar (no availability) lets every future day be chosen and says the server checks the request.
+- **Return date of a loan request** ([#51](https://github.com/fabiodalez-dev/Pinakes-Android/pull/51), Pinakes #485): with Mobile API 1.8.1 the sheet shows "Start · Return by" from the library's `loan_duration_days`; older servers get a hint about the library's standard loan period instead of "about 1 month".
+- **Wanted titles** ([#49](https://github.com/fabiodalez-dev/Pinakes-Android/pull/49)): the row action reads "Receive" (it read as a status, "Received") and asks before adding the copy; after receiving a wanted title or an offer the app opens the record on the new copy's editor so its inventory code and place can be filled in.
+- No change to the local cache database (Room version 3).
+- Verification recorded on the PRs: 411 debug and 411 release unit tests for the four branches combined, `compileDebugAndroidTestKotlin`; the 6 `DigitalLinkRefreshFlowTest` and the `DesiderataStaffFlowTest` flows on an Android 15 emulator. This release branch is verified by Android CI.
+
 ## 1.8.0 (versionCode 22): circulation desk, book tools and plugin content for staff
 
 Requires Mobile API 1.7.0. Every area is gated on its own `/health` flag (`staff_circulation`, `staff_copies`, `staff_series`, `staff_merges`, `staff_labels`, `staff_imports`, `staff_covers`, `staff_desiderata`, `staff_archives`) plus the staff role and `staff_catalog`; a server that answers `false` or omits a flag keeps the 1.7.0 staff area for that part. The 403 `forbidden` contract is unchanged: every new call goes through the shared `staffCall`, which drops the stored role.
