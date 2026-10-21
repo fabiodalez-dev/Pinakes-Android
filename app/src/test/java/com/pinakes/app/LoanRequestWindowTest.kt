@@ -116,4 +116,16 @@ class LoanRequestWindowTest {
             .performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("loan-confirm").performScrollTo().assertIsNotEnabled()
     }
+
+    @Test fun theMaximumDurationIsShownAndSentWithoutABookingExplanation() {
+        show(calendar("2030-03-14", duration = 30).copy(maxLoanDurationDays = 7))
+        compose.onNodeWithText(context.getString(R.string.book_loan_period_range, DateFormat.date("2030-03-04"), DateFormat.date("2030-03-11")))
+            .performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("loan-limit").assertDoesNotExist()
+        compose.onNodeWithTag("loan-confirm").performScrollTo().performClick()
+        compose.runOnIdle {
+            assertEquals("2030-03-04", pickedStart)
+            assertEquals("2030-03-11", pickedEnd)
+        }
+    }
 }

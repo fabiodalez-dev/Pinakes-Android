@@ -82,4 +82,28 @@ class LoanWindowTest {
         assertNull(loanWindowFrom("not a date", calendar("2030-03-09"), 14))
         assertNull(loanWindowFrom("2030-03-04", null, null))
     }
+
+    @Test fun theConfiguredMaximumWinsBeforeALaterCommitment() {
+        val calendar = calendar("2030-03-14").copy(maxLoanDurationDays = 7)
+        val window = loanWindowFrom("2030-03-04", calendar, 30)!!
+        assertEquals("2030-03-11", window.endDate)
+        assertEquals(7, window.maxDays)
+        assertNull(window.firstBlocked)
+        assertFalse(window.capped) // No booking explanation for a settings limit.
+        assertTrue(window.requiresEndDate)
+    }
+
+    @Test fun aCommitmentInsideTheMaximumCanStillShortenTheLoan() {
+        val calendar = calendar("2030-03-09").copy(maxLoanDurationDays = 7)
+        val window = loanWindowFrom("2030-03-04", calendar, 30)!!
+        assertEquals("2030-03-08", window.endDate)
+        assertTrue(window.capped)
+        assertTrue(window.requiresEndDate)
+    }
+
+    @Test fun anAlreadyBoundedDefaultNeedsNoExplicitEndDate() {
+        val window = loanWindowFrom("2030-03-04", calendar().copy(maxLoanDurationDays = 7), 7)!!
+        assertEquals("2030-03-11", window.endDate)
+        assertFalse(window.requiresEndDate)
+    }
 }

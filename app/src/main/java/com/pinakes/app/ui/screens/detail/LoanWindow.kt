@@ -23,6 +23,8 @@ data class LoanWindow(
     val maxDays: Int,
     /** True when [firstBlocked] shortened the default duration. */
     val capped: Boolean,
+    /** Send the displayed date when either a commitment or the configured maximum shortened it. */
+    val requiresEndDate: Boolean = capped,
 ) {
     /** False when the very next day is blocked: no loan of at least one day exists from this start. */
     val possible: Boolean get() = maxDays >= 1
@@ -47,20 +49,23 @@ internal fun AvailabilityCalendar.isFullyBooked(isoDate: String): Boolean {
 internal fun loanWindowFrom(startIso: String, calendar: AvailabilityCalendar?, loanDurationDays: Int?): LoanWindow? {
     if (loanDurationDays == null || loanDurationDays < 1) return null
     val start = runCatching { LocalDate.parse(startIso) }.getOrNull() ?: return null
+    val durationDays = calendar?.maxLoanDurationDays?.takeIf { it > 0 }
+        ?.let { minOf(loanDurationDays, it) } ?: loanDurationDays
     var firstBlocked: String? = null
-    for (offset in 1..loanDurationDays) {
+    for (offset in 1..durationDays) {
         val day = start.plusDays(offset.toLong()).toString()
         if (calendar?.isFullyBooked(day) == true) {
             firstBlocked = day
             break
         }
     }
-    val defaultEnd = start.plusDays(loanDurationDays.toLong())
+    val defaultEnd = start.plusDays(durationDays.toLong())
     val end = firstBlocked?.let { LocalDate.parse(it).minusDays(1) } ?: defaultEnd
     return LoanWindow(
         endDate = end.toString(),
         firstBlocked = firstBlocked,
         maxDays = ChronoUnit.DAYS.between(start, end).toInt(),
         capped = firstBlocked != null,
+        requiresEndDate = end.isBefore(start.plusDays(loanDurationDays.toLong())),
     )
 }

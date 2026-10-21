@@ -401,7 +401,7 @@ internal fun LoanRequestSheetContent(
             ) {
                 PrimaryButton(
                     label = stringResource(R.string.book_loan_confirm),
-                    onClick = { selectedIso?.let { start -> onConfirm(start, window?.takeIf { it.capped }?.endDate) } },
+                    onClick = { selectedIso?.let { start -> onConfirm(start, window?.takeIf { it.requiresEndDate }?.endDate) } },
                     enabled = selectedIso != null && window?.possible != false,
                     loading = submitting,
                     modifier = Modifier.fillMaxWidth().testTag("loan-confirm"),
