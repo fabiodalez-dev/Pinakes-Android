@@ -36,6 +36,7 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class LoanRequestReturnDateTest {
     private val compose = createComposeRule()
+    private val context get() = ApplicationProvider.getApplicationContext<Application>()
     @get:Rule val rules: RuleChain = RuleChain.outerRule(object : TestWatcher() {
         override fun starting(description: Description) {
             val app = ApplicationProvider.getApplicationContext<Application>()
@@ -69,14 +70,14 @@ class LoanRequestReturnDateTest {
     /** With the duration, the dialog names the start and the return date of the preselected day. */
     @Test fun dialogShowsTheReturnDateForThePreselectedStart() {
         show(AvailabilityCalendar(totalCopies = 1, earliestAvailable = "2030-03-04", loanDurationDays = 14))
-        compose.onNodeWithText("Start: ${DateFormat.date("2030-03-04")} · Return by: ${DateFormat.date("2030-03-18")}")
+        compose.onNodeWithText(context.getString(R.string.book_loan_period_range, DateFormat.date("2030-03-04"), DateFormat.date("2030-03-18")))
             .performScrollTo().assertIsDisplayed()
     }
 
     /** Without it, the dialog falls back to the library's standard loan period, with no date. */
     @Test fun withoutTheDurationTheDialogNamesTheStandardPeriod() {
         show(AvailabilityCalendar(totalCopies = 1, earliestAvailable = "2030-03-04"))
-        compose.onNodeWithText("From ${DateFormat.date("2030-03-04")}, for the library’s standard loan period")
+        compose.onNodeWithText(context.getString(R.string.book_loan_period_hint, DateFormat.date("2030-03-04")))
             .performScrollTo().assertIsDisplayed()
     }
 }

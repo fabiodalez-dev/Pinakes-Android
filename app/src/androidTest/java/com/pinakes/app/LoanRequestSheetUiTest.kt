@@ -20,7 +20,9 @@ import java.time.LocalDate
 class LoanRequestSheetUiTest {
     @get:Rule val compose = createComposeRule()
 
-    private val today = LocalDate.now()
+    // A fixed day, passed to the sheet as its today: a run that crosses midnight cannot move
+    // the device clock away from the calendar built here.
+    private val today = LocalDate.of(2030, 3, 4)
 
     /** Six weeks from today: mostly free, a partial day and a full one in the first week. */
     private fun calendar(earliest: String? = today.plusDays(1).toString()) = AvailabilityCalendar(
@@ -52,6 +54,7 @@ class LoanRequestSheetUiTest {
                 submitting = submitting,
                 onDismiss = onDismiss,
                 onConfirm = onConfirm,
+                today = today,
             )
         }
     }
@@ -91,7 +94,7 @@ class LoanRequestSheetUiTest {
         compose.setContent {
             PinakesTheme {
                 Box(Modifier.width(360.dp)) {
-                    LoanRequestSheetContent(loading = false, calendar = null, fallback = true, submitting = false, onDismiss = {}, onConfirm = {})
+                    LoanRequestSheetContent(loading = false, calendar = null, fallback = true, submitting = false, onDismiss = {}, onConfirm = {}, today = today)
                 }
             }
         }

@@ -239,6 +239,8 @@ internal fun LoanRequestSheet(
     submitting: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (isoDate: String) -> Unit,
+    /** Passed to [LoanCalendar]; null reads the device clock. */
+    today: LocalDate? = null,
 ) {
     // Same sheet as the web's loan request: the card shape of the availability box (20dp), a
     // serif title, and two buttons stacked at full width in the page's own styles — the filled
@@ -251,7 +253,7 @@ internal fun LoanRequestSheet(
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Box(Modifier.testTag("loan-dialog")) {
-            LoanRequestSheetContent(loading, calendar, fallback, submitting, onDismiss, onConfirm)
+            LoanRequestSheetContent(loading, calendar, fallback, submitting, onDismiss, onConfirm, today)
         }
     }
 }
@@ -268,6 +270,8 @@ internal fun LoanRequestSheetContent(
     submitting: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (isoDate: String) -> Unit,
+    /** Passed to [LoanCalendar]; null reads the device clock. */
+    today: LocalDate? = null,
 ) {
     // Pre-select earliest_available when offered, else null until the user picks.
     var selectedIso by remember(calendar) {
@@ -319,6 +323,7 @@ internal fun LoanRequestSheetContent(
                         calendar = calendar,
                         selected = selectedIso,
                         onSelect = { selectedIso = it },
+                        today = today,
                     )
                 }
 
@@ -329,6 +334,7 @@ internal fun LoanRequestSheetContent(
                         selected = selectedIso,
                         onSelect = { selectedIso = it },
                         anyFutureDay = true,
+                        today = today,
                     )
                     Text(
                         stringResource(R.string.book_loan_availability_error),

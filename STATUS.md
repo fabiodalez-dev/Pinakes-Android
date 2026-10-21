@@ -9,7 +9,7 @@ Pairs with Pinakes 0.8.6 (Mobile API 1.8.1). Works with older servers: every new
 - **Return date of a loan request** ([#51](https://github.com/fabiodalez-dev/Pinakes-Android/pull/51), Pinakes #485): with Mobile API 1.8.1 the sheet shows "Start · Return by" from the library's `loan_duration_days`; older servers get a hint about the library's standard loan period instead of "about 1 month".
 - **Wanted titles** ([#49](https://github.com/fabiodalez-dev/Pinakes-Android/pull/49)): the row action reads "Receive" (it read as a status, "Received") and asks before adding the copy; after receiving a wanted title or an offer the app opens the record on the new copy's editor so its inventory code and place can be filled in.
 - No change to the local cache database (Room version 3).
-- Verification recorded on the PRs: 411 debug and 411 release unit tests for the four branches combined, `compileDebugAndroidTestKotlin`; the 6 `DigitalLinkRefreshFlowTest` and the `DesiderataStaffFlowTest` flows on an Android 15 emulator. This release branch is verified by Android CI.
+- Verification on this release branch: 422 debug unit tests with none failed or skipped, lint and `assembleDebug`, locally and in Android CI; 17 device tests on an Android 15 emulator (`LoanRequestSheetUiTest`, `CalendarLayoutTest`, `DesiderataStaffFlowTest`, `DigitalLinkRefreshFlowTest`), none failed.
 
 ## 1.8.0 (versionCode 22): circulation desk, book tools and plugin content for staff
 

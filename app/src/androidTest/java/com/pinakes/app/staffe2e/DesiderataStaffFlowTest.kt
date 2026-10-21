@@ -66,9 +66,10 @@ class DesiderataStaffFlowTest : AppFlowTest() {
         compose.onAllNodesWithText(text(R.string.staff_wanted_mark_received)).onLast().performClick()
         waitRequest("POST", "staff/desiderata/wanted/77/receive")
         assertEquals(1, api.recorded("POST", "staff/desiderata/wanted/77/receive").size)
-        // Received: the record opens on the new copy's editor, to give it its code and place.
+        // Received: the record opens on the new copy's editor, for its status and notes. The
+        // server gives the copy its code, which no client changes afterwards (web included).
         waitFor(hasTestTag("copy-save"))
-        waitText("LIB-77-C901")
+        waitText(text(R.string.staff_copy_code_value, "LIB-77-C901"))
     }
 
     @Test fun aClosedOfferSaysSo() {

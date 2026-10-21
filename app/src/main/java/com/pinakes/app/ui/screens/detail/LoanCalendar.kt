@@ -134,9 +134,12 @@ fun LoanCalendar(
     modifier: Modifier = Modifier,
     /** Availability could not be loaded: every future day is selectable, no colour legend. */
     anyFutureDay: Boolean = false,
+    /** The day the grid treats as today; null reads the device clock once. Tests pin it. */
+    today: LocalDate? = null,
 ) {
     val dark = LocalPinakesColors.current.darkMode
-    val today = remember { LocalDate.now() }
+    val deviceToday = remember { LocalDate.now() }
+    val today = today ?: deviceToday
     val model = remember(calendar) { CalendarModel(calendar) }
 
     // Visible month: start on the selected date's month, else the earliest-available month, else now.
