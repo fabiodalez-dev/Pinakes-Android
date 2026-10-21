@@ -63,17 +63,19 @@ class LibraryRepository(
     /**
      * Request a loan/reservation for [bookId] starting on [desiredDate] (yyyy-MM-dd). The
      * backend sets the return date from the library's configured loan duration
-     * (loan_duration_days), matching the website behaviour.
+     * (loan_duration_days), matching the website behaviour, unless [endDate] names an earlier
+     * one: the day before a fully-booked day the default would cross (Mobile API 1.8.2).
      */
     suspend fun reserve(
         bookId: Int,
         desiredDate: String? = null,
+        endDate: String? = null,
     ): ApiResult<CirculationRequestResult> {
         val api = network.api()
         // The request lands in pending loans or in reservations; the caller refreshes the
         // offline copy afterwards (refreshCache) so the confirmation is not held back by
         // two more round trips.
-        return apiCall { api.createReservation(ReservationRequest(bookId = bookId, desiredDate = desiredDate)) }
+        return apiCall { api.createReservation(ReservationRequest(bookId = bookId, desiredDate = desiredDate, endDate = endDate)) }
     }
 
     suspend fun cancelReservation(reservationId: Int): ApiResult<Unit> {

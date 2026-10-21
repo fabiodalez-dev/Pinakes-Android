@@ -179,14 +179,16 @@ class BookDetailViewModel @Inject constructor(
 
     /**
      * Submit a loan/reservation request for [desiredDate] (yyyy-MM-dd, today-or-future). The
-     * backend sets the return from the library's configured loan duration. On success we surface
-     * the chosen date so the UI can confirm exactly what was requested.
+     * backend sets the return from the library's configured loan duration, unless [endDate]
+     * asks for an earlier one (the day before a fully-booked day the default would cross, see
+     * LoanWindow). On success we surface the chosen date so the UI can confirm exactly what
+     * was requested.
      */
-    fun reserve(desiredDate: String) {
+    fun reserve(desiredDate: String, endDate: String? = null) {
         if (_state.value.reserveBusy) return
         _state.update { it.copy(reserveBusy = true) }
         viewModelScope.launch {
-            when (val res = library.reserve(bookId, desiredDate)) {
+            when (val res = library.reserve(bookId, desiredDate, endDate)) {
                 is ApiResult.Success -> {
                     _state.update {
                         it.copy(
@@ -207,6 +209,9 @@ class BookDetailViewModel @Inject constructor(
                 is ApiResult.Failure -> {
                     // Close the calendar dialog so the error is visible: the snackbar
                     // lives at the screen Scaffold level, behind the open DatePickerDialog.
+                    // A `not_available` refusal carries the server's own explanation (the
+                    // longest loan still possible, and from which day the book is booked):
+                    // that message, not the generic conflict text, is what the reader sees.
                     when {
                         res.code == ErrorCodes.CONFLICT ->
                             _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = null, snackbarRes = R.string.snackbar_request_conflict) }

@@ -87,12 +87,10 @@ private fun ruled(container: Color, onContainer: Color) =
     DayTint(container, onContainer, mix(onContainer, container, .22f))
 
 /** Index per-day data by ISO date for O(1) lookup, and the set of unavailable dates. */
-private class CalendarModel(calendar: AvailabilityCalendar) {
+private class CalendarModel(private val source: AvailabilityCalendar) {
     private val byDate: Map<String, String> =
-        calendar.days.associate { it.date to it.state } // date -> state
-    private val available: Map<String, Int> =
-        calendar.days.associate { it.date to it.available }
-    private val unavailable: Set<String> = calendar.unavailableDates.toSet()
+        source.days.associate { it.date to it.state } // date -> state
+    private val unavailable: Set<String> = source.unavailableDates.toSet()
     private val knownDates: Set<String> = byDate.keys
 
     /** True only when we have fetched data covering this day at all. */
@@ -101,11 +99,11 @@ private class CalendarModel(calendar: AvailabilityCalendar) {
     fun kind(date: LocalDate, today: LocalDate): DayKind {
         val iso = date.toString()
         if (date.isBefore(today)) return DayKind.PastOrUnknown
-        if (unavailable.contains(iso)) return DayKind.Full
+        // Same predicate as loanWindowFrom(): a red day is a day that caps the loan.
+        if (source.isFullyBooked(iso)) return DayKind.Full
         return when (byDate[iso]) {
-            "free" -> if ((available[iso] ?: 1) > 0) DayKind.Free else DayKind.Full
+            "free" -> DayKind.Free
             "partial" -> DayKind.Partial
-            "full" -> DayKind.Full
             else -> DayKind.PastOrUnknown // beyond the fetched window → unknown/disabled
         }
     }
@@ -136,6 +134,8 @@ fun LoanCalendar(
     anyFutureDay: Boolean = false,
     /** The day the grid treats as today; null reads the device clock once. Tests pin it. */
     today: LocalDate? = null,
+    /** A fully-booked future day cannot be picked; tapping it calls this so the sheet can say why. */
+    onBlockedTap: ((isoDate: String) -> Unit)? = null,
 ) {
     val dark = LocalPinakesColors.current.darkMode
     val deviceToday = remember { LocalDate.now() }
@@ -167,6 +167,7 @@ fun LoanCalendar(
             dark = dark,
             onSelect = onSelect,
             anyFutureDay = anyFutureDay,
+            onBlockedTap = onBlockedTap,
         )
         if (!anyFutureDay) {
             Spacer(Modifier.height(Spacing.md))
@@ -234,6 +235,7 @@ private fun MonthGrid(
     dark: Boolean,
     onSelect: (String) -> Unit,
     anyFutureDay: Boolean = false,
+    onBlockedTap: ((String) -> Unit)? = null,
 ) {
     val firstOfMonth = month.atDay(1)
     // Mon=1 .. Sun=7 → leading blanks before day 1.
@@ -262,6 +264,7 @@ private fun MonthGrid(
                                 dark = dark,
                                 onSelect = onSelect,
                                 anyFutureDay = anyFutureDay,
+                                onBlockedTap = onBlockedTap,
                             )
                         }
                     }
@@ -280,6 +283,7 @@ private fun DayCell(
     dark: Boolean,
     onSelect: (String) -> Unit,
     anyFutureDay: Boolean = false,
+    onBlockedTap: ((String) -> Unit)? = null,
 ) {
     val iso = date.toString()
     val kind = model.kind(date, today)
@@ -310,7 +314,12 @@ private fun DayCell(
             if (rule != Color.Transparent) Modifier.border(1.dp, rule, CircleShape) else Modifier
         )
         .then(
-            if (selectable) Modifier.clickable { onSelect(iso) } else Modifier
+            when {
+                selectable -> Modifier.clickable { onSelect(iso) }
+                // Not pickable, but a tap must still explain why (every copy is booked).
+                onBlockedTap != null && kind == DayKind.Full -> Modifier.clickable { onBlockedTap(iso) }
+                else -> Modifier
+            }
         )
 
     Box(cellModifier, contentAlignment = Alignment.Center) {
