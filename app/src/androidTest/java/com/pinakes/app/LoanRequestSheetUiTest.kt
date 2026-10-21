@@ -44,7 +44,7 @@ class LoanRequestSheetUiTest {
         fallback: Boolean = false,
         submitting: Boolean = false,
         onDismiss: () -> Unit = {},
-        onConfirm: (String) -> Unit = {},
+        onConfirm: (String, String?) -> Unit = { _, _ -> },
     ) = compose.setContent {
         PinakesTheme {
             LoanRequestSheet(
@@ -61,8 +61,9 @@ class LoanRequestSheetUiTest {
 
     @Test fun bothButtonsSpanTheSheetAndConfirmSendsTheEarliestDay() {
         var confirmed: String? = null
+        var confirmedEnd: String? = "unset"
         var dismissed = false
-        sheet(onDismiss = { dismissed = true }, onConfirm = { confirmed = it })
+        sheet(onDismiss = { dismissed = true }, onConfirm = { start, end -> confirmed = start; confirmedEnd = end })
 
         val sheet = compose.onNodeWithTag("loan-sheet").getBoundsInRoot()
         val confirm = compose.onNodeWithTag("loan-confirm").assertIsDisplayed().assertIsEnabled().getBoundsInRoot()
@@ -73,6 +74,8 @@ class LoanRequestSheetUiTest {
 
         compose.onNodeWithTag("loan-confirm").performClick()
         compose.runOnIdle { assertEquals(today.plusDays(1).toString(), confirmed) }
+        // No loan duration in this calendar: nothing caps the window, so no end_date is sent.
+        compose.runOnIdle { assertNull(confirmedEnd) }
         compose.onNodeWithTag("loan-cancel").performClick()
         compose.runOnIdle { assertTrue(dismissed) }
     }
@@ -94,7 +97,7 @@ class LoanRequestSheetUiTest {
         compose.setContent {
             PinakesTheme {
                 Box(Modifier.width(360.dp)) {
-                    LoanRequestSheetContent(loading = false, calendar = null, fallback = true, submitting = false, onDismiss = {}, onConfirm = {}, today = today)
+                    LoanRequestSheetContent(loading = false, calendar = null, fallback = true, submitting = false, onDismiss = {}, onConfirm = { _, _ -> }, today = today)
                 }
             }
         }

@@ -1,5 +1,13 @@
 # Pinakes Android — Build Status
 
+## 1.10.0 (versionCode 24): loan requests bounded by a scheduled loan
+
+Pairs with Pinakes 0.8.7 (Mobile API 1.8.2). Works with older servers: every new field is optional and its absence keeps the 1.9.0 behaviour.
+
+- **Loan requests stop before a scheduled loan** ([#53](https://github.com/fabiodalez-dev/Pinakes-Android/pull/53), Pinakes #490): when a scheduled loan or a reservation on every copy begins inside the requested period, the sheet ends the loan the day before, says how long it can be and from when the book is booked, and sends that day as `end_date` of `POST /reservations`. A start whose next day is already booked says no loan is possible from it and keeps the request button off. The window also respects the library's `max_loan_duration_days`. One predicate decides which days are fully booked, for the calendar and the cap alike.
+- No change to the local cache database (Room version 3).
+- Verification on this release branch: 444 debug unit tests with none failed or skipped, lint and `assembleDebug`; 17 device tests on an Android 15 emulator (`LoanRequestSheetUiTest`, `CalendarLayoutTest`, `DesiderataStaffFlowTest`, `DigitalLinkRefreshFlowTest`), none failed.
+
 ## 1.9.0 (versionCode 23): digital file access, loan request sheet, wanted-title receipts
 
 Pairs with Pinakes 0.8.6 (Mobile API 1.8.1). Works with older servers: every new field is optional and its absence keeps the 1.8.0 behaviour.
