@@ -276,7 +276,10 @@ fun StaffLoanCreateScreen(onNavigateUp: () -> Unit, onCreated: (loanId: Int) -> 
                 stringResource(R.string.staff_pick_user_placeholder), onClick = { vm.openPicker(DeskPicker.USER) },
             )
             state.user?.note?.let {
-                Text(stringResource(R.string.staff_user_not_eligible, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                // The note is the server's eligibility_reason: a known one in our words.
+                val text = com.pinakes.app.data.staff.StaffErrors.eligibilityRes(it)?.let { res -> stringResource(res) }
+                    ?: stringResource(R.string.staff_user_not_eligible, it)
+                Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
             FormSectionTitle(stringResource(R.string.staff_pick_book))
             PickedField(stringResource(R.string.staff_pick_book), state.book?.title, stringResource(R.string.staff_pick_book_placeholder),

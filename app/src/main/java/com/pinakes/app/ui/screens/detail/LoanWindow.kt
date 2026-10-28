@@ -41,6 +41,43 @@ internal fun AvailabilityCalendar.isFullyBooked(isoDate: String): Boolean {
     return day.state == "full" || (day.state == "free" && day.available <= 0)
 }
 
+/** A day the library is closed (closures calendar, Mobile API 1.9.0): never a start or a return. */
+internal fun AvailabilityCalendar.isClosed(isoDate: String): Boolean = closedDates.contains(isoDate)
+
+/** How far [openDayFrom] looks for an open day: closures longer than this are not real. */
+private const val MAX_CLOSED_RUN = 60
+
+/**
+ * The nearest open day from [date] (itself when open), walking [forward] or back, or null when
+ * none exists within [MAX_CLOSED_RUN] days or before [notBefore] (going back).
+ */
+internal fun AvailabilityCalendar.openDayFrom(date: LocalDate, forward: Boolean, notBefore: LocalDate? = null): LocalDate? {
+    var d = date
+    repeat(MAX_CLOSED_RUN) {
+        if (notBefore != null && d.isBefore(notBefore)) return null
+        if (!isClosed(d.toString())) return d
+        d = if (forward) d.plusDays(1) else d.minusDays(1)
+    }
+    return null
+}
+
+/**
+ * The day the request sheet pre-selects: [earliestIso] (the server's `earliest_available`), or
+ * the first day after it that is neither closed nor fully booked. Null when nothing qualifies
+ * in the fetched window or [earliestIso] is not a date.
+ */
+internal fun AvailabilityCalendar.firstRequestableDay(earliestIso: String?): String? {
+    val start = runCatching { LocalDate.parse(earliestIso) }.getOrNull() ?: return null
+    if (closedDates.isEmpty()) return earliestIso
+    var d = start
+    repeat(MAX_CLOSED_RUN) {
+        val iso = d.toString()
+        if (!isClosed(iso) && !isFullyBooked(iso)) return iso
+        d = d.plusDays(1)
+    }
+    return null
+}
+
 /**
  * The window from [startIso] (yyyy-MM-dd), or null when the duration is unknown (an older
  * server omits `loan_duration_days`) or the start is not a date: then the server's default
@@ -56,31 +93,44 @@ internal fun loanWindowFrom(startIso: String, calendar: AvailabilityCalendar?, l
     if (loanDurationDays == null || loanDurationDays < 1) return null
     val start = runCatching { LocalDate.parse(startIso) }.getOrNull() ?: return null
     if (calendar?.maxLoanDurationDays == null) {
+        // The server moves a return that falls on a closed day to the next open one.
+        val end = start.plusDays(loanDurationDays.toLong()).let { calendar?.openDayFrom(it, forward = true) ?: it }
         return LoanWindow(
-            endDate = start.plusDays(loanDurationDays.toLong()).toString(),
+            endDate = end.toString(),
             firstBlocked = null,
-            maxDays = loanDurationDays,
+            maxDays = ChronoUnit.DAYS.between(start, end).toInt(),
             capped = false,
             requiresEndDate = false,
         )
     }
-    val durationDays = calendar?.maxLoanDurationDays?.takeIf { it > 0 }
+    // Non-null from here: maxLoanDurationDays was read off it.
+    val cal = calendar ?: return null
+    val durationDays = cal.maxLoanDurationDays?.takeIf { it > 0 }
         ?.let { minOf(loanDurationDays, it) } ?: loanDurationDays
     var firstBlocked: String? = null
     for (offset in 1..durationDays) {
         val day = start.plusDays(offset.toLong()).toString()
-        if (calendar?.isFullyBooked(day) == true) {
+        if (cal.isFullyBooked(day)) {
             firstBlocked = day
             break
         }
     }
     val defaultEnd = start.plusDays(durationDays.toLong())
-    val end = firstBlocked?.let { LocalDate.parse(it).minusDays(1) } ?: defaultEnd
+    val rawEnd = firstBlocked?.let { LocalDate.parse(it).minusDays(1) } ?: defaultEnd
+    val shortened = rawEnd.isBefore(start.plusDays(loanDurationDays.toLong()))
+    // A return on a closed day: the server's default return moves to the next open day, but a
+    // shortened one (sent as end_date) cannot move past the day that shortened it, so it moves
+    // back to the last open day after the start; when there is none, no loan fits.
+    val end = when {
+        !cal.isClosed(rawEnd.toString()) -> rawEnd
+        shortened -> cal.openDayFrom(rawEnd, forward = false, notBefore = start.plusDays(1)) ?: start
+        else -> cal.openDayFrom(rawEnd, forward = true) ?: rawEnd
+    }
     return LoanWindow(
         endDate = end.toString(),
         firstBlocked = firstBlocked,
         maxDays = ChronoUnit.DAYS.between(start, end).toInt(),
         capped = firstBlocked != null,
-        requiresEndDate = end.isBefore(start.plusDays(loanDurationDays.toLong())),
+        requiresEndDate = shortened,
     )
 }

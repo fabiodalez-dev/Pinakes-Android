@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.BrightnessMedium
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.DevicesOther
@@ -93,6 +94,7 @@ fun ProfileScreen(
     onOpenNotifications: () -> Unit,
     onOpenContact: () -> Unit,
     onOpenMyReviews: () -> Unit,
+    onOpenMovements: () -> Unit,
     onOpenBookClub: () -> Unit,
     onOpenPeriodicals: () -> Unit,
     onOpenArticles: () -> Unit,
@@ -137,6 +139,7 @@ fun ProfileScreen(
                     onOpenNotifications = onOpenNotifications,
                     onOpenContact = onOpenContact,
                     onOpenMyReviews = onOpenMyReviews,
+                    onOpenMovements = onOpenMovements,
                     onOpenBookClub = onOpenBookClub,
                     onOpenPeriodicals = onOpenPeriodicals,
                     onOpenArticles = onOpenArticles,
@@ -152,6 +155,7 @@ fun ProfileScreen(
                     showNotifications = features.notifications,
                     showContact = features.messages,
                     showReviews = features.showReviews,
+                    showMovements = features.showMovements,
                     showBookClub = features.bookClubAvailable,
                     showPeriodicals = features.periodicalsAvailable,
                 )
@@ -230,6 +234,7 @@ private fun ProfileContent(
     onOpenNotifications: () -> Unit,
     onOpenContact: () -> Unit,
     onOpenMyReviews: () -> Unit,
+    onOpenMovements: () -> Unit,
     onOpenBookClub: () -> Unit,
     onOpenPeriodicals: () -> Unit,
     onOpenArticles: () -> Unit,
@@ -242,6 +247,7 @@ private fun ProfileContent(
     showNotifications: Boolean,
     showContact: Boolean,
     showReviews: Boolean,
+    showMovements: Boolean,
     showBookClub: Boolean,
     showPeriodicals: Boolean,
     showDesiderata: Boolean,
@@ -291,7 +297,9 @@ private fun ProfileContent(
         // Read-only membership info (only shown when the server provides it).
         val cardNumber = profile.codiceTessera?.takeIf { it.isNotBlank() }
         val cardExpiry = profile.cardExpiresAt?.takeIf { it.isNotBlank() }
-        if (cardNumber != null || cardExpiry != null) {
+        // Patron type (Pinakes 0.9.0 circulation rules), when /me names it.
+        val patronType = profile.patronType?.let { it.name?.takeIf(String::isNotBlank) ?: it.code?.takeIf(String::isNotBlank) }
+        if (cardNumber != null || cardExpiry != null || patronType != null) {
             Spacer(Modifier.height(Spacing.xl))
             Surface(
                 shape = MaterialTheme.shapes.medium,
@@ -301,6 +309,7 @@ private fun ProfileContent(
                 Column(Modifier.padding(Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     cardNumber?.let { ReadOnlyRow(stringResource(R.string.profile_card_number), it) }
                     cardExpiry?.let { ReadOnlyRow(stringResource(R.string.profile_card_expires), DateFormat.date(it)) }
+                    patronType?.let { ReadOnlyRow(stringResource(R.string.profile_patron_type), it) }
                 }
             }
         }
@@ -312,6 +321,9 @@ private fun ProfileContent(
         ActionRow(Icons.Outlined.Lock, stringResource(R.string.profile_action_change_password), onClick = onChangePassword)
         if (showReviews) {
             ActionRow(Icons.Outlined.RateReview, stringResource(R.string.profile_action_my_reviews), onClick = onOpenMyReviews)
+        }
+        if (showMovements) {
+            ActionRow(Icons.Outlined.AccountBalanceWallet, stringResource(R.string.profile_action_movements), onClick = onOpenMovements)
         }
         if (showCalendar) {
             ActionRow(Icons.Outlined.CalendarMonth, stringResource(R.string.profile_action_calendar), onClick = onOpenCalendar)

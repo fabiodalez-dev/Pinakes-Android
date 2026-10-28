@@ -117,6 +117,11 @@ data class HealthFeatures(
     @SerialName("staff_frbr") val staffFrbr: Boolean = false,
     @SerialName("staff_digital_library") val staffDigitalLibrary: Boolean = false,
     @SerialName("staff_librarything") val staffLibraryThing: Boolean = false,
+    // Pinakes 0.9.0 feature toggles (Mobile API 1.9.1), each already false in catalogue mode.
+    // Older servers omit them: no fines ledger, no closures calendar, no patron-type rules.
+    val fines: Boolean = false,
+    @SerialName("closures_calendar") val closuresCalendar: Boolean = false,
+    @SerialName("circulation_rules") val circulationRules: Boolean = false,
 )
 
 // ---------- Auth ----------
@@ -231,6 +236,8 @@ data class UserProfile(
     @SerialName("custom_fields") val customFields: List<CustomFieldValue> = emptyList(),
     /** Fields the library hides (`sesso`, `cod_fiscale`); their keys are omitted from `/me`. */
     @SerialName("hidden_fields") val hiddenFields: List<String> = emptyList(),
+    /** The reader's patron type (Pinakes 0.9.0 circulation rules); null when the server omits it. */
+    @SerialName("patron_type") val patronType: PatronTypeRef? = null,
 ) {
     val fullName: String get() = listOf(nome, cognome).filter { it.isNotBlank() }.joinToString(" ")
 }
@@ -510,6 +517,13 @@ data class ReservationItem(
     @SerialName("expires_at") val expiresAt: String? = null,
 )
 
+/** A patron type (`tipologia lettore`) as `/me` names it. */
+@Serializable
+data class PatronTypeRef(
+    val code: String? = null,
+    val name: String? = null,
+)
+
 // ---------- Availability calendar ----------
 // Mirrors GET /catalog/books/{id}/availability — ~180 days of per-day availability
 // used to drive the colored loan-request calendar (matches the website).
@@ -524,6 +538,15 @@ data class AvailabilityCalendar(
     @SerialName("loan_duration_days") val loanDurationDays: Int? = null,
     // Longest loan POST /reservations accepts through end_date (Mobile API 1.8.2); null on older servers.
     @SerialName("max_loan_duration_days") val maxLoanDurationDays: Int? = null,
+    // Closures calendar (Mobile API 1.9.0): days the library is closed. Not a start/pickup
+    // day; a return date on one moves to the next open day. Empty on older servers.
+    @SerialName("closed_dates") val closedDates: List<String> = emptyList(),
+    // Circulation rules of the reader's patron type (Mobile API 1.9.0). False `loanable` =
+    // consultation only (POST /reservations answers 409 not_loanable); false
+    // `reservations_enabled` = no waitlist (409 reservations_disabled). Older servers omit
+    // both, which reads as the behaviour they always had.
+    val loanable: Boolean = true,
+    @SerialName("reservations_enabled") val reservationsEnabled: Boolean = true,
 )
 
 @Serializable

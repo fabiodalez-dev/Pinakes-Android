@@ -219,6 +219,17 @@ internal fun copyStateLabel(copy: StaffCopy, lookups: StaffLookups): String =
         ?: copy.status.orEmpty()
 
 /**
+ * The second line of a copy row: its state, "consultation only" when the copy is kept in the
+ * library (Pinakes 0.9.0 `consultation_only`), then its notes. Blank parts are dropped.
+ */
+internal fun copySummary(copy: StaffCopy, stateLabel: String, consultationLabel: String): String =
+    listOfNotNull(
+        stateLabel.takeIf { it.isNotBlank() },
+        consultationLabel.takeIf { copy.consultationOnly && it.isNotBlank() },
+        copy.notes?.takeIf { it.isNotBlank() },
+    ).joinToString(" · ")
+
+/**
  * The per-copy list of the book editor. Shown only when the server offers per-copy management
  * (`staff_copies`); label buttons only with `staff_labels`. Messages go to [onMessage] (the
  * editor's snackbar); counter changes to [onBookRefreshed].
@@ -270,7 +281,7 @@ fun StaffCopiesSection(
                         Column(Modifier.weight(1f)) {
                             Text(copy.inventoryNumber ?: stringResource(R.string.staff_copy_no_code), style = MaterialTheme.typography.bodyLarge)
                             Text(
-                                listOfNotNull(copyStateLabel(copy, lookups).takeIf { it.isNotBlank() }, copy.notes?.takeIf { it.isNotBlank() }).joinToString(" · "),
+                                copySummary(copy, copyStateLabel(copy, lookups), stringResource(R.string.staff_copy_consultation_only)),
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }

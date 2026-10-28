@@ -1,5 +1,17 @@
 # Pinakes Android — Build Status
 
+## Unreleased: alignment with Pinakes 0.9.0 (Mobile API 1.9.x)
+
+Pairs with Pinakes 0.9.0 (Mobile API 1.9.0 for `closed_dates`, `loanable`, `reservations_enabled`, `/me/movements` and the new 409 codes; Mobile API 1.9.1 for the `/health` toggles `fines`, `closures_calendar` and `circulation_rules`). Works with older servers: every field is optional, the three flags default to off, and their absence keeps the 1.10.0 behaviour.
+
+- **Feature toggles**: `/health.features.fines`, `closures_calendar` and `circulation_rules` are read and stored with the other flags; catalogue mode turns all three off whatever the server sends.
+- **Closures calendar**: `closed_dates` paints closed days grey (legend "Library closed", only when the library has closures), they cannot be picked as a start, a tap says the library is closed, the pre-selected day skips them, and a proposed return date always lands on an open day (the default return moves forward as the server does; a shortened one sent as `end_date` moves back, never past the booked day). Same calendar for the reader and for the staff loan desk.
+- **Consultation only and closed waitlists**: with `circulation_rules` on, the book page reads `loanable` and `reservations_enabled` from the availability payload; the loan button stays visible but disabled, with the reason under it ("Consultation only", or no reservations with this card). A 409 `not_loanable` / `reservations_disabled` turns the button the same way at once.
+- **Refusal codes**: `not_loanable`, `reservations_disabled`, `reservation_limit_reached`, `media_limit_reached`, `max_loans_reached` and `not_eligible` with `meta.reason` `debt_block` / `card_expired` / `user_suspended` have their own wording for readers and staff; unknown codes keep the server message. Staff borrower pages and the new-loan form name the eligibility reason in the app's words.
+- **Balance and movements** (Profile, only with `features.fines`): balance, the "loans blocked" banner with the library's threshold, fines still accruing on overdue loans, and the ledger. A 404 `feature_disabled` closes the page without an error.
+- Additive, shown when the server sends them: `patron_type` on the profile, `consultation_only` on a staff copy.
+- No change to the local cache database (Room version 3).
+
 ## 1.10.0 (versionCode 24): loan requests bounded by a scheduled loan
 
 Pairs with Pinakes 0.8.7 (Mobile API 1.8.2). Works with older servers: every new field is optional and its absence keeps the 1.9.0 behaviour.

@@ -202,6 +202,7 @@ fun BookDetailScreen(
                     showWishlist = features.showWishlist && !state.offlineNow,
                     showReviews = features.showReviews && !state.offlineNow,
                     onReserve = vm::openLoanSheet,
+                    rules = state.rules,
                     onToggleWishlist = vm::toggleWishlist,
                     onFindWorks = onFindWorks,
                     onRefreshFile = vm::refreshDigitalFile,
@@ -276,8 +277,9 @@ internal fun LoanRequestSheetContent(
     today: LocalDate? = null,
 ) {
     // Pre-select earliest_available when offered, else null until the user picks.
+    // A closed day is never offered: the first requestable day from it (closures calendar).
     var selectedIso by remember(calendar) {
-        mutableStateOf(calendar?.earliestAvailable?.takeIf { it.isNotBlank() })
+        mutableStateOf(calendar?.earliestAvailable?.takeIf { it.isNotBlank() }?.let { calendar.firstRequestableDay(it) })
     }
     // A fully-booked day the reader tapped: explained under the calendar until the next pick.
     var blockedIso by remember(calendar) { mutableStateOf<String?>(null) }
@@ -384,7 +386,10 @@ internal fun LoanRequestSheetContent(
                     )
                 }
             }
-            val blockedText = blockedIso?.let { stringResource(R.string.book_loan_blocked_day, formatDisplayDate(it)) }
+            val blockedText = blockedIso?.let {
+                if (calendar?.isClosed(it) == true) stringResource(R.string.book_loan_closed_day, formatDisplayDate(it))
+                else stringResource(R.string.book_loan_blocked_day, formatDisplayDate(it))
+            }
             val explanation = listOfNotNull(blockedText, limitText).joinToString(" ")
             if (explanation.isNotEmpty()) {
                 Text(
@@ -428,6 +433,8 @@ internal fun DetailContent(
     onReserve: () -> Unit,
     onToggleWishlist: () -> Unit,
     onShowMessage: (String) -> Unit,
+    /** The reader's circulation rules for this title (Pinakes 0.9.0); null = not known, usual button. */
+    rules: ViewerRules? = null,
     onFindWorks: (String, Int?) -> Unit = { _, _ -> },
     /** Revalidates a signed file on the server, preserving this page while the request runs. */
     onRefreshFile: suspend (DigitalAttachment) -> ApiResult<DigitalAttachment> = {
@@ -585,12 +592,34 @@ internal fun DetailContent(
         if (showLoanButton || showWishlist) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (showLoanButton) {
+                    // Consultation only, or no waitlist for this reader's patron type: the button
+                    // stays, disabled, with the reason under it (it does not just disappear).
+                    val action = CirculationRules.loanAction(book.available, rules)
                     PrimaryButton(
-                        label = if (book.available) stringResource(R.string.book_request_loan) else stringResource(R.string.book_reserve),
+                        label = when (action) {
+                            LoanAction.Request -> stringResource(R.string.book_request_loan)
+                            LoanAction.Reserve -> stringResource(R.string.book_reserve)
+                            LoanAction.ConsultationOnly -> stringResource(R.string.book_consultation_only)
+                            LoanAction.ReservationsDisabled -> stringResource(R.string.book_reserve)
+                        },
                         onClick = onReserve,
+                        enabled = CirculationRules.canRequest(action),
                         loading = reserveBusy,
                         modifier = Modifier.fillMaxWidth().testTag("detail-loan"),
                     )
+                    val reason = when (action) {
+                        LoanAction.ConsultationOnly -> stringResource(R.string.book_consultation_only_hint)
+                        LoanAction.ReservationsDisabled -> stringResource(R.string.book_reservations_disabled_hint)
+                        else -> null
+                    }
+                    if (reason != null) {
+                        Text(
+                            reason,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("detail-loan-reason"),
+                        )
+                    }
                 }
                 if (showWishlist) {
                     SecondaryButton(
