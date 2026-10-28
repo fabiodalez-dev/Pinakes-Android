@@ -1492,5 +1492,6 @@
   "movements_history_title": "Movements",
   "movements_empty_title": "No movements",
   "movements_empty_subtitle": "Charges, payments and waivers will appear here.",
-  "movements_untitled": "Loan"
+  "movements_untitled": "Loan",
+  "movements_refresh_failed": "Could not refresh: the balance shown may be out of date."
 }

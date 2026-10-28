@@ -1492,5 +1492,6 @@
   "movements_history_title": "Bewegungen",
   "movements_empty_title": "Keine Bewegungen",
   "movements_empty_subtitle": "Hier erscheinen Gebühren, Zahlungen und Erlasse.",
-  "movements_untitled": "Ausleihe"
+  "movements_untitled": "Ausleihe",
+  "movements_refresh_failed": "Aktualisierung fehlgeschlagen: Der angezeigte Kontostand ist möglicherweise nicht aktuell."
 }

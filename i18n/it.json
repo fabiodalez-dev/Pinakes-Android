@@ -1492,5 +1492,6 @@
   "movements_history_title": "Movimenti",
   "movements_empty_title": "Nessun movimento",
   "movements_empty_subtitle": "Qui compariranno addebiti, pagamenti e condoni.",
-  "movements_untitled": "Prestito"
+  "movements_untitled": "Prestito",
+  "movements_refresh_failed": "Aggiornamento non riuscito: il saldo mostrato potrebbe non essere aggiornato."
 }

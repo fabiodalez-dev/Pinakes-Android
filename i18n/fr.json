@@ -1492,5 +1492,6 @@
   "movements_history_title": "Mouvements",
   "movements_empty_title": "Aucun mouvement",
   "movements_empty_subtitle": "Les frais, paiements et remises apparaîtront ici.",
-  "movements_untitled": "Prêt"
+  "movements_untitled": "Prêt",
+  "movements_refresh_failed": "Échec de l'actualisation : le solde affiché n'est peut-être pas à jour."
 }

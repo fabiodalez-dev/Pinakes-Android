@@ -76,6 +76,11 @@ data class InstanceFeatures(
      * no patron-type rules, and the app then behaves exactly as before.
      */
     val finesAvailable: Boolean = false,
+    /**
+     * Informational: the calendar honours `closed_dates` whatever this says, because the server
+     * already sends an empty list with the toggle off, and a Mobile API 1.9.0 server sends closures
+     * before the flag existed (ignoring them would offer days the server then moves).
+     */
     val closuresCalendarAvailable: Boolean = false,
     val circulationRulesAvailable: Boolean = false,
 ) {

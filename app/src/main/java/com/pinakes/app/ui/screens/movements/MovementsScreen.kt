@@ -8,18 +8,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -60,9 +63,19 @@ fun MovementsScreen(
     LaunchedEffect(state.disabled, features.showMovements) {
         if (state.disabled || !features.showMovements) onNavigateUp()
     }
+    // A failed refresh keeps the last balance on screen, but says it may be out of date.
+    val snackbar = remember { SnackbarHostState() }
+    val refreshFailedText = stringResource(R.string.movements_refresh_failed)
+    LaunchedEffect(state.refreshFailed) {
+        if (state.refreshFailed) {
+            snackbar.showSnackbar(refreshFailedText)
+            vm.consumeRefreshFailed()
+        }
+    }
 
     Scaffold(
         topBar = { PinakesTopBar(title = stringResource(R.string.title_movements), onNavigateUp = onNavigateUp) },
+        snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = state.refreshing,
@@ -88,11 +101,13 @@ private fun MovementsContent(data: MovementsPayload) {
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         item(key = "balance") { BalanceCard(data, money) }
-        if (data.accrued.isNotEmpty()) {
+        // The total shows even when the server sends it without the per-loan rows.
+        if (data.accruedCents != 0 || data.accrued.isNotEmpty()) {
             item(key = "accrued-title") {
                 SectionHeader(title = stringResource(R.string.movements_accrued_title, money(data.accruedCents)))
             }
-            items(data.accrued, key = { "accrued-${it.loanId}" }) { AccruedRow(it, money) }
+            // Keys fall back to the position: a row without its id must not collide with another.
+            itemsIndexed(data.accrued, key = { i, a -> MoneyFormat.rowKey("accrued", i, a.loanId) }) { _, a -> AccruedRow(a, money) }
         }
         item(key = "items-title") { SectionHeader(title = stringResource(R.string.movements_history_title)) }
         if (data.items.isEmpty()) {
@@ -105,7 +120,7 @@ private fun MovementsContent(data: MovementsPayload) {
                 )
             }
         } else {
-            items(data.items, key = { "movement-${it.id}" }) { MovementRow(it, money) }
+            itemsIndexed(data.items, key = { i, m -> MoneyFormat.rowKey("movement", i, m.id) }) { _, m -> MovementRow(m, money) }
         }
     }
 }

@@ -27,6 +27,8 @@ data class MovementsUiState(
      * route): the page leaves at once instead of showing an error, as the profile entry is gone too.
      */
     val disabled: Boolean = false,
+    /** A pull-to-refresh failed: the page keeps the last balance and says it may be out of date. */
+    val refreshFailed: Boolean = false,
 ) {
     companion object {
         /**
@@ -35,10 +37,10 @@ data class MovementsUiState(
          * page already on screen.
          */
         fun after(previous: MovementsUiState, result: ApiResult<MovementsPayload>): MovementsUiState = when (result) {
-            is ApiResult.Success -> previous.copy(content = UiState.Success(result.data), refreshing = false, disabled = false)
+            is ApiResult.Success -> previous.copy(content = UiState.Success(result.data), refreshing = false, disabled = false, refreshFailed = false)
             is ApiResult.Failure -> when {
                 result.code == "feature_disabled" || result.httpStatus == 404 -> previous.copy(refreshing = false, disabled = true)
-                previous.content is UiState.Success -> previous.copy(refreshing = false)
+                previous.content is UiState.Success -> previous.copy(refreshing = false, refreshFailed = true)
                 else -> previous.copy(content = UiState.Error(result.message, result.code, R.string.movements_error_load), refreshing = false)
             }
         }
@@ -49,6 +51,12 @@ data class MovementsUiState(
 enum class BalanceKind { Owed, Settled, Credit }
 
 object MoneyFormat {
+
+    /**
+     * A LazyColumn key for a ledger row: its id when the server sent one, else its position.
+     * Ids default to 0 when omitted, and Compose throws on a duplicate key.
+     */
+    fun rowKey(prefix: String, index: Int, id: Int): String = if (id > 0) "$prefix-$id" else "$prefix-at-$index"
 
     fun balanceKind(cents: Int): BalanceKind = when {
         cents > 0 -> BalanceKind.Owed
@@ -101,6 +109,8 @@ class MovementsViewModel @Inject constructor(
         _state.update { it.copy(refreshing = true) }
         fetch()
     }
+
+    fun consumeRefreshFailed() = _state.update { it.copy(refreshFailed = false) }
 
     private fun fetch() {
         viewModelScope.launch {

@@ -70,11 +70,22 @@ class MovementsTest {
         assertEquals(R.string.movements_error_load, (s.content as UiState.Error).messageRes)
     }
 
-    @Test fun aFailedRefreshKeepsThePageOnScreen() {
+    @Test fun aFailedRefreshKeepsThePageOnScreenAndSaysSo() {
         val loaded = MovementsUiState(content = UiState.Success(MovementsPayload(balanceCents = 100)), refreshing = true)
         val s = MovementsUiState.after(loaded, ApiResult.Failure("network", "", 0))
         assertEquals(100, (s.content as UiState.Success).data.balanceCents)
         assertFalse(s.refreshing)
+        assertTrue(s.refreshFailed)
+        // The next successful refresh clears it.
+        assertFalse(MovementsUiState.after(s, ApiResult.Success(MovementsPayload())).refreshFailed)
+    }
+
+    @Test fun rowsWithoutIdsGetDistinctKeys() {
+        val p = json.decodeFromString<MovementsPayload>("""{"items":[{"type":"pagamento"},{"type":"condono"},{"id":4,"type":"storno"}],"accrued":[{},{}]}""")
+        val keys = p.items.mapIndexed { i, m -> MoneyFormat.rowKey("movement", i, m.id) } +
+            p.accrued.mapIndexed { i, a -> MoneyFormat.rowKey("accrued", i, a.loanId) }
+        assertEquals(keys.size, keys.toSet().size)
+        assertEquals("movement-4", keys[2])
     }
 
     @Test fun theBalanceSignPicksTheWording() {

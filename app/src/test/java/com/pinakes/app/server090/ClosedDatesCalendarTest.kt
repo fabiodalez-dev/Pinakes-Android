@@ -91,10 +91,29 @@ class ClosedDatesCalendarTest {
         assertFalse(window.capped)
     }
 
-    @Test fun anOlderServerWithoutTheMaximumAlsoMovesTheReturn() {
+    @Test fun anOlderServerWithoutTheMaximumKeepsTheDefaultReturn() {
+        // closed_dates only comes with Mobile API 1.9.0, which always sends the maximum.
         val window = loanWindowFrom("2030-03-04", calendar(listOf("2030-03-18"), maxDuration = null), 14)
-        assertEquals("2030-03-19", window?.endDate)
+        assertEquals("2030-03-18", window?.endDate)
         assertFalse(window!!.requiresEndDate)
+    }
+
+    @Test fun aReturnMovedOverAClosureNeverLandsOnABookedDay() {
+        // Default return 2030-03-18 is closed and 2030-03-19 is fully booked: the loan stops on
+        // the last open day before the booking, and the app sends it as end_date.
+        val window = loanWindowFrom("2030-03-04", calendar(listOf("2030-03-18"), full = listOf("2030-03-19")), 14)
+        assertEquals("2030-03-17", window?.endDate)
+        assertEquals("2030-03-19", window?.firstBlocked)
+        assertTrue(window!!.capped)
+        assertTrue(window.requiresEndDate)
+        assertEquals(13, window.maxDays)
+    }
+
+    @Test fun aClosedAndBookedDefaultReturnCapsTheLoanBeforeIt() {
+        val window = loanWindowFrom("2030-03-04", calendar(listOf("2030-03-18", "2030-03-17"), full = listOf("2030-03-18")), 14)
+        assertEquals("2030-03-16", window?.endDate)
+        assertEquals("2030-03-18", window?.firstBlocked)
+        assertTrue(window!!.requiresEndDate)
     }
 
     @Test fun aShortenedReturnOnAClosedDayMovesBackNotPastTheBookedDay() {
