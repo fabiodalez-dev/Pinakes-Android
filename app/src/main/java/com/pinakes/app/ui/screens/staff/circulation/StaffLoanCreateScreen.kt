@@ -68,6 +68,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 
 enum class DeskPicker { USER, BOOK }
@@ -85,6 +86,8 @@ data class LoanCreateUiState(
     val calendarFailed: Boolean = false,
     /** The availability (and its closures) is being fetched: submit waits for it. */
     val calendarLoading: Boolean = false,
+    /** Number of the latest availability request: only its answer is applied. */
+    val calendarRequest: Int = 0,
     val picker: DeskPicker? = null,
     val saving: Boolean = false,
     val error: StaffMessage? = null,
@@ -107,6 +110,18 @@ data class LoanCreateUiState(
      * start begins today, so today is checked then too.
      */
     val closedDateChosen: String? get() = listOfNotNull(start ?: today.takeIf { !reservation }, end).firstOrNull { it in closedDates }
+
+    /** A new availability request starts: it supersedes any one still in flight. */
+    fun startCalendarRequest(): LoanCreateUiState = copy(calendarLoading = true, calendarRequest = calendarRequest + 1)
+
+    /**
+     * The answer to availability request [request]. An answer to an older request (the staff
+     * changed book or user meanwhile) is dropped: it neither replaces the calendar nor ends the
+     * loading of the latest one.
+     */
+    fun withCalendarResult(request: Int, calendar: AvailabilityCalendar?, forbidden: Boolean = false): LoanCreateUiState =
+        if (request != calendarRequest) this
+        else copy(calendar = calendar, calendarFailed = calendar == null, calendarLoading = false, forbidden = this.forbidden || forbidden)
 }
 
 /**
@@ -185,11 +200,11 @@ class StaffLoanCreateViewModel @Inject constructor(
     /** Availability for the chosen book, from this user's point of view (their own holds count as free). */
     private suspend fun loadCalendar() {
         val book = _state.value.book ?: return
-        _state.update { it.copy(calendarLoading = true) }
+        val request = _state.updateAndGet { it.startCalendarRequest() }.calendarRequest
         when (val res = circulation.availability(book.id, _state.value.user?.id)) {
-            is ApiResult.Success -> _state.update { it.copy(calendar = res.data, calendarFailed = false, calendarLoading = false) }
+            is ApiResult.Success -> _state.update { it.withCalendarResult(request, res.data) }
             // A failed fetch keeps the old fallback: the form can be sent, the server decides.
-            is ApiResult.Failure -> _state.update { it.copy(calendar = null, calendarFailed = true, calendarLoading = false, forbidden = res.isForbidden()) }
+            is ApiResult.Failure -> _state.update { it.withCalendarResult(request, null, forbidden = res.isForbidden()) }
         }
     }
 

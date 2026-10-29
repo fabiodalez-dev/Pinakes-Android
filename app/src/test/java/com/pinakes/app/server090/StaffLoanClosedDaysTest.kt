@@ -34,6 +34,31 @@ class StaffLoanClosedDaysTest {
         assertTrue(picked.copy(calendarFailed = true).canSubmit)
     }
 
+    @Test fun onlyTheLatestCalendarRequestIsApplied() {
+        val picked = LoanCreateUiState(user = PickItem(1, "Ada"), book = PickItem(2, "Emma"))
+        val first = picked.startCalendarRequest()
+        val second = first.startCalendarRequest()
+        // The answer to the superseded request (another book was picked meanwhile) is dropped,
+        // whether it succeeded or failed: the latest one is still loading, submit still waits.
+        val staleOk = second.withCalendarResult(first.calendarRequest, calendar)
+        assertTrue(staleOk.calendarLoading)
+        assertNull(staleOk.calendar)
+        assertFalse(staleOk.canSubmit)
+        val staleFail = second.copy(calendar = calendar).withCalendarResult(first.calendarRequest, null)
+        assertTrue(staleFail.calendarLoading)
+        assertFalse(staleFail.calendarFailed)
+        assertEquals(calendar, staleFail.calendar)
+        // The latest answer ends the loading.
+        val latest = staleOk.withCalendarResult(second.calendarRequest, calendar)
+        assertFalse(latest.calendarLoading)
+        assertEquals(calendar, latest.calendar)
+        assertTrue(latest.canSubmit)
+        val latestFail = staleOk.withCalendarResult(second.calendarRequest, null, forbidden = true)
+        assertTrue(latestFail.calendarFailed)
+        assertTrue(latestFail.forbidden)
+        assertFalse(latestFail.calendarLoading)
+    }
+
     @Test fun openDaysOrNoCalendarPass() {
         assertNull(LoanCreateUiState(calendar = calendar, start = "2030-03-04", end = "2030-03-18").closedDateChosen)
         assertNull(LoanCreateUiState(calendar = null, start = "2030-03-09").closedDateChosen)
