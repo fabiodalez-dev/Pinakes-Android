@@ -83,6 +83,8 @@ data class LoanCreateUiState(
     val notes: String = "",
     val calendar: AvailabilityCalendar? = null,
     val calendarFailed: Boolean = false,
+    /** The availability (and its closures) is being fetched: submit waits for it. */
+    val calendarLoading: Boolean = false,
     val picker: DeskPicker? = null,
     val saving: Boolean = false,
     val error: StaffMessage? = null,
@@ -95,13 +97,16 @@ data class LoanCreateUiState(
     /** "Hand over now" only makes sense for a loan starting today. */
     val canHandOver: Boolean get() = !reservation && (start == null || start == today)
 
-    val canSubmit: Boolean get() = user != null && book != null && !saving
+    val canSubmit: Boolean get() = user != null && book != null && !saving && !calendarLoading
 
     /** Closed days of the library (closures calendar) from the availability payload. */
     val closedDates: Set<String> get() = calendar?.closedDates?.toSet().orEmpty()
 
-    /** The chosen start or end when it falls on a day the library is closed, else null. */
-    val closedDateChosen: String? get() = listOfNotNull(start, end).firstOrNull { it in closedDates }
+    /**
+     * The start or end that falls on a day the library is closed, else null. A loan without a
+     * start begins today, so today is checked then too.
+     */
+    val closedDateChosen: String? get() = listOfNotNull(start ?: today.takeIf { !reservation }, end).firstOrNull { it in closedDates }
 }
 
 /**
@@ -180,9 +185,11 @@ class StaffLoanCreateViewModel @Inject constructor(
     /** Availability for the chosen book, from this user's point of view (their own holds count as free). */
     private suspend fun loadCalendar() {
         val book = _state.value.book ?: return
+        _state.update { it.copy(calendarLoading = true) }
         when (val res = circulation.availability(book.id, _state.value.user?.id)) {
-            is ApiResult.Success -> _state.update { it.copy(calendar = res.data, calendarFailed = false) }
-            is ApiResult.Failure -> _state.update { it.copy(calendar = null, calendarFailed = true, forbidden = res.isForbidden()) }
+            is ApiResult.Success -> _state.update { it.copy(calendar = res.data, calendarFailed = false, calendarLoading = false) }
+            // A failed fetch keeps the old fallback: the form can be sent, the server decides.
+            is ApiResult.Failure -> _state.update { it.copy(calendar = null, calendarFailed = true, calendarLoading = false, forbidden = res.isForbidden()) }
         }
     }
 
@@ -196,7 +203,7 @@ class StaffLoanCreateViewModel @Inject constructor(
         val s = _state.value
         val user = s.user ?: return
         val book = s.book ?: return
-        if (s.saving) return
+        if (!s.canSubmit) return
         if (s.start != null && s.end != null && s.end < s.start) {
             _state.update { it.copy(error = StaffMessage(R.string.staff_loan_dates_order)) }
             return
