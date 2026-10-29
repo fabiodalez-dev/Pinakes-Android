@@ -48,6 +48,17 @@ class FeatureFlags090Test {
         assertFalse(f.showMovements)
     }
 
+    @Test fun appAccessOffHidesTheThreeAreasLikeEveryOtherArea() {
+        val payload = json.decodeFromString<HealthPayload>(
+            """{"app_access_enabled":false,"features":{"loans":true,"fines":true,"closures_calendar":true,"circulation_rules":true}}""",
+        )
+        val f = InstanceFeatures.from(payload)
+        assertFalse(f.finesAvailable)
+        assertFalse(f.closuresCalendarAvailable)
+        assertFalse(f.circulationRulesAvailable)
+        assertFalse(f.showMovements)
+    }
+
     @Test fun theMovementsPageNeedsLoansToo() {
         val f = InstanceFeatures(finesAvailable = true, loans = false)
         assertFalse(f.showMovements)

@@ -1493,5 +1493,6 @@
   "movements_empty_title": "Nessun movimento",
   "movements_empty_subtitle": "Qui compariranno addebiti, pagamenti e condoni.",
   "movements_untitled": "Prestito",
-  "movements_refresh_failed": "Aggiornamento non riuscito: il saldo mostrato potrebbe non essere aggiornato."
+  "movements_refresh_failed": "Aggiornamento non riuscito: il saldo mostrato potrebbe non essere aggiornato.",
+  "staff_loan_closed_day": "Il %1$s la biblioteca è chiusa: scegli un'altra data di inizio o di restituzione."
 }

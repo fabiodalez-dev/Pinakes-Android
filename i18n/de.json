@@ -1493,5 +1493,6 @@
   "movements_empty_title": "Keine Bewegungen",
   "movements_empty_subtitle": "Hier erscheinen Gebühren, Zahlungen und Erlasse.",
   "movements_untitled": "Ausleihe",
-  "movements_refresh_failed": "Aktualisierung fehlgeschlagen: Der angezeigte Kontostand ist möglicherweise nicht aktuell."
+  "movements_refresh_failed": "Aktualisierung fehlgeschlagen: Der angezeigte Kontostand ist möglicherweise nicht aktuell.",
+  "staff_loan_closed_day": "Am %1$s ist die Bibliothek geschlossen: Wähle ein anderes Start- oder Rückgabedatum."
 }

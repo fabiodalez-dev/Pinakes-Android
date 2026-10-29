@@ -15,8 +15,9 @@ import kotlinx.serialization.json.JsonNames
 @Serializable
 data class MovementsPayload(
     val currency: String? = null,
-    @SerialName("balance_cents") val balanceCents: Int = 0,
-    /** Decimal string in [currency] ("4.50"); the app formats [balanceCents] when it is missing. */
+    /** Null when the server omits it: [balanceTotalCents] then reads [balance]. */
+    @SerialName("balance_cents") val balanceCents: Int? = null,
+    /** Decimal string in [currency] ("4.50"), the fallback when [balanceCents] is missing. */
     val balance: String? = null,
     /** Null when the server omits it: [accruedTotalCents] then adds up [accrued]. */
     @SerialName("accrued_cents") val accruedCents: Int? = null,
@@ -28,6 +29,14 @@ data class MovementsPayload(
 ) {
     /** The fines still accruing: the server's total, else the sum of its rows (an explicit 0 stays 0). */
     val accruedTotalCents: Int get() = accruedCents ?: accrued.sumOf { it.amountCents }
+
+    /** The balance in cents: `balance_cents`, else the decimal `balance` ("4.50", "-2,00"), else 0. */
+    val balanceTotalCents: Int get() = balanceCents ?: decimalToCents(balance) ?: 0
+
+    private companion object {
+        fun decimalToCents(raw: String?): Int? = raw?.trim()?.replace(',', '.')?.takeIf { it.isNotEmpty() }
+            ?.let { runCatching { java.math.BigDecimal(it).movePointRight(2).setScale(0, java.math.RoundingMode.HALF_UP).intValueExact() }.getOrNull() }
+    }
 }
 
 /** One ledger entry: a charge (positive amount), a payment, waiver or reversal (negative). */

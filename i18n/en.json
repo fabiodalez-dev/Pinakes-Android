@@ -1493,5 +1493,6 @@
   "movements_empty_title": "No movements",
   "movements_empty_subtitle": "Charges, payments and waivers will appear here.",
   "movements_untitled": "Loan",
-  "movements_refresh_failed": "Could not refresh: the balance shown may be out of date."
+  "movements_refresh_failed": "Could not refresh: the balance shown may be out of date.",
+  "staff_loan_closed_day": "The library is closed on %1$s: choose another start or return date."
 }

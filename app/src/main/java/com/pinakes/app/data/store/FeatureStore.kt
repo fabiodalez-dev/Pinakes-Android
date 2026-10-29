@@ -144,9 +144,9 @@ data class InstanceFeatures(
                 staffLibraryThingAvailable = f.staffLibraryThing && app,
                 // The server already turns these off in catalogue mode; the app does too, so a
                 // stale or inconsistent payload can never show circulation in a read-only catalogue.
-                finesAvailable = f.fines && circulation,
-                closuresCalendarAvailable = f.closuresCalendar && circulation,
-                circulationRulesAvailable = f.circulationRules && circulation,
+                finesAvailable = f.fines && app && circulation,
+                closuresCalendarAvailable = f.closuresCalendar && app && circulation,
+                circulationRulesAvailable = f.circulationRules && app && circulation,
             )
         }
     }

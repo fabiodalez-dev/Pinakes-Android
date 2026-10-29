@@ -49,6 +49,14 @@ class MovementsTest {
         assertEquals(120, json.decodeFromString<MovementsPayload>(serverBody).accruedTotalCents)
     }
 
+    @Test fun theDecimalBalanceIsTheFallbackForAMissingBalanceCents() {
+        assertEquals(450, json.decodeFromString<MovementsPayload>("""{"balance":"4.50"}""").balanceTotalCents)
+        assertEquals(-200, json.decodeFromString<MovementsPayload>("""{"balance":"-2,00"}""").balanceTotalCents)
+        assertEquals(0, json.decodeFromString<MovementsPayload>("""{"balance":"n/a"}""").balanceTotalCents)
+        // balance_cents wins when both are there.
+        assertEquals(300, json.decodeFromString<MovementsPayload>("""{"balance_cents":300,"balance":"9.99"}""").balanceTotalCents)
+    }
+
     @Test fun thePlannedNameMovementsIsReadToo() {
         val p = json.decodeFromString<MovementsPayload>("""{"balance_cents":0,"movements":[{"id":5,"type":"condono","amount_cents":-100}]}""")
         assertEquals(5, p.items.single().id)
@@ -56,7 +64,7 @@ class MovementsTest {
 
     @Test fun aBarePayloadMissingEveryFieldStillParses() {
         val p = json.decodeFromString<MovementsPayload>("{}")
-        assertEquals(0, p.balanceCents)
+        assertEquals(0, p.balanceTotalCents)
         assertFalse(p.debtBlocked)
         assertNull(p.debtBlockThresholdCents)
         assertTrue(p.items.isEmpty())

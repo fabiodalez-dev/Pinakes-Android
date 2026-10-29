@@ -127,7 +127,7 @@ private fun MovementsContent(data: MovementsPayload) {
 
 @Composable
 private fun BalanceCard(data: MovementsPayload, money: (Int) -> String) {
-    val kind = MoneyFormat.balanceKind(data.balanceCents)
+    val kind = MoneyFormat.balanceKind(data.balanceTotalCents)
     Column(Modifier.padding(horizontal = Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Surface(
             shape = MaterialTheme.shapes.medium,
@@ -138,7 +138,7 @@ private fun BalanceCard(data: MovementsPayload, money: (Int) -> String) {
                 Text(stringResource(R.string.movements_balance), style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    money(kotlin.math.abs(data.balanceCents)),
+                    money(kotlin.math.abs(data.balanceTotalCents)),
                     style = MaterialTheme.typography.headlineMedium,
                     color = if (kind == BalanceKind.Owed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                 )

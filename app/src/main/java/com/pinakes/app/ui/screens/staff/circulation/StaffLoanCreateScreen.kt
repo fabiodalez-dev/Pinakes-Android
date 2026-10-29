@@ -96,6 +96,12 @@ data class LoanCreateUiState(
     val canHandOver: Boolean get() = !reservation && (start == null || start == today)
 
     val canSubmit: Boolean get() = user != null && book != null && !saving
+
+    /** Closed days of the library (closures calendar) from the availability payload. */
+    val closedDates: Set<String> get() = calendar?.closedDates?.toSet().orEmpty()
+
+    /** The chosen start or end when it falls on a day the library is closed, else null. */
+    val closedDateChosen: String? get() = listOfNotNull(start, end).firstOrNull { it in closedDates }
 }
 
 /**
@@ -195,6 +201,11 @@ class StaffLoanCreateViewModel @Inject constructor(
             _state.update { it.copy(error = StaffMessage(R.string.staff_loan_dates_order)) }
             return
         }
+        // Neither a start nor a return on a day the library is closed (closures calendar).
+        s.closedDateChosen?.let { day ->
+            _state.update { it.copy(error = StaffMessage(R.string.staff_loan_closed_day, args = listOf(DateFormat.date(day)))) }
+            return
+        }
         _state.update { it.copy(saving = true, error = null) }
         viewModelScope.launch {
             if (s.reservation) {
@@ -292,8 +303,8 @@ fun StaffLoanCreateScreen(onNavigateUp: () -> Unit, onCreated: (loanId: Int) -> 
                 )
             }
             FormSectionTitle(stringResource(R.string.staff_loan_dates))
-            DatePickerField(stringResource(if (state.reservation) R.string.staff_reservation_from else R.string.staff_loan_loaned), state.start, vm::setStart, allowClear = true)
-            DatePickerField(stringResource(if (state.reservation) R.string.staff_reservation_to else R.string.staff_loan_due), state.end, vm::setEnd, allowClear = true)
+            DatePickerField(stringResource(if (state.reservation) R.string.staff_reservation_from else R.string.staff_loan_loaned), state.start, vm::setStart, allowClear = true, disabledDates = state.closedDates)
+            DatePickerField(stringResource(if (state.reservation) R.string.staff_reservation_to else R.string.staff_loan_due), state.end, vm::setEnd, allowClear = true, disabledDates = state.closedDates)
             Text(
                 stringResource(if (state.reservation) R.string.staff_reservation_dates_hint else R.string.staff_loan_dates_hint),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
