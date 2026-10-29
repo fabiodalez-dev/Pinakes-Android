@@ -18,13 +18,17 @@ data class MovementsPayload(
     @SerialName("balance_cents") val balanceCents: Int = 0,
     /** Decimal string in [currency] ("4.50"); the app formats [balanceCents] when it is missing. */
     val balance: String? = null,
-    @SerialName("accrued_cents") val accruedCents: Int = 0,
+    /** Null when the server omits it: [accruedTotalCents] then adds up [accrued]. */
+    @SerialName("accrued_cents") val accruedCents: Int? = null,
     val accrued: List<AccruedFine> = emptyList(),
     @SerialName("debt_block_threshold_cents") val debtBlockThresholdCents: Int? = null,
     @SerialName("debt_blocked") val debtBlocked: Boolean = false,
     /** The server names the list `items`; the 0.9.0 plan called it `movements`: both are read. */
     @JsonNames("movements") val items: List<Movement> = emptyList(),
-)
+) {
+    /** The fines still accruing: the server's total, else the sum of its rows (an explicit 0 stays 0). */
+    val accruedTotalCents: Int get() = accruedCents ?: accrued.sumOf { it.amountCents }
+}
 
 /** One ledger entry: a charge (positive amount), a payment, waiver or reversal (negative). */
 @Serializable

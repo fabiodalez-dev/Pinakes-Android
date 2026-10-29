@@ -41,6 +41,14 @@ class MovementsTest {
         assertEquals(6, p.accrued.single().daysLate)
     }
 
+    @Test fun theAccruedTotalFallsBackToTheRowsOnlyWhenAbsent() {
+        val rowsOnly = json.decodeFromString<MovementsPayload>("""{"accrued":[{"loan_id":1,"amount_cents":120},{"loan_id":2,"amount_cents":30}]}""")
+        assertEquals(150, rowsOnly.accruedTotalCents)
+        val explicit = json.decodeFromString<MovementsPayload>("""{"accrued_cents":0,"accrued":[{"loan_id":1,"amount_cents":120}]}""")
+        assertEquals(0, explicit.accruedTotalCents)
+        assertEquals(120, json.decodeFromString<MovementsPayload>(serverBody).accruedTotalCents)
+    }
+
     @Test fun thePlannedNameMovementsIsReadToo() {
         val p = json.decodeFromString<MovementsPayload>("""{"balance_cents":0,"movements":[{"id":5,"type":"condono","amount_cents":-100}]}""")
         assertEquals(5, p.items.single().id)

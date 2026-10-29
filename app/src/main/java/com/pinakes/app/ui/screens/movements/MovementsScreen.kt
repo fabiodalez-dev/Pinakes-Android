@@ -102,9 +102,9 @@ private fun MovementsContent(data: MovementsPayload) {
     ) {
         item(key = "balance") { BalanceCard(data, money) }
         // The total shows even when the server sends it without the per-loan rows.
-        if (data.accruedCents != 0 || data.accrued.isNotEmpty()) {
+        if (data.accruedTotalCents != 0 || data.accrued.isNotEmpty()) {
             item(key = "accrued-title") {
-                SectionHeader(title = stringResource(R.string.movements_accrued_title, money(data.accruedCents)))
+                SectionHeader(title = stringResource(R.string.movements_accrued_title, money(data.accruedTotalCents)))
             }
             // Keys fall back to the position: a row without its id must not collide with another.
             itemsIndexed(data.accrued, key = { i, a -> MoneyFormat.rowKey("accrued", i, a.loanId) }) { _, a -> AccruedRow(a, money) }
