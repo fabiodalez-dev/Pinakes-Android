@@ -133,7 +133,9 @@ fun StaffUserScreen(onNavigateUp: () -> Unit, onOpenLoan: (Int) -> Unit, onNewLo
                             InfoLine(stringResource(R.string.staff_reservations), user.activeReservations.toString())
                             if (!user.eligible) {
                                 Text(
-                                    stringResource(R.string.staff_user_not_eligible, user.eligibilityReason ?: user.status.orEmpty()),
+                                    // A known reason (debt block, expired card, suspension) in our words.
+                                    com.pinakes.app.data.staff.StaffErrors.eligibilityRes(user.eligibilityReason)?.let { stringResource(it) }
+                                        ?: stringResource(R.string.staff_user_not_eligible, user.eligibilityReason ?: user.status.orEmpty()),
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
                                 )
                             }

@@ -70,6 +70,19 @@ data class InstanceFeatures(
     val staffFrbrAvailable: Boolean = false,
     val staffDigitalLibraryAvailable: Boolean = false,
     val staffLibraryThingAvailable: Boolean = false,
+    /**
+     * Pinakes 0.9.0 toggles (`features.fines`, `closures_calendar`, `circulation_rules`). Hidden
+     * until a server advertises them: an older server has no ledger, no closures calendar and
+     * no patron-type rules, and the app then behaves exactly as before.
+     */
+    val finesAvailable: Boolean = false,
+    /**
+     * Informational: the calendar honours `closed_dates` whatever this says, because the server
+     * already sends an empty list with the toggle off, and a Mobile API 1.9.0 server sends closures
+     * before the flag existed (ignoring them would offer days the server then moves).
+     */
+    val closuresCalendarAvailable: Boolean = false,
+    val circulationRulesAvailable: Boolean = false,
 ) {
     /** Library tab (loans + reservations) is shown only when at least one of them is enabled. */
     val showLibrary: Boolean get() = loans || reservations
@@ -82,9 +95,60 @@ data class InstanceFeatures(
     /** Book reviews (read + write) surfaced on book detail and the "My reviews" page. */
     val showReviews: Boolean get() = reviews
 
+    /** The balance and movements page (fines ledger on, loans offered). */
+    val showMovements: Boolean get() = finesAvailable && loans && !catalogueMode
+
     companion object {
         /** Safe default before/without `/health`: app features enabled, registration hidden. */
         val AllEnabled = InstanceFeatures()
+
+        /**
+         * The flags a `/health` payload grants. Pure, so the mapping is unit-tested without the
+         * encrypted preferences; the plugin probes ([bookClub], [periodicals]) keep their own value.
+         */
+        fun from(health: HealthPayload, bookClub: Boolean = false, periodicals: Boolean = false): InstanceFeatures {
+            val f = health.features
+            val app = health.appAccessEnabled
+            val circulation = !health.catalogueMode
+            return InstanceFeatures(
+                catalogueMode = health.catalogueMode,
+                catalog = f.catalog,
+                loans = f.loans,
+                reservations = f.reservations,
+                wishlist = f.wishlist,
+                messages = f.messages,
+                notifications = f.notifications,
+                push = f.push,
+                reviews = f.reviews,
+                registrationEnabled = health.registrationEnabled,
+                bookClubAvailable = bookClub,
+                periodicalsAvailable = periodicals,
+                archivesAvailable = f.archives && app,
+                desiderataAvailable = f.desiderata && app,
+                staffCatalogAvailable = f.staffCatalog && app,
+                catalogSyncAvailable = f.catalogSync && app,
+                calendarFeedAvailable = f.calendarFeed && app && circulation,
+                staffCirculationAvailable = f.staffCirculation && app && circulation,
+                staffCopiesAvailable = f.staffCopies && app,
+                staffSeriesAvailable = f.staffSeries && app,
+                staffMergesAvailable = f.staffMerges && app,
+                staffLabelsAvailable = f.staffLabels && app,
+                staffImportsAvailable = f.staffImports && app,
+                staffCoversAvailable = f.staffCovers && app,
+                staffDesiderataAvailable = f.staffDesiderata && app,
+                staffArchivesAvailable = f.staffArchives && app,
+                staffPeriodicalsAvailable = f.staffPeriodicals && app,
+                staffBookClubAvailable = f.staffBookClub && app,
+                staffFrbrAvailable = f.staffFrbr && app,
+                staffDigitalLibraryAvailable = f.staffDigitalLibrary && app,
+                staffLibraryThingAvailable = f.staffLibraryThing && app,
+                // The server already turns these off in catalogue mode; the app does too, so a
+                // stale or inconsistent payload can never show circulation in a read-only catalogue.
+                finesAvailable = f.fines && app && circulation,
+                closuresCalendarAvailable = f.closuresCalendar && app && circulation,
+                circulationRulesAvailable = f.circulationRules && app && circulation,
+            )
+        }
     }
 }
 
@@ -112,39 +176,10 @@ class FeatureStore(context: Context) {
      * [setPeriodicalsAvailable]) and are preserved, not clobbered.
      */
     fun update(health: HealthPayload) {
-        val f = health.features
-        val value = InstanceFeatures(
-            catalogueMode = health.catalogueMode,
-            catalog = f.catalog,
-            loans = f.loans,
-            reservations = f.reservations,
-            wishlist = f.wishlist,
-            messages = f.messages,
-            notifications = f.notifications,
-            push = f.push,
-            reviews = f.reviews,
-            registrationEnabled = health.registrationEnabled,
-            bookClubAvailable = prefs.getBoolean(KEY_BOOK_CLUB, false),
-            periodicalsAvailable = prefs.getBoolean(KEY_PERIODICALS, false),
-            archivesAvailable = f.archives && health.appAccessEnabled,
-            desiderataAvailable = f.desiderata && health.appAccessEnabled,
-            staffCatalogAvailable = f.staffCatalog && health.appAccessEnabled,
-            catalogSyncAvailable = f.catalogSync && health.appAccessEnabled,
-            calendarFeedAvailable = f.calendarFeed && health.appAccessEnabled && !health.catalogueMode,
-            staffCirculationAvailable = f.staffCirculation && health.appAccessEnabled && !health.catalogueMode,
-            staffCopiesAvailable = f.staffCopies && health.appAccessEnabled,
-            staffSeriesAvailable = f.staffSeries && health.appAccessEnabled,
-            staffMergesAvailable = f.staffMerges && health.appAccessEnabled,
-            staffLabelsAvailable = f.staffLabels && health.appAccessEnabled,
-            staffImportsAvailable = f.staffImports && health.appAccessEnabled,
-            staffCoversAvailable = f.staffCovers && health.appAccessEnabled,
-            staffDesiderataAvailable = f.staffDesiderata && health.appAccessEnabled,
-            staffArchivesAvailable = f.staffArchives && health.appAccessEnabled,
-            staffPeriodicalsAvailable = f.staffPeriodicals && health.appAccessEnabled,
-            staffBookClubAvailable = f.staffBookClub && health.appAccessEnabled,
-            staffFrbrAvailable = f.staffFrbr && health.appAccessEnabled,
-            staffDigitalLibraryAvailable = f.staffDigitalLibrary && health.appAccessEnabled,
-            staffLibraryThingAvailable = f.staffLibraryThing && health.appAccessEnabled,
+        val value = InstanceFeatures.from(
+            health,
+            bookClub = prefs.getBoolean(KEY_BOOK_CLUB, false),
+            periodicals = prefs.getBoolean(KEY_PERIODICALS, false),
         )
         prefs.edit()
             .putBoolean(KEY_KNOWN, true)
@@ -177,6 +212,9 @@ class FeatureStore(context: Context) {
             .putBoolean(KEY_STAFF_FRBR, value.staffFrbrAvailable)
             .putBoolean(KEY_STAFF_DIGITAL, value.staffDigitalLibraryAvailable)
             .putBoolean(KEY_STAFF_LIBRARYTHING, value.staffLibraryThingAvailable)
+            .putBoolean(KEY_FINES, value.finesAvailable)
+            .putBoolean(KEY_CLOSURES_CALENDAR, value.closuresCalendarAvailable)
+            .putBoolean(KEY_CIRCULATION_RULES, value.circulationRulesAvailable)
             .apply()
         _features.value = value
     }
@@ -236,6 +274,9 @@ class FeatureStore(context: Context) {
             staffFrbrAvailable = prefs.getBoolean(KEY_STAFF_FRBR, false),
             staffDigitalLibraryAvailable = prefs.getBoolean(KEY_STAFF_DIGITAL, false),
             staffLibraryThingAvailable = prefs.getBoolean(KEY_STAFF_LIBRARYTHING, false),
+            finesAvailable = prefs.getBoolean(KEY_FINES, false),
+            closuresCalendarAvailable = prefs.getBoolean(KEY_CLOSURES_CALENDAR, false),
+            circulationRulesAvailable = prefs.getBoolean(KEY_CIRCULATION_RULES, false),
         )
     }
 
@@ -271,5 +312,8 @@ class FeatureStore(context: Context) {
         private const val KEY_STAFF_FRBR = "f_staff_frbr"
         private const val KEY_STAFF_DIGITAL = "f_staff_digital_library"
         private const val KEY_STAFF_LIBRARYTHING = "f_staff_librarything"
+        private const val KEY_FINES = "f_fines"
+        private const val KEY_CLOSURES_CALENDAR = "f_closures_calendar"
+        private const val KEY_CIRCULATION_RULES = "f_circulation_rules"
     }
 }

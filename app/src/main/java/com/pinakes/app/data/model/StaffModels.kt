@@ -206,6 +206,8 @@ data class StaffCopy(
     val available: Boolean? = null,
     /** Copy-code lookup only: the open loan on this copy. */
     val loan: StaffLoan? = null,
+    /** Kept for consultation in the library (Pinakes 0.9.0); absent on older servers. */
+    @SerialName("consultation_only") val consultationOnly: Boolean = false,
 )
 
 @Serializable

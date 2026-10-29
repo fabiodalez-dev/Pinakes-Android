@@ -68,6 +68,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 
 enum class DeskPicker { USER, BOOK }
@@ -83,6 +84,10 @@ data class LoanCreateUiState(
     val notes: String = "",
     val calendar: AvailabilityCalendar? = null,
     val calendarFailed: Boolean = false,
+    /** The availability (and its closures) is being fetched: submit waits for it. */
+    val calendarLoading: Boolean = false,
+    /** Number of the latest availability request: only its answer is applied. */
+    val calendarRequest: Int = 0,
     val picker: DeskPicker? = null,
     val saving: Boolean = false,
     val error: StaffMessage? = null,
@@ -95,7 +100,28 @@ data class LoanCreateUiState(
     /** "Hand over now" only makes sense for a loan starting today. */
     val canHandOver: Boolean get() = !reservation && (start == null || start == today)
 
-    val canSubmit: Boolean get() = user != null && book != null && !saving
+    val canSubmit: Boolean get() = user != null && book != null && !saving && !calendarLoading
+
+    /** Closed days of the library (closures calendar) from the availability payload. */
+    val closedDates: Set<String> get() = calendar?.closedDates?.toSet().orEmpty()
+
+    /**
+     * The start or end that falls on a day the library is closed, else null. A loan without a
+     * start begins today, so today is checked then too.
+     */
+    val closedDateChosen: String? get() = listOfNotNull(start ?: today.takeIf { !reservation }, end).firstOrNull { it in closedDates }
+
+    /** A new availability request starts: it supersedes any one still in flight. */
+    fun startCalendarRequest(): LoanCreateUiState = copy(calendarLoading = true, calendarRequest = calendarRequest + 1)
+
+    /**
+     * The answer to availability request [request]. An answer to an older request (the staff
+     * changed book or user meanwhile) is dropped: it neither replaces the calendar nor ends the
+     * loading of the latest one.
+     */
+    fun withCalendarResult(request: Int, calendar: AvailabilityCalendar?, forbidden: Boolean = false): LoanCreateUiState =
+        if (request != calendarRequest) this
+        else copy(calendar = calendar, calendarFailed = calendar == null, calendarLoading = false, forbidden = this.forbidden || forbidden)
 }
 
 /**
@@ -174,9 +200,11 @@ class StaffLoanCreateViewModel @Inject constructor(
     /** Availability for the chosen book, from this user's point of view (their own holds count as free). */
     private suspend fun loadCalendar() {
         val book = _state.value.book ?: return
+        val request = _state.updateAndGet { it.startCalendarRequest() }.calendarRequest
         when (val res = circulation.availability(book.id, _state.value.user?.id)) {
-            is ApiResult.Success -> _state.update { it.copy(calendar = res.data, calendarFailed = false) }
-            is ApiResult.Failure -> _state.update { it.copy(calendar = null, calendarFailed = true, forbidden = res.isForbidden()) }
+            is ApiResult.Success -> _state.update { it.withCalendarResult(request, res.data) }
+            // A failed fetch keeps the old fallback: the form can be sent, the server decides.
+            is ApiResult.Failure -> _state.update { it.withCalendarResult(request, null, forbidden = res.isForbidden()) }
         }
     }
 
@@ -190,9 +218,14 @@ class StaffLoanCreateViewModel @Inject constructor(
         val s = _state.value
         val user = s.user ?: return
         val book = s.book ?: return
-        if (s.saving) return
+        if (!s.canSubmit) return
         if (s.start != null && s.end != null && s.end < s.start) {
             _state.update { it.copy(error = StaffMessage(R.string.staff_loan_dates_order)) }
+            return
+        }
+        // Neither a start nor a return on a day the library is closed (closures calendar).
+        s.closedDateChosen?.let { day ->
+            _state.update { it.copy(error = StaffMessage(R.string.staff_loan_closed_day, args = listOf(DateFormat.date(day)))) }
             return
         }
         _state.update { it.copy(saving = true, error = null) }
@@ -276,7 +309,10 @@ fun StaffLoanCreateScreen(onNavigateUp: () -> Unit, onCreated: (loanId: Int) -> 
                 stringResource(R.string.staff_pick_user_placeholder), onClick = { vm.openPicker(DeskPicker.USER) },
             )
             state.user?.note?.let {
-                Text(stringResource(R.string.staff_user_not_eligible, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                // The note is the server's eligibility_reason: a known one in our words.
+                val text = com.pinakes.app.data.staff.StaffErrors.eligibilityRes(it)?.let { res -> stringResource(res) }
+                    ?: stringResource(R.string.staff_user_not_eligible, it)
+                Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
             FormSectionTitle(stringResource(R.string.staff_pick_book))
             PickedField(stringResource(R.string.staff_pick_book), state.book?.title, stringResource(R.string.staff_pick_book_placeholder),
@@ -289,8 +325,8 @@ fun StaffLoanCreateScreen(onNavigateUp: () -> Unit, onCreated: (loanId: Int) -> 
                 )
             }
             FormSectionTitle(stringResource(R.string.staff_loan_dates))
-            DatePickerField(stringResource(if (state.reservation) R.string.staff_reservation_from else R.string.staff_loan_loaned), state.start, vm::setStart, allowClear = true)
-            DatePickerField(stringResource(if (state.reservation) R.string.staff_reservation_to else R.string.staff_loan_due), state.end, vm::setEnd, allowClear = true)
+            DatePickerField(stringResource(if (state.reservation) R.string.staff_reservation_from else R.string.staff_loan_loaned), state.start, vm::setStart, allowClear = true, disabledDates = state.closedDates)
+            DatePickerField(stringResource(if (state.reservation) R.string.staff_reservation_to else R.string.staff_loan_due), state.end, vm::setEnd, allowClear = true, disabledDates = state.closedDates)
             Text(
                 stringResource(if (state.reservation) R.string.staff_reservation_dates_hint else R.string.staff_loan_dates_hint),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,

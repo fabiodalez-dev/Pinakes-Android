@@ -42,6 +42,7 @@ import com.pinakes.app.ui.screens.periodicals.StandaloneArticlesScreen
 import com.pinakes.app.ui.screens.periodicals.StandaloneArticleScreen
 import com.pinakes.app.ui.screens.periodicals.PeriodicalsScreen
 import com.pinakes.app.ui.screens.reviews.MyReviewsScreen
+import com.pinakes.app.ui.screens.movements.MovementsScreen
 import com.pinakes.app.ui.screens.staff.StaffAuthorsScreen
 import com.pinakes.app.ui.screens.staff.StaffBookEditScreen
 import com.pinakes.app.ui.screens.staff.StaffBooksScreen
@@ -153,6 +154,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                 onOpenContact = { navController.navigate(Routes.CONTACT) },
                 onOpenMyReviews = { navController.navigate(Routes.MY_REVIEWS) },
+                onOpenMovements = { navController.navigate(Routes.MOVEMENTS) },
                 onOpenBookClub = { navController.navigate(Routes.BOOK_CLUB) },
                 onOpenPeriodicals = { navController.navigate(Routes.PERIODICALS) },
                 onOpenArticles = { navController.navigate(Routes.standaloneArticles()) },
@@ -487,6 +489,14 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onNavigateUp = { navController.popBackStack() },
                 onOpenBook = { id -> navController.navigate(Routes.bookDetail(id)) },
             )
+        }
+
+        composable(
+            Routes.MOVEMENTS,
+            enterTransition = slideIn,
+            popExitTransition = slideOut,
+        ) {
+            MovementsScreen(onNavigateUp = { navController.popBackStack() })
         }
 
         composable(

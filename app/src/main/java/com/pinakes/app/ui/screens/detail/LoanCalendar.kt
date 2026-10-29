@@ -67,7 +67,7 @@ import java.util.Locale
 private data class DayTint(val container: Color, val onContainer: Color, val rule: Color = Color.Transparent)
 
 /** Per-day availability state used to colour a calendar cell. */
-private enum class DayKind { Free, Partial, Full, PastOrUnknown }
+internal enum class DayKind { Free, Partial, Full, Closed, PastOrUnknown }
 
 @Composable
 private fun tintFor(kind: DayKind, dark: Boolean): DayTint = when (kind) {
@@ -78,6 +78,9 @@ private fun tintFor(kind: DayKind, dark: Boolean): DayTint = when (kind) {
         else ruled(DueSoonContainerLight, DueSoonOnContainerLight)
     DayKind.Full ->
         ruled(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
+    // The library is closed: a neutral grey, never the red of a booked day (nothing is on loan).
+    DayKind.Closed ->
+        ruled(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
     DayKind.PastOrUnknown ->
         DayTint(Color.Transparent, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f))
 }
@@ -87,7 +90,7 @@ private fun ruled(container: Color, onContainer: Color) =
     DayTint(container, onContainer, mix(onContainer, container, .22f))
 
 /** Index per-day data by ISO date for O(1) lookup, and the set of unavailable dates. */
-private class CalendarModel(private val source: AvailabilityCalendar) {
+internal class CalendarModel(private val source: AvailabilityCalendar) {
     private val byDate: Map<String, String> =
         source.days.associate { it.date to it.state } // date -> state
     private val unavailable: Set<String> = source.unavailableDates.toSet()
@@ -99,6 +102,8 @@ private class CalendarModel(private val source: AvailabilityCalendar) {
     fun kind(date: LocalDate, today: LocalDate): DayKind {
         val iso = date.toString()
         if (date.isBefore(today)) return DayKind.PastOrUnknown
+        // Closures calendar: no start or pickup on a day the library is closed.
+        if (source.isClosed(iso)) return DayKind.Closed
         // Same predicate as loanWindowFrom(): a red day is a day that caps the loan.
         if (source.isFullyBooked(iso)) return DayKind.Full
         return when (byDate[iso]) {
@@ -134,7 +139,10 @@ fun LoanCalendar(
     anyFutureDay: Boolean = false,
     /** The day the grid treats as today; null reads the device clock once. Tests pin it. */
     today: LocalDate? = null,
-    /** A fully-booked future day cannot be picked; tapping it calls this so the sheet can say why. */
+    /**
+     * A fully-booked or closed future day cannot be picked; tapping it calls this so the sheet
+     * can say why (it tells the two apart with [AvailabilityCalendar.isClosed]).
+     */
     onBlockedTap: ((isoDate: String) -> Unit)? = null,
 ) {
     val dark = LocalPinakesColors.current.darkMode
@@ -171,7 +179,7 @@ fun LoanCalendar(
         )
         if (!anyFutureDay) {
             Spacer(Modifier.height(Spacing.md))
-            Legend(dark = dark)
+            Legend(dark = dark, showClosed = calendar.closedDates.isNotEmpty())
         }
     }
 }
@@ -316,8 +324,9 @@ private fun DayCell(
         .then(
             when {
                 selectable -> Modifier.clickable { onSelect(iso) }
-                // Not pickable, but a tap must still explain why (every copy is booked).
-                onBlockedTap != null && kind == DayKind.Full -> Modifier.clickable { onBlockedTap(iso) }
+                // Not pickable, but a tap must still explain why (every copy is booked, or the
+                // library is closed that day).
+                onBlockedTap != null && (kind == DayKind.Full || kind == DayKind.Closed) -> Modifier.clickable { onBlockedTap(iso) }
                 else -> Modifier
             }
         )
@@ -334,7 +343,7 @@ private fun DayCell(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Legend(dark: Boolean) {
+private fun Legend(dark: Boolean, showClosed: Boolean = false) {
     // Wraps on narrow screens and with long translations instead of running off the edge.
     FlowRow(
         Modifier.fillMaxWidth(),
@@ -345,6 +354,10 @@ private fun Legend(dark: Boolean) {
         LegendItem(MaterialTheme.colorScheme.surface, stringResource(R.string.book_loan_legend_available), MaterialTheme.colorScheme.outline)
         tintFor(DayKind.Partial, dark).let { LegendItem(it.container, stringResource(R.string.book_loan_legend_limited), it.rule) }
         tintFor(DayKind.Full, dark).let { LegendItem(it.container, stringResource(R.string.book_loan_legend_unavailable), it.rule) }
+        // Only when the library publishes closures: an empty key would explain nothing.
+        if (showClosed) {
+            tintFor(DayKind.Closed, dark).let { LegendItem(it.container, stringResource(R.string.book_loan_legend_closed), it.rule) }
+        }
     }
 }
 

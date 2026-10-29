@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.drop
 import com.pinakes.app.data.repository.CatalogRepository
 import com.pinakes.app.data.repository.LibraryRepository
 import com.pinakes.app.data.repository.WishlistRepository
+import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.R
 import com.pinakes.app.ui.common.UiState
 import com.pinakes.app.ui.navigation.Routes
@@ -49,6 +50,11 @@ data class BookDetailUiState(
     val syncedAt: String? = null,
     /** Device connectivity: a page loaded online hides its loan actions when it drops. */
     val connected: Boolean = true,
+    /**
+     * What this reader's patron type allows on the title (Pinakes 0.9.0), from the availability
+     * payload; null until known (older server, rules off, fetch failed): the usual button then.
+     */
+    val rules: ViewerRules? = null,
 ) {
     /** Cached page or no connection: no loan/reservation affordance, no current availability. */
     val offlineNow: Boolean get() = offline || !connected
@@ -66,6 +72,7 @@ class BookDetailViewModel @Inject constructor(
     private val library: LibraryRepository,
     private val wishlist: WishlistRepository,
     private val connectivity: ConnectivityObserver,
+    private val featureStore: FeatureStore,
 ) : ViewModel() {
 
     // The book id arrives as a navigation argument; Hilt populates SavedStateHandle from it.
@@ -95,7 +102,7 @@ class BookDetailViewModel @Inject constructor(
                         wishlisted = res.data.personalHistory?.hasWishlisted ?: it.wishlisted,
                         offline = false,
                     )
-                }
+                }.also { loadRules() }
                 is ApiResult.Failure -> {
                     val cached = if (res.code == ErrorCodes.NETWORK) catalog.bookOffline(bookId) else null
                     val syncedAt = if (cached != null) catalog.lastSyncedAt() else null
@@ -104,6 +111,20 @@ class BookDetailViewModel @Inject constructor(
                         else it.copy(content = UiState.Error(res.message, res.code, R.string.book_error_load))
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * With the server's circulation rules on, learn up front whether the title is consultation
+     * only or the waitlist is closed for this reader, so the button says so before a tap. Without
+     * the flag (an older server) nothing is fetched and the page behaves as it always did.
+     */
+    private fun loadRules() {
+        if (!featureStore.features.value.circulationRulesAvailable) return
+        viewModelScope.launch {
+            (catalog.bookAvailability(bookId) as? ApiResult.Success)?.data?.let { cal ->
+                _state.update { it.copy(rules = ViewerRules.of(cal)) }
             }
         }
     }
@@ -164,7 +185,8 @@ class BookDetailViewModel @Inject constructor(
         viewModelScope.launch {
             when (val res = catalog.bookAvailability(bookId)) {
                 is ApiResult.Success -> _state.update {
-                    it.copy(availabilityLoading = false, availability = res.data, availabilityFallback = false)
+                    it.copy(availabilityLoading = false, availability = res.data, availabilityFallback = false,
+                        rules = ViewerRules.of(res.data))
                 }
                 is ApiResult.Failure -> _state.update {
                     it.copy(availabilityLoading = false, availability = null, availabilityFallback = true)
@@ -212,13 +234,17 @@ class BookDetailViewModel @Inject constructor(
                     // A `not_available` refusal carries the server's own explanation (the
                     // longest loan still possible, and from which day the book is booked):
                     // that message, not the generic conflict text, is what the reader sees.
+                    // Patron-type refusals (Pinakes 0.9.0) get our wording and turn the button
+                    // into its disabled state; unknown codes keep the server's message.
+                    val ownText = CirculationRules.requestErrorRes(res)
+                    val rules = CirculationRules.rulesAfterRefusal(_state.value.rules, res.code)
                     when {
-                        res.code == ErrorCodes.CONFLICT ->
-                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = null, snackbarRes = R.string.snackbar_request_conflict) }
+                        ownText != null ->
+                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = null, snackbarRes = ownText, rules = rules) }
                         res.serverMessage() != null ->
-                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = res.serverMessage(), snackbarRes = null) }
+                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = res.serverMessage(), snackbarRes = null, rules = rules) }
                         else ->
-                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = null, snackbarRes = R.string.snackbar_request_error) }
+                            _state.update { it.copy(reserveBusy = false, showLoanSheet = false, snackbar = null, snackbarRes = R.string.snackbar_request_error, rules = rules) }
                     }
                 }
             }

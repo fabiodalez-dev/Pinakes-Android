@@ -20,6 +20,8 @@ object Routes {
     const val NOTIFICATIONS = "notifications"
     const val CONTACT = "contact"
     const val MY_REVIEWS = "my-reviews"
+    /** Balance and movements of the fines ledger (Pinakes 0.9.0, `features.fines`). */
+    const val MOVEMENTS = "movements"
 
     const val BOOK_DETAIL = "book/{bookId}"
     fun bookDetail(bookId: Int): String = "book/$bookId"

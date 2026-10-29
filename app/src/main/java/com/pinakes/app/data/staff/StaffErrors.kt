@@ -17,6 +17,11 @@ object StaffErrors {
         "not_eligible" -> R.string.staff_err_not_eligible
         "not_available" -> R.string.staff_err_not_available
         "max_loans_reached" -> R.string.staff_err_max_loans
+        // Circulation rules of the borrower's patron type (Pinakes 0.9.0).
+        "media_limit_reached" -> R.string.staff_err_media_limit
+        "not_loanable" -> R.string.staff_err_not_loanable
+        "reservations_disabled" -> R.string.staff_err_reservations_disabled
+        "reservation_limit_reached" -> R.string.staff_err_reservation_limit
         "loan_closed" -> R.string.staff_err_loan_closed
         "concurrent_retry" -> R.string.staff_err_concurrent_retry
         "not_returnable" -> R.string.staff_err_not_returnable
@@ -43,7 +48,25 @@ object StaffErrors {
         else -> null
     }
 
-    /** The resource for [failure], when its code is one of ours. */
+    /**
+     * The resource for [failure], when its code is one of ours. A 409 `not_eligible` carries the
+     * core reason in `meta.reason` (`debt_block`, `card_expired`, `user_suspended`): the precise
+     * wording when we know it, the generic one otherwise.
+     */
     @StringRes
-    fun messageRes(failure: ApiResult.Failure): Int? = messageRes(failure.code)
+    fun messageRes(failure: ApiResult.Failure): Int? =
+        if (failure.code == "not_eligible") eligibilityRes(failure.meta?.reason) ?: messageRes(failure.code)
+        else messageRes(failure.code)
+
+    /**
+     * Wording for an `eligibility_reason` (user lists, loan create) or a `not_eligible` reason;
+     * null for a reason this app version does not know (the caller shows the raw value).
+     */
+    @StringRes
+    fun eligibilityRes(reason: String?): Int? = when (reason) {
+        "debt_block" -> R.string.staff_err_debt_block
+        "card_expired" -> R.string.staff_err_card_expired
+        "user_suspended" -> R.string.staff_err_user_suspended
+        else -> null
+    }
 }

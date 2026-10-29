@@ -224,6 +224,8 @@ internal fun DatePickerField(
     onChange: (String?) -> Unit,
     allowClear: Boolean = false,
     enabled: Boolean = true,
+    /** Days the dialog refuses (yyyy-MM-dd), e.g. the library's closures; empty = none. */
+    disabledDates: Set<String> = emptySet(),
 ) {
     var open by remember { mutableStateOf(false) }
     PickerRow(
@@ -235,7 +237,16 @@ internal fun DatePickerField(
     )
     if (open) {
         val initial = value?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-        val pickerState = rememberDatePickerState(initialSelectedDateMillis = initial?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli())
+        val selectable = remember(disabledDates) {
+            object : androidx.compose.material3.SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                    Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneOffset.UTC).toLocalDate().toString() !in disabledDates
+            }
+        }
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = initial?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli(),
+            selectableDates = selectable,
+        )
         DatePickerDialog(
             onDismissRequest = { open = false },
             confirmButton = {
