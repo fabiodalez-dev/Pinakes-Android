@@ -994,6 +994,8 @@
   "staff_scan_next": "Scanner l’exemplaire suivant",
   "staff_loan_new_with_copy": "Nouveau prêt avec cet exemplaire",
   "staff_loan_open": "Ouvrir le prêt",
+  "staff_reservation_override_limits": "Ignorer les limites de réservation de la catégorie du lecteur",
+  "staff_reservation_override_limits_hint": "Comme dans le formulaire du site : la réservation est créée même au-delà des limites de la catégorie du lecteur.",
   "staff_hand_over_now": "Remettre maintenant",
   "staff_hand_over_now_hint": "Le lecteur emporte l’exemplaire au guichet : le prêt démarre aussitôt.",
   "staff_hand_over_future": "Un prêt qui commence plus tard est programmé et remis ce jour-là.",

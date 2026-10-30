@@ -218,4 +218,7 @@ data class ReservationWrite(
     @SerialName("expires_at") val expiresAt: String? = null,
     @SerialName("requested_from") val requestedFrom: String? = null,
     @SerialName("requested_to") val requestedTo: String? = null,
+    // Pinakes 0.9.0: staff may ignore the patron type's reservation limits, as the website's
+    // "new reservation" form allows. Null is omitted, so an older server never sees the key.
+    @SerialName("override_limits") val overrideLimits: Boolean? = null,
 )

@@ -994,6 +994,8 @@
   "staff_scan_next": "Scan the next copy",
   "staff_loan_new_with_copy": "New loan with this copy",
   "staff_loan_open": "Open the loan",
+  "staff_reservation_override_limits": "Ignore the reservation limits of the patron's type",
+  "staff_reservation_override_limits_hint": "As in the website form: the reservation is created even beyond the limits of the patron's type.",
   "staff_hand_over_now": "Hand over now",
   "staff_hand_over_now_hint": "The borrower takes the copy at the desk: the loan starts running at once.",
   "staff_hand_over_future": "A loan starting later is scheduled and handed over on that day.",
