@@ -994,6 +994,8 @@
   "staff_scan_next": "Nächstes Exemplar scannen",
   "staff_loan_new_with_copy": "Neue Ausleihe mit diesem Exemplar",
   "staff_loan_open": "Ausleihe öffnen",
+  "staff_reservation_override_limits": "Vormerkungsgrenzen der Leserkategorie ignorieren",
+  "staff_reservation_override_limits_hint": "Wie im Formular der Website: Die Vormerkung wird auch über die Grenzen der Leserkategorie hinaus angelegt.",
   "staff_hand_over_now": "Jetzt aushändigen",
   "staff_hand_over_now_hint": "Der Nutzer nimmt das Exemplar an der Theke mit: die Ausleihe läuft sofort.",
   "staff_hand_over_future": "Eine später beginnende Ausleihe wird geplant und an diesem Tag ausgehändigt.",

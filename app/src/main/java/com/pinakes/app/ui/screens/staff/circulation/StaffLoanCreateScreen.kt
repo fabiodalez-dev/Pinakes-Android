@@ -33,6 +33,7 @@ import com.pinakes.app.R
 import com.pinakes.app.data.model.AvailabilityCalendar
 import com.pinakes.app.data.model.LoanCreateRequest
 import com.pinakes.app.data.model.ReservationWrite
+import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.repository.StaffCirculationRepository
 import com.pinakes.app.data.repository.StaffRepository
@@ -94,6 +95,10 @@ data class LoanCreateUiState(
     val forbidden: Boolean = false,
     /** Loan id after a successful create (the screen opens it); -1 for a reservation. */
     val createdLoanId: Int? = null,
+    /** Patron-type rules are on (`features.circulation_rules`): their limits can be overridden. */
+    val limitsOverridable: Boolean = false,
+    /** Ignore the patron type's reservation limits (a new reservation only). */
+    val overrideLimits: Boolean = false,
 ) {
     val today: String get() = LocalDate.now().toString()
 
@@ -110,6 +115,15 @@ data class LoanCreateUiState(
      * start begins today, so today is checked then too.
      */
     val closedDateChosen: String? get() = listOfNotNull(start ?: today.takeIf { !reservation }, end).firstOrNull { it in closedDates }
+
+    /**
+     * The reservation sent to the server. The override is sent only when staff ticked it and the
+     * rules it overrides are on, the same condition under which the website shows the box.
+     */
+    fun reservationWrite(userId: Int, bookId: Int): ReservationWrite = ReservationWrite(
+        userId = userId, bookId = bookId, requestedFrom = start, requestedTo = end,
+        overrideLimits = true.takeIf { overrideLimits && limitsOverridable },
+    )
 
     /** A new availability request starts: it supersedes any one still in flight. */
     fun startCalendarRequest(): LoanCreateUiState = copy(calendarLoading = true, calendarRequest = calendarRequest + 1)
@@ -133,12 +147,14 @@ data class LoanCreateUiState(
 class StaffLoanCreateViewModel @Inject constructor(
     private val circulation: StaffCirculationRepository,
     private val staff: StaffRepository,
+    featureStore: FeatureStore,
     savedState: SavedStateHandle,
 ) : ViewModel() {
     private val _state = MutableStateFlow(
         LoanCreateUiState(
             reservation = savedState.get<Boolean>(Routes.ARG_RESERVATION_MODE) ?: false,
             copyCode = savedState.get<String>(Routes.ARG_COPY_CODE).orEmpty(),
+            limitsOverridable = featureStore.features.value.circulationRulesAvailable,
         ),
     )
     val state: StateFlow<LoanCreateUiState> = _state.asStateFlow()
@@ -213,6 +229,7 @@ class StaffLoanCreateViewModel @Inject constructor(
     fun setEnd(value: String?) = _state.update { it.copy(end = value) }
     fun setHandOver(value: Boolean) = _state.update { it.copy(handOverNow = value && it.canHandOver) }
     fun setNotes(value: String) = _state.update { it.copy(notes = value) }
+    fun setOverrideLimits(value: Boolean) = _state.update { it.copy(overrideLimits = value) }
 
     fun submit() {
         val s = _state.value
@@ -231,7 +248,7 @@ class StaffLoanCreateViewModel @Inject constructor(
         _state.update { it.copy(saving = true, error = null) }
         viewModelScope.launch {
             if (s.reservation) {
-                val body = ReservationWrite(userId = user.id, bookId = book.id, requestedFrom = s.start, requestedTo = s.end)
+                val body = s.reservationWrite(user.id, book.id)
                 val res = withIdempotency(body) { key -> circulation.createReservation(body, key) }
                 _state.update {
                     when (res) {
@@ -339,6 +356,12 @@ fun StaffLoanCreateScreen(onNavigateUp: () -> Unit, onCreated: (loanId: Int) -> 
                     onSelect = { vm.setStart(it) },
                     anyFutureDay = state.calendarFailed,
                     modifier = Modifier.testTag("loan-calendar"),
+                )
+            }
+            if (state.reservation && state.limitsOverridable) {
+                SwitchRow(
+                    stringResource(R.string.staff_reservation_override_limits), state.overrideLimits, vm::setOverrideLimits,
+                    subtitle = stringResource(R.string.staff_reservation_override_limits_hint),
                 )
             }
             if (!state.reservation) {

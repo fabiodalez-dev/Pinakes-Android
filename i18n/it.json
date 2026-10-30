@@ -994,6 +994,8 @@
   "staff_scan_next": "Scansiona la copia successiva",
   "staff_loan_new_with_copy": "Nuovo prestito con questa copia",
   "staff_loan_open": "Apri il prestito",
+  "staff_reservation_override_limits": "Ignora i limiti di prenotazione della tipologia del lettore",
+  "staff_reservation_override_limits_hint": "Come nel modulo del sito: la prenotazione viene creata anche oltre i limiti della tipologia.",
   "staff_hand_over_now": "Consegna subito",
   "staff_hand_over_now_hint": "L’utente prende la copia al banco: il prestito parte subito.",
   "staff_hand_over_future": "Un prestito che inizia più avanti viene programmato e consegnato quel giorno.",
