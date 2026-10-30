@@ -310,6 +310,14 @@ private fun ProfileContent(
                     cardNumber?.let { ReadOnlyRow(stringResource(R.string.profile_card_number), it) }
                     cardExpiry?.let { ReadOnlyRow(stringResource(R.string.profile_card_expires), DateFormat.date(it)) }
                     patronType?.let { ReadOnlyRow(stringResource(R.string.profile_patron_type), it) }
+                    // The card's code as the printed card carries it, for the desk or kiosk scanner.
+                    cardNumber?.let {
+                        com.pinakes.app.ui.common.CardBarcodeImage(
+                            code = it,
+                            description = stringResource(R.string.profile_card_barcode, it),
+                            modifier = Modifier.padding(top = Spacing.sm),
+                        )
+                    }
                 }
             }
         }

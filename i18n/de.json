@@ -207,6 +207,7 @@
   "profile_date_none": "Nicht festgelegt",
   "profile_card_number": "Ausweisnummer",
   "profile_card_expires": "Ausweis läuft ab",
+  "profile_card_barcode": "Barcode des Ausweises %1$s",
   "profile_change_password_title": "Passwort ändern",
   "profile_current_password": "Aktuelles Passwort",
   "profile_new_password": "Neues Passwort",
