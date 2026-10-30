@@ -141,6 +141,10 @@ fun BookDetailScreen(
             )
             CirculationRequestKind.LoanReadyForPickup ->
                 stringResource(R.string.snackbar_loan_ready_for_pickup)
+            CirculationRequestKind.LoanScheduled -> stringResource(
+                R.string.snackbar_loan_scheduled,
+                formatDisplayDate(confirmation.startDate ?: confirmation.desiredDate),
+            )
             CirculationRequestKind.LoanPending -> stringResource(
                 R.string.snackbar_request_for_date,
                 formatDisplayDate(confirmation.desiredDate),

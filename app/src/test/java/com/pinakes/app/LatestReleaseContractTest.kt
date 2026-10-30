@@ -33,6 +33,14 @@ class LatestReleaseContractTest {
         assertEquals(CirculationRequestKind.LoanPending, pending.kind)
         assertEquals(CirculationRequestKind.LoanReadyForPickup, ready.kind)
         assertEquals(CirculationRequestKind.Unknown, CirculationRequestResult(type = "future").kind)
+        // Pinakes 0.9.0: approved with the library closed today, the loan starts on the next open
+        // day; auto_approved is true but the book is not waiting at the desk yet.
+        val scheduled = json.decodeFromString<Envelope<CirculationRequestResult>>(
+            """{"data":{"type":"loan","book_id":7,"loan_id":9,"auto_approved":true,"status":"prenotato","start_date":"2026-11-02"},"meta":{},"error":null}""",
+        ).data
+        assertEquals(CirculationRequestKind.LoanScheduled, scheduled?.kind)
+        assertEquals("2026-11-02", scheduled?.startDate)
+        assertEquals(null, ready.startDate)
         assertEquals(
             CirculationRequestKind.Unknown,
             CirculationRequestResult(type = "loan", status = "future_status").kind,

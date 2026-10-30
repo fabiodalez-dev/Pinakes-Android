@@ -63,6 +63,8 @@ data class BookDetailUiState(
 data class RequestConfirmation(
     val desiredDate: String,
     val kind: CirculationRequestKind,
+    /** The server's start day of a scheduled loan ([CirculationRequestKind.LoanScheduled]). */
+    val startDate: String? = null,
 )
 
 @HiltViewModel
@@ -116,12 +118,13 @@ class BookDetailViewModel @Inject constructor(
     }
 
     /**
-     * With the server's circulation rules on, learn up front whether the title is consultation
-     * only or the waitlist is closed for this reader, so the button says so before a tap. Without
-     * the flag (an older server) nothing is fetched and the page behaves as it always did.
+     * With the server's circulation rules or consultation-only copies on, learn up front whether
+     * the title is consultation only or the waitlist is closed for this reader, so the button says
+     * so before a tap. Without either flag (an older server) nothing is fetched and the page
+     * behaves as it always did.
      */
     private fun loadRules() {
-        if (!featureStore.features.value.circulationRulesAvailable) return
+        if (!featureStore.features.value.viewerRulesAvailable) return
         viewModelScope.launch {
             (catalog.bookAvailability(bookId) as? ApiResult.Success)?.data?.let { cal ->
                 _state.update { it.copy(rules = ViewerRules.of(cal)) }
@@ -217,7 +220,7 @@ class BookDetailViewModel @Inject constructor(
                             reserveBusy = false,
                             snackbar = null,
                             snackbarRes = null,
-                            requestConfirmation = RequestConfirmation(desiredDate, res.data.kind),
+                            requestConfirmation = RequestConfirmation(desiredDate, res.data.kind, res.data.startDate),
                             showLoanSheet = false,
                             availability = null,
                             availabilityFallback = false,

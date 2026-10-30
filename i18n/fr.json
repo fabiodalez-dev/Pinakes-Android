@@ -269,6 +269,7 @@
   "snackbar_request_for_date": "Prêt demandé pour le %1$s",
   "snackbar_reservation_for_date": "Réservation enregistrée pour le %1$s",
   "snackbar_loan_ready_for_pickup": "Prêt approuvé; prêt à être retiré.",
+  "snackbar_loan_scheduled": "Prêt approuvé : vous pourrez retirer le livre à partir du %1$s.",
   "book_section_audiobook": "Livre audio",
   "audio_play": "Lecture",
   "audio_pause": "Pause",

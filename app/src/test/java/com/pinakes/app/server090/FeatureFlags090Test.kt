@@ -59,6 +59,28 @@ class FeatureFlags090Test {
         assertFalse(f.showMovements)
     }
 
+    @Test fun consultationOnlyIsReadOnItsOwnSwitch() {
+        // Pinakes 0.9.0: consultation-only copies have their own switch, so a title can be
+        // consultation only with the patron-type rules off.
+        val f = InstanceFeatures.from(health(""""circulation_rules":false,"consultation_only":true"""))
+        assertFalse(f.circulationRulesAvailable)
+        assertTrue(f.consultationOnlyAvailable)
+        assertTrue(f.viewerRulesAvailable)
+    }
+
+    @Test fun theBookPageAsksForTheReaderRulesWithEitherSwitch() {
+        assertTrue(InstanceFeatures.from(health(""""circulation_rules":true""")).viewerRulesAvailable)
+        assertFalse(InstanceFeatures.from(health(""""circulation_rules":false,"consultation_only":false""")).viewerRulesAvailable)
+        // A server from before the split omits consultation_only: circulation_rules alone decides.
+        assertFalse(InstanceFeatures.from(health(""""wishlist":true""")).viewerRulesAvailable)
+    }
+
+    @Test fun consultationOnlyFollowsCatalogueModeAndAppAccess() {
+        assertFalse(InstanceFeatures.from(health(""""consultation_only":true""", catalogueMode = true)).consultationOnlyAvailable)
+        val noApp = json.decodeFromString<HealthPayload>("""{"app_access_enabled":false,"features":{"loans":true,"consultation_only":true}}""")
+        assertFalse(InstanceFeatures.from(noApp).viewerRulesAvailable)
+    }
+
     @Test fun theMovementsPageNeedsLoansToo() {
         val f = InstanceFeatures(finesAvailable = true, loans = false)
         assertFalse(f.showMovements)

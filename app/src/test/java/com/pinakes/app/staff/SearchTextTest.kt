@@ -34,4 +34,23 @@ class SearchTextTest {
         assertEquals("1-2", SearchText.queryPattern("1-2"))
         assertEquals("harry potter 7", SearchText.queryPattern("Harry Potter 7"))
     }
+
+    @Test fun quotedQueriesSearchTheWordsOffline() {
+        // Pinakes #501: quotes ask the server for the exact spelling. Offline the key folds
+        // accents, so the quotes go and the words are searched as they would be unquoted.
+        assertEquals("rolf haffner", SearchText.queryPattern("\"Rolf Häffner\""))
+        assertEquals("haffner roma", SearchText.queryPattern("\u201EHäffner\u201C Roma"))
+        assertEquals("haffner roma", SearchText.queryPattern("\u201CHäffner\u201D Roma"))
+        assertEquals("haffner", SearchText.queryPattern("\u00ABHäffner\u00BB"))
+        // An unclosed quote is dropped too.
+        assertEquals("haffner", SearchText.queryPattern("\"Häffner"))
+        assertEquals("plain words", SearchText.withoutSearchQuotes("plain words"))
+    }
+
+    @Test fun anInchMarkAfterADigitStays() {
+        assertEquals("disco 12\"", SearchText.queryPattern("Disco 12\""))
+        assertEquals("schermo 15\u201D", SearchText.queryPattern("Schermo 15\u201D"))
+        // Inside a quoted part the quote after a digit closes it, as on the server.
+        assertEquals("catch 22", SearchText.queryPattern("\"Catch 22\""))
+    }
 }
