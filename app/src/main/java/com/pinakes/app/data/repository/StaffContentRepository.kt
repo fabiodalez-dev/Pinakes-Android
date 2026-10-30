@@ -59,8 +59,8 @@ class StaffContentRepository(
 
     suspend fun copy(id: Int): ApiResult<StaffCopy> = session.staffCall { api.copy(id) }
 
-    suspend fun updateCopy(id: Int, status: String?, notes: String?): ApiResult<StaffCopy> =
-        session.staffCall { api.updateCopy(id, CopyUpdate(status = status.blankToNull(), notes = notes?.trim())) }
+    suspend fun updateCopy(id: Int, status: String?, notes: String?, consultationOnly: Boolean? = null): ApiResult<StaffCopy> =
+        session.staffCall { api.updateCopy(id, CopyUpdate(status = status.blankToNull(), notes = notes?.trim(), consultationOnly = consultationOnly)) }
 
     suspend fun deleteCopy(id: Int): ApiResult<DeleteResult> = session.staffCall { api.deleteCopy(id) }
 

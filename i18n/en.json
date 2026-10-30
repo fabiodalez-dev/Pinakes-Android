@@ -1479,6 +1479,8 @@
   "staff_err_card_expired": "This user's library card has expired.",
   "staff_err_user_suspended": "This user is suspended.",
   "staff_copy_consultation_only": "Consultation only",
+  "staff_copy_consultation_switch": "Consultation only, in the library",
+  "staff_copy_consultation_switch_hint": "The copy is never lent. As on the book page: it cannot be set while the copy is on loan, awaiting pickup or requested.",
   "profile_patron_type": "Patron type",
   "profile_action_movements": "Balance and movements",
   "title_movements": "Balance and movements",
