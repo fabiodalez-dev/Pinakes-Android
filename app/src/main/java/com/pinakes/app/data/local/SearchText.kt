@@ -14,6 +14,8 @@ object SearchText {
     private val COMBINING = Regex("\\p{M}+")
     private val ID_SEPARATORS = Regex("[\\s-]")
     private val IDENTIFIER_LIKE = Regex("^[0-9Xx\\s-]+$")
+    private const val QUOTES = "\"\u201C\u201D\u201E\u00AB\u00BB"
+    private val SPACES = Regex("\\s+")
 
     /** Lower-case, accent-free form of [text] ("Città" → "citta", "Ærø" keeps æ/ø, ß stays). */
     fun fold(text: String?): String =
@@ -39,11 +41,33 @@ object SearchText {
      * so "978-88-04" finds 9788804….
      */
     fun queryPattern(query: String?): String {
-        val trimmed = query?.trim().orEmpty()
+        val trimmed = withoutSearchQuotes(query?.trim().orEmpty())
         val compact = if (IDENTIFIER_LIKE.matches(trimmed) && trimmed.count { it.isDigit() } >= 4) {
             trimmed.replace(ID_SEPARATORS, "")
         } else trimmed
         return escapeLike(fold(compact))
+    }
+
+    /**
+     * [query] without the quotes that mark an exact spelling online (Pinakes #501): straight and
+     * typographic quotes, as the server reads them. The offline key folds accents, so it cannot
+     * tell "Häffner" from "Haffner"; without this the quotes themselves were searched for and a
+     * quoted query found nothing offline. An inch mark (a straight or closing quote right after
+     * a digit, outside a quoted part, as in `12"`) stays, as it does on the server.
+     */
+    fun withoutSearchQuotes(query: String): String {
+        if (query.none { it in QUOTES }) return query
+        val out = StringBuilder(query.length)
+        var open = false
+        var prev = ' '
+        for (c in query) {
+            if (c in QUOTES) {
+                if (!open && (c == '"' || c == '\u201D') && prev.isDigit()) out.append(c)
+                else { open = !open; out.append(' ') }
+            } else out.append(c)
+            prev = c
+        }
+        return out.toString().replace(SPACES, " ").trim()
     }
 
     /** Escape the LIKE metacharacters for `ESCAPE '\'`. */

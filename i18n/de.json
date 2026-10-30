@@ -269,6 +269,7 @@
   "snackbar_request_for_date": "Ausleihe angefragt für %1$s",
   "snackbar_reservation_for_date": "Reservierung für den %1$s eingetragen",
   "snackbar_loan_ready_for_pickup": "Ausleihe genehmigt; zur Abholung bereit.",
+  "snackbar_loan_scheduled": "Ausleihe genehmigt: Sie können das Buch ab dem %1$s abholen.",
   "book_section_audiobook": "Hörbuch",
   "audio_play": "Abspielen",
   "audio_pause": "Pause",
