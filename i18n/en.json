@@ -207,6 +207,7 @@
   "profile_date_none": "Not set",
   "profile_card_number": "Card number",
   "profile_card_expires": "Card expires",
+  "profile_card_barcode": "Library card barcode %1$s",
   "profile_change_password_title": "Change password",
   "profile_current_password": "Current password",
   "profile_new_password": "New password",

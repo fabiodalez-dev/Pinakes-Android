@@ -207,6 +207,7 @@
   "profile_date_none": "Non impostata",
   "profile_card_number": "Numero tessera",
   "profile_card_expires": "Scadenza tessera",
+  "profile_card_barcode": "Codice a barre della tessera %1$s",
   "profile_change_password_title": "Cambia password",
   "profile_current_password": "Password attuale",
   "profile_new_password": "Nuova password",

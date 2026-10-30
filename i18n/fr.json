@@ -207,6 +207,7 @@
   "profile_date_none": "Non renseignée",
   "profile_card_number": "Numéro de carte",
   "profile_card_expires": "Expiration de la carte",
+  "profile_card_barcode": "Code-barres de la carte %1$s",
   "profile_change_password_title": "Changer le mot de passe",
   "profile_current_password": "Mot de passe actuel",
   "profile_new_password": "Nouveau mot de passe",
