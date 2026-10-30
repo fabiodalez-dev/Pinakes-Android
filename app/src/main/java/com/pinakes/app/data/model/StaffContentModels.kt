@@ -9,7 +9,13 @@ import kotlinx.serialization.json.JsonObject
 // duplicate merges, labels, CSV/LibraryThing imports, covers and bulk enrichment.
 
 @Serializable
-data class CopyUpdate(val status: String? = null, val notes: String? = null)
+data class CopyUpdate(
+    val status: String? = null,
+    val notes: String? = null,
+    // Pinakes 0.9.0: keep the copy for in-house consultation, or make it lendable again. Null is
+    // omitted, so an older server, which would ignore it, never sees the key.
+    @SerialName("consultation_only") val consultationOnly: Boolean? = null,
+)
 
 // ---------- Series ----------
 

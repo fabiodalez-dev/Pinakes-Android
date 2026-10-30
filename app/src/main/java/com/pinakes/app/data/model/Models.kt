@@ -122,6 +122,10 @@ data class HealthFeatures(
     val fines: Boolean = false,
     @SerialName("closures_calendar") val closuresCalendar: Boolean = false,
     @SerialName("circulation_rules") val circulationRules: Boolean = false,
+    // Pinakes 0.9.0 splits consultation-only copies off the rules matrix: with this switch on
+    // and `circulation_rules` off, `loanable` can still be false. A server that predates the
+    // split omits the key and ties consultation to `circulation_rules`, as before.
+    @SerialName("consultation_only") val consultationOnly: Boolean = false,
 )
 
 // ---------- Auth ----------
@@ -578,11 +582,16 @@ data class CirculationRequestResult(
     @SerialName("book_id") val bookId: Int = 0,
     @SerialName("loan_id") val loanId: Int? = null,
     @SerialName("auto_approved") val autoApproved: Boolean? = null,
-    val status: String? = null, // pendente | da_ritirare
+    val status: String? = null, // pendente | da_ritirare | prenotato (Pinakes 0.9.0)
+    // Start day of an approved loan that begins on a later open day (`prenotato`): the library
+    // is closed today. Null otherwise, and on servers before Pinakes 0.9.0.
+    @SerialName("start_date") val startDate: String? = null,
 ) {
     val kind: CirculationRequestKind
         get() = when {
             type == "reservation" -> CirculationRequestKind.Reservation
+            // Approved, but it starts on the next open day: not waiting at the desk yet.
+            type == "loan" && status == "prenotato" -> CirculationRequestKind.LoanScheduled
             type == "loan" && (autoApproved == true || status == "da_ritirare") ->
                 CirculationRequestKind.LoanReadyForPickup
             type == "loan" && (autoApproved == false || status in setOf("pendente", "in_attesa")) ->
@@ -595,6 +604,8 @@ enum class CirculationRequestKind {
     Reservation,
     LoanPending,
     LoanReadyForPickup,
+    /** Approved and starting on a later open day (`prenotato`, with `start_date`). */
+    LoanScheduled,
     Unknown,
 }
 

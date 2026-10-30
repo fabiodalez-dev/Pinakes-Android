@@ -83,6 +83,8 @@ data class InstanceFeatures(
      */
     val closuresCalendarAvailable: Boolean = false,
     val circulationRulesAvailable: Boolean = false,
+    /** `features.consultation_only`: consultation-only copies apply on their own switch. */
+    val consultationOnlyAvailable: Boolean = false,
 ) {
     /** Library tab (loans + reservations) is shown only when at least one of them is enabled. */
     val showLibrary: Boolean get() = loans || reservations
@@ -94,6 +96,13 @@ data class InstanceFeatures(
 
     /** Book reviews (read + write) surfaced on book detail and the "My reviews" page. */
     val showReviews: Boolean get() = reviews
+
+    /**
+     * Whether the book page asks the server up front if the reader may borrow or join the
+     * waitlist: patron-type rules close the waitlist, and consultation-only copies close the
+     * loan, each on its own switch since Pinakes 0.9.0.
+     */
+    val viewerRulesAvailable: Boolean get() = circulationRulesAvailable || consultationOnlyAvailable
 
     /** The balance and movements page (fines ledger on, loans offered). */
     val showMovements: Boolean get() = finesAvailable && loans && !catalogueMode
@@ -147,6 +156,7 @@ data class InstanceFeatures(
                 finesAvailable = f.fines && app && circulation,
                 closuresCalendarAvailable = f.closuresCalendar && app && circulation,
                 circulationRulesAvailable = f.circulationRules && app && circulation,
+                consultationOnlyAvailable = f.consultationOnly && app && circulation,
             )
         }
     }
@@ -215,6 +225,7 @@ class FeatureStore(context: Context) {
             .putBoolean(KEY_FINES, value.finesAvailable)
             .putBoolean(KEY_CLOSURES_CALENDAR, value.closuresCalendarAvailable)
             .putBoolean(KEY_CIRCULATION_RULES, value.circulationRulesAvailable)
+            .putBoolean(KEY_CONSULTATION_ONLY, value.consultationOnlyAvailable)
             .apply()
         _features.value = value
     }
@@ -277,6 +288,7 @@ class FeatureStore(context: Context) {
             finesAvailable = prefs.getBoolean(KEY_FINES, false),
             closuresCalendarAvailable = prefs.getBoolean(KEY_CLOSURES_CALENDAR, false),
             circulationRulesAvailable = prefs.getBoolean(KEY_CIRCULATION_RULES, false),
+            consultationOnlyAvailable = prefs.getBoolean(KEY_CONSULTATION_ONLY, false),
         )
     }
 
@@ -315,5 +327,6 @@ class FeatureStore(context: Context) {
         private const val KEY_FINES = "f_fines"
         private const val KEY_CLOSURES_CALENDAR = "f_closures_calendar"
         private const val KEY_CIRCULATION_RULES = "f_circulation_rules"
+        private const val KEY_CONSULTATION_ONLY = "f_consultation_only"
     }
 }
