@@ -49,7 +49,7 @@ class CatalogDaoTest {
         genre: String = "", availableOnly: Boolean = false, sort: String = "title_asc",
         limit: Int = 50, offset: Int = 0,
     ) = dao.search(
-        SearchText.queryPattern(q), SearchText.escapeLike(author), SearchText.escapeLike(publisher),
+        SearchText.queryPattern(q), SearchText.filterPattern(author), SearchText.filterPattern(publisher),
         language, genre, availableOnly, sort, limit, offset,
     ).map { it.id }
 
@@ -211,5 +211,19 @@ class CatalogDaoTest {
     fun authorFilterEscapesWildcards() = runBlocking {
         dao.upsertAll(listOf(book(1, author = "A_B"), book(2, author = "AxB")))
         assertEquals(listOf(1), search(author = "A_B"))
+    }
+
+    @Test
+    fun quotedQueriesAndFiltersFindTheirWordsOffline() = runBlocking {
+        // Pinakes #501: quotes ask the server for the exact spelling; offline they are dropped.
+        dao.upsertAll(
+            listOf(
+                book(1, title = "Il barone rampante", author = "Italo Calvino", publisher = "Einaudi"),
+                book(2, title = "Altro", author = "Thomas Mann", publisher = "Fischer"),
+            ),
+        )
+        assertEquals(listOf(1), search(q = "\"barone rampante\""))
+        assertEquals(listOf(1), search(author = "\"Italo Calvino\""))
+        assertEquals(listOf(1), search(publisher = "\u201CEinaudi\u201D"))
     }
 }

@@ -70,6 +70,13 @@ object SearchText {
         return out.toString().replace(SPACES, " ").trim()
     }
 
+    /**
+     * The LIKE pattern of the author or publisher filter. Those are quoted for an exact spelling
+     * too (#501); offline the quotes go, as in [queryPattern]. Case and accents are left to the
+     * DAO, as before.
+     */
+    fun filterPattern(value: String?): String = escapeLike(withoutSearchQuotes(value?.trim().orEmpty()))
+
     /** Escape the LIKE metacharacters for `ESCAPE '\'`. */
     fun escapeLike(value: String): String =
         value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")

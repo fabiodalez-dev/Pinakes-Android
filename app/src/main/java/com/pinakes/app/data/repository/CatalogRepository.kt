@@ -199,8 +199,8 @@ class CatalogRepository(
         limit: Int = 20,
     ): List<BookSummary> = catalogDao.search(
         q = SearchText.queryPattern(filters.query),
-        author = SearchText.escapeLike(filters.author?.trim().orEmpty()),
-        publisher = SearchText.escapeLike(filters.publisher?.trim().orEmpty()),
+        author = SearchText.filterPattern(filters.author),
+        publisher = SearchText.filterPattern(filters.publisher),
         language = filters.language?.trim().orEmpty(),
         genre = genreName?.trim().orEmpty(),
         availableOnly = filters.availableOnly == true,
