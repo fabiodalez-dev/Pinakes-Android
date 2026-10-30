@@ -1479,6 +1479,8 @@
   "staff_err_card_expired": "Der Bibliotheksausweis dieser Person ist abgelaufen.",
   "staff_err_user_suspended": "Diese Person ist gesperrt.",
   "staff_copy_consultation_only": "Nur zur Einsicht",
+  "staff_copy_consultation_switch": "Nur zur Einsicht vor Ort",
+  "staff_copy_consultation_switch_hint": "Das Exemplar wird nie ausgeliehen. Wie auf der Buchseite: nicht möglich, solange das Exemplar ausgeliehen, zur Abholung bereit oder angefragt ist.",
   "profile_patron_type": "Leserkategorie",
   "profile_action_movements": "Kontostand und Bewegungen",
   "title_movements": "Kontostand und Bewegungen",

@@ -1479,6 +1479,8 @@
   "staff_err_card_expired": "La carte de bibliothèque de cet utilisateur a expiré.",
   "staff_err_user_suspended": "Cet utilisateur est suspendu.",
   "staff_copy_consultation_only": "Consultation sur place",
+  "staff_copy_consultation_switch": "Consultation sur place uniquement",
+  "staff_copy_consultation_switch_hint": "L'exemplaire n'est jamais prêté. Comme sur la fiche du livre : impossible tant que l'exemplaire est prêté, en attente de retrait ou demandé.",
   "profile_patron_type": "Catégorie de lecteur",
   "profile_action_movements": "Solde et mouvements",
   "title_movements": "Solde et mouvements",

@@ -1479,6 +1479,8 @@
   "staff_err_card_expired": "La tessera dell'utente è scaduta.",
   "staff_err_user_suspended": "L'utente è sospeso.",
   "staff_copy_consultation_only": "Solo consultazione",
+  "staff_copy_consultation_switch": "Solo consultazione in sede",
+  "staff_copy_consultation_switch_hint": "La copia non viene mai prestata. Come nella scheda del libro: non si può impostare se la copia è in prestito, in ritiro o richiesta.",
   "profile_patron_type": "Tipologia lettore",
   "profile_action_movements": "Saldo e movimenti",
   "title_movements": "Saldo e movimenti",

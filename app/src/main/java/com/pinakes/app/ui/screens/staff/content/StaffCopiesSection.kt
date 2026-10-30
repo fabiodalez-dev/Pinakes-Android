@@ -58,6 +58,7 @@ import com.pinakes.app.data.repository.StaffFilesRepository
 import com.pinakes.app.data.repository.StaffRepository
 import com.pinakes.app.data.repository.isDuplicate
 import com.pinakes.app.data.repository.isForbidden
+import com.pinakes.app.data.store.FeatureStore
 import com.pinakes.app.data.staff.CopyCodeCodec
 import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.components.ConfirmDialog
@@ -70,6 +71,7 @@ import com.pinakes.app.ui.navigation.Routes
 import com.pinakes.app.ui.screens.staff.ExportFileDialog
 import com.pinakes.app.ui.screens.staff.LookupField
 import com.pinakes.app.ui.screens.staff.StaffMessage
+import com.pinakes.app.ui.screens.staff.SwitchRow
 import com.pinakes.app.ui.screens.staff.resolve
 import com.pinakes.app.ui.screens.staff.toStaffMessage
 import com.pinakes.app.ui.theme.Spacing
@@ -83,7 +85,23 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** The copy being edited (sheet) or created (id 0). */
-data class CopyDraft(val id: Int = 0, val code: String = "", val status: String = "", val notes: String = "", val originalStatus: String = "")
+data class CopyDraft(
+    val id: Int = 0,
+    val code: String = "",
+    val status: String = "",
+    val notes: String = "",
+    val originalStatus: String = "",
+    /** Kept for in-house consultation (Pinakes 0.9.0 `consultation_only`), as edited and as loaded. */
+    val consultationOnly: Boolean = false,
+    val originalConsultationOnly: Boolean = false,
+) {
+    /**
+     * The consultation flag to send: only for an existing copy, only when it changed, and only
+     * when the server applies consultation-only copies ([editable]); otherwise null (left out).
+     */
+    fun consultationChange(editable: Boolean): Boolean? =
+        consultationOnly.takeIf { editable && id > 0 && it != originalConsultationOnly }
+}
 
 data class CopiesUiState(
     val copies: List<StaffCopy> = emptyList(),
@@ -97,6 +115,8 @@ data class CopiesUiState(
     val forbidden: Boolean = false,
     /** The reloaded record after a copy change, for the editor's counters. */
     val refreshed: StaffBook? = null,
+    /** The server applies consultation-only copies (`features.consultation_only`): the switch shows. */
+    val consultationEditable: Boolean = false,
 )
 
 /**
@@ -109,10 +129,11 @@ class StaffCopiesViewModel @Inject constructor(
     private val staff: StaffRepository,
     private val content: StaffContentRepository,
     private val files: StaffFilesRepository,
+    featureStore: FeatureStore,
     savedState: SavedStateHandle,
 ) : ViewModel() {
     private val bookId: Int = savedState.get<Int>(Routes.ARG_BOOK_ID) ?: 0
-    private val _state = MutableStateFlow(CopiesUiState())
+    private val _state = MutableStateFlow(CopiesUiState(consultationEditable = featureStore.features.value.consultationOnlyAvailable))
     val state: StateFlow<CopiesUiState> = _state.asStateFlow()
 
     /** The editor already loaded the record: start from its copies. */
@@ -133,7 +154,13 @@ class StaffCopiesViewModel @Inject constructor(
     fun startAdd() = _state.update { it.copy(editing = CopyDraft(status = "disponibile"), formError = null) }
 
     fun startEdit(copy: StaffCopy) = _state.update {
-        it.copy(editing = CopyDraft(copy.id, copy.inventoryNumber.orEmpty(), copy.status.orEmpty(), copy.notes.orEmpty(), copy.status.orEmpty()), formError = null)
+        it.copy(
+            editing = CopyDraft(
+                copy.id, copy.inventoryNumber.orEmpty(), copy.status.orEmpty(), copy.notes.orEmpty(), copy.status.orEmpty(),
+                consultationOnly = copy.consultationOnly, originalConsultationOnly = copy.consultationOnly,
+            ),
+            formError = null,
+        )
     }
 
     fun edit(transform: (CopyDraft) -> CopyDraft) = _state.update { s -> s.copy(editing = s.editing?.let(transform), formError = null) }
@@ -152,7 +179,8 @@ class StaffCopiesViewModel @Inject constructor(
             } else {
                 // Send the status only when it changed: an unchanged circulation state is not a request.
                 val status = draft.status.takeIf { it != draft.originalStatus }
-                when (val res = content.updateCopy(draft.id, status, draft.notes)) {
+                val consultation = draft.consultationChange(_state.value.consultationEditable)
+                when (val res = content.updateCopy(draft.id, status, draft.notes, consultation)) {
                     is ApiResult.Success -> null
                     is ApiResult.Failure -> res
                 }
@@ -348,6 +376,13 @@ private fun CopyEditorSheet(draft: CopyDraft, state: CopiesUiState, lookups: Sta
                 value = draft.notes, onValueChange = { v -> vm.edit { it.copy(notes = v) } }, label = stringResource(R.string.staff_field_notes),
                 singleLine = false, maxLength = 1000, modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp).testTag("copy-notes"),
             )
+            if (draft.id > 0 && state.consultationEditable) {
+                SwitchRow(
+                    stringResource(R.string.staff_copy_consultation_switch), draft.consultationOnly,
+                    { v -> vm.edit { it.copy(consultationOnly = v) } },
+                    subtitle = stringResource(R.string.staff_copy_consultation_switch_hint),
+                )
+            }
             PrimaryButton(stringResource(R.string.action_save), onClick = vm::save, loading = state.saving, modifier = Modifier.fillMaxWidth().testTag("copy-save"))
             if (draft.id > 0) {
                 if (labels) {
