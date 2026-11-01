@@ -1642,5 +1642,7 @@
   "staff090_patrons_err_job_cancelled": "The import was cancelled while rows were being processed.",
   "staff090_patrons_err_file_missing": "The uploaded file is no longer on the server: upload it again.",
   "staff090_patrons_err_import_not_finished": "The error report is available when the import is over.",
-  "staff090_patrons_err_db_update_pending": "Available once the library's database update has run."
+  "staff090_patrons_err_db_update_pending": "Available once the library's database update has run.",
+  "staff090_patrons_import_open_started": "Started · %1$s",
+  "staff090_patrons_import_open_not_started": "Not started yet · rows: %1$d"
 }

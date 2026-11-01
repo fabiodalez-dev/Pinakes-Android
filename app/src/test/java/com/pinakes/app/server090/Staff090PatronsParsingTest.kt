@@ -240,6 +240,25 @@ class Staff090PatronsParsingTest {
         assertFalse(data<AttendanceOverview>("np_overview").canConfigure)
     }
 
+    @Test fun theOpenImportsList() {
+        val e = json.decodeFromString<Envelope<List<UserImportJob>>>(body("ui_list"))
+        // Newest first: the started one (readers-b) was uploaded last.
+        assertEquals(listOf("readers-b.csv", "readers-a.csv"), e.data!!.map { it.fileName })
+        assertTrue(e.data!![0].started)
+        assertFalse(e.data!![1].started)
+        assertEquals(2, e.data!![0].totalRows)
+        assertEquals(false, e.meta?.hasMore)
+        assertEquals(2, com.pinakes.app.data.staff.UserImportRules.openJobs(e.data!!).size)
+        val page = json.decodeFromString<Envelope<List<UserImportJob>>>(body("ui_list_page"))
+        assertEquals(1, page.data!!.size)
+        assertEquals(true, page.meta?.hasMore)
+        assertNotNull(page.meta?.nextCursor)
+        // Cancelled jobs stay listed until they expire: none is offered again.
+        val after = json.decodeFromString<Envelope<List<UserImportJob>>>(body("ui_list_after")).data!!
+        assertEquals(listOf("cancelled", "cancelled"), after.map { it.status })
+        assertTrue(com.pinakes.app.data.staff.UserImportRules.openJobs(after).isEmpty())
+    }
+
     @Test fun patronImportJob() {
         val created = data<UserImportJob>("ui_upload")
         assertEquals("ready", created.status)

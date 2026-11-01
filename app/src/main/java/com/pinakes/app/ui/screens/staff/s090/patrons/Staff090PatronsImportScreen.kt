@@ -102,6 +102,10 @@ data class UserImportUiState(
     /** The mapping being edited: one field key per header ("" = ignored). */
     val mapping: List<String> = emptyList(),
     val sendInvites: Boolean = false,
+    /** Unfinished jobs of this operator (started here, on another device, or lost after a restart). */
+    val openJobs: List<UserImportJob> = emptyList(),
+    /** The open job being reopened or cancelled from the list. */
+    val openBusy: String? = null,
     val uploading: Boolean = false,
     val starting: Boolean = false,
     val running: Boolean = false,
@@ -131,6 +135,7 @@ class Staff090UserImportViewModel @Inject constructor(
     private var loop: Job? = null
 
     init {
+        if (savedState.get<String>(KEY_JOB) == null) loadOpenJobs()
         savedState.get<String>(KEY_JOB)?.let { id ->
             viewModelScope.launch {
                 when (val res = patrons.userImport(id)) {
@@ -138,9 +143,57 @@ class Staff090UserImportViewModel @Inject constructor(
                         setJob(res.data)
                         if (res.data.started && !UserImportRules.isFinished(res.data)) resume()
                     }
-                    is ApiResult.Failure -> savedState.remove<String>(KEY_JOB)
+                    is ApiResult.Failure -> {
+                        savedState.remove<String>(KEY_JOB)
+                        loadOpenJobs()
+                    }
                 }
             }
+        }
+    }
+
+    /** The open jobs listed under the upload form. */
+    fun loadOpenJobs() {
+        viewModelScope.launch {
+            when (val res = patrons.userImports()) {
+                is ApiResult.Success -> _state.update { it.copy(openJobs = UserImportRules.openJobs(res.data.items)) }
+                is ApiResult.Failure -> _state.update { it.copy(forbidden = res.isForbidden()) }
+            }
+        }
+    }
+
+    /** Reopen a listed job as the server has it now: the mapping when not started, else the chunk loop. */
+    fun reopen(job: UserImportJob) {
+        if (_state.value.openBusy != null) return
+        _state.update { it.copy(openBusy = job.id, error = null) }
+        viewModelScope.launch {
+            when (val res = patrons.userImport(job.id)) {
+                is ApiResult.Success -> {
+                    _state.update { it.copy(openBusy = null, ended = false, sendInvites = res.data.sendInvites ?: false) }
+                    setJob(res.data)
+                    if (res.data.started && !UserImportRules.isFinished(res.data)) resume()
+                }
+                is ApiResult.Failure -> {
+                    _state.update { it.copy(openBusy = null, forbidden = res.isForbidden(), error = res.toPatronsMessage(R.string.staff_error_load)) }
+                    loadOpenJobs()
+                }
+            }
+        }
+    }
+
+    /** Cancel a listed job without opening it (the accounts already created stay). */
+    fun cancelOpen(job: UserImportJob) {
+        if (_state.value.openBusy != null) return
+        _state.update { it.copy(openBusy = job.id) }
+        viewModelScope.launch {
+            val res = patrons.cancelUserImport(job.id)
+            _state.update {
+                when (res) {
+                    is ApiResult.Success -> it.copy(openBusy = null, message = StaffMessage(R.string.staff090_patrons_import_cancelled))
+                    is ApiResult.Failure -> it.copy(openBusy = null, forbidden = res.isForbidden(), message = res.toPatronsMessage(R.string.staff_error_save))
+                }
+            }
+            loadOpenJobs()
         }
     }
 
@@ -310,6 +363,7 @@ class Staff090UserImportViewModel @Inject constructor(
         if (_state.value.running) return
         savedState.remove<String>(KEY_JOB)
         _state.update { UserImportUiState(delimiter = it.delimiter) }
+        loadOpenJobs()
     }
 
     fun downloadExample() = download("staff/user-imports/example.csv", "esempio_import_utenti.csv")
@@ -396,6 +450,10 @@ fun Staff090UserImportScreen(onNavigateUp: () -> Unit) {
                         )
                     }
                 }
+                if (state.openJobs.isNotEmpty()) {
+                    item(key = "open-title") { FormSectionTitle(stringResource(R.string.staff_import_open_jobs)) }
+                    itemsIndexed(state.openJobs, key = { _, j -> "open-${j.id}" }) { _, j -> OpenJobRow(j, state.openBusy, vm) }
+                }
             } else {
                 item(key = "job") { JobHeader(job, state, vm) }
                 if (!job.started && !UserImportRules.isFinished(job)) {
@@ -439,6 +497,31 @@ fun Staff090UserImportScreen(onNavigateUp: () -> Unit) {
         }
     }
     state.export?.let { ExportFileDialog(it, "text/csv", stringResource(R.string.staff090_user_import), onDismiss = vm::closeExport) }
+}
+
+/** An unfinished import: where it stands, Resume and Cancel. */
+@Composable
+internal fun OpenJobRow(job: UserImportJob, busy: String?, vm: Staff090UserImportViewModel) =
+    OpenJobRow(job, busy, onResume = { vm.reopen(job) }, onCancel = { vm.cancelOpen(job) })
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun OpenJobRow(job: UserImportJob, busy: String?, onResume: () -> Unit, onCancel: () -> Unit) {
+    InfoCard(Modifier.padding(vertical = Spacing.xs).testTag("open-job-${job.id}")) {
+        Text(job.fileName, style = MaterialTheme.typography.titleSmall)
+        Text(
+            if (job.started) stringResource(R.string.staff090_patrons_import_open_started, stringResource(R.string.staff_import_progress, job.processed, job.totalRows))
+            else stringResource(R.string.staff090_patrons_import_open_not_started, job.totalRows),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        FlowRow(Modifier.padding(top = Spacing.sm), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            PrimaryButton(
+                stringResource(R.string.staff_import_resume), onClick = onResume, loading = busy == job.id, enabled = busy == null,
+                modifier = Modifier.testTag("open-resume-${job.id}"),
+            )
+            SecondaryButton(stringResource(R.string.staff_import_cancel), onClick = onCancel, enabled = busy == null, modifier = Modifier.testTag("open-cancel-${job.id}"))
+        }
+    }
 }
 
 private val MIME_TYPES = arrayOf("text/csv", "text/comma-separated-values", "text/plain", "text/tab-separated-values", "application/vnd.ms-excel")

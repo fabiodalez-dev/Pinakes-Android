@@ -163,6 +163,9 @@ object UserImportRules {
     /** Same rules as the catalogue import, plus `not_started` and `job_cancelled` that stop the loop. */
     fun afterFailure(failure: ApiResult.Failure, start: Int, busyAttempts: Int): ChunkStep = ImportProgress.afterFailure(failure, start, busyAttempts)
 
+    /** The jobs still to finish (the list also carries completed and cancelled ones until they expire). */
+    fun openJobs(jobs: List<UserImportJob>): List<UserImportJob> = jobs.filterNot(::isFinished)
+
     /** The mapping aligned with the headers (missing entries are "ignored"). */
     fun aligned(job: UserImportJob, mapping: List<String> = job.mapping): List<String> =
         List(job.headers.size) { i -> mapping.getOrNull(i).orEmpty() }

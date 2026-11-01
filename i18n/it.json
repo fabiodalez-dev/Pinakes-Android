@@ -1642,5 +1642,7 @@
   "staff090_patrons_err_job_cancelled": "L'importazione è stata annullata durante l'elaborazione.",
   "staff090_patrons_err_file_missing": "Il file caricato non è più sul server: caricalo di nuovo.",
   "staff090_patrons_err_import_not_finished": "Il report degli errori sarà disponibile al termine dell'importazione.",
-  "staff090_patrons_err_db_update_pending": "Disponibile dopo l'aggiornamento del database della biblioteca."
+  "staff090_patrons_err_db_update_pending": "Disponibile dopo l'aggiornamento del database della biblioteca.",
+  "staff090_patrons_import_open_started": "Avviata · %1$s",
+  "staff090_patrons_import_open_not_started": "Non ancora avviata · righe: %1$d"
 }

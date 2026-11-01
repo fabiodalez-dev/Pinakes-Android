@@ -145,6 +145,10 @@ class Staff090PatronsRepository @Inject constructor(
         return session.staffCall { network.longTypedApi(Staff090PatronsApi::class.java).createUserImport(part, delimiter.toRequestBody("text/plain".toMediaType())) }
     }
 
+    /** Jobs started here or on another device, so one left half-way can be finished. */
+    suspend fun userImports(cursor: String? = null, limit: Int = 30): ApiResult<StaffPage<UserImportJob>> =
+        session.staffCall { api.userImports(cursor, limit) }.toPage()
+
     suspend fun userImport(id: String): ApiResult<UserImportJob> = session.staffCall { api.userImport(id) }
 
     suspend fun startUserImport(id: String, mapping: List<String>, sendInvites: Boolean): ApiResult<UserImportJob> =

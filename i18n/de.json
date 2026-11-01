@@ -1642,5 +1642,7 @@
   "staff090_patrons_err_job_cancelled": "Der Import wurde während der Verarbeitung abgebrochen.",
   "staff090_patrons_err_file_missing": "Die hochgeladene Datei ist nicht mehr auf dem Server: lade sie erneut hoch.",
   "staff090_patrons_err_import_not_finished": "Der Fehlerbericht ist nach dem Import verfügbar.",
-  "staff090_patrons_err_db_update_pending": "Verfügbar, sobald das Datenbank-Update der Bibliothek gelaufen ist."
+  "staff090_patrons_err_db_update_pending": "Verfügbar, sobald das Datenbank-Update der Bibliothek gelaufen ist.",
+  "staff090_patrons_import_open_started": "Gestartet · %1$s",
+  "staff090_patrons_import_open_not_started": "Noch nicht gestartet · Zeilen: %1$d"
 }
