@@ -1,0 +1,1294 @@
+#!/usr/bin/env python3
+"""Live end-to-end smoke test of the Pinakes 0.9.0 staff areas (Mobile API 1.10.0).
+
+The real app on an emulator against a real Pinakes instance, driven like a librarian with
+adb/uiautomator (``ui.py``). Every action under test is a tap or typed text in the app; the
+Mobile API and the database are used only to prepare fixtures (a book with copies, a reader,
+an overdue loan, module switches), to verify the server state after each step and to clean up.
+
+Environment: the same as live_smoke.py (PINAKES_E2E_URL, PINAKES_E2E_HOST_URL,
+PINAKES_E2E_EMAIL/PASSWORD of an ADMIN, ANDROID_SERIAL) plus, required here:
+  PINAKES_E2E_DB_NAME, PINAKES_E2E_DB_USER, PINAKES_E2E_DB_PASSWORD,
+  PINAKES_E2E_DB_SOCKET (or _HOST + _PORT)   direct access to the instance's database,
+                                             used for fixtures and hard cleanup only
+  PINAKES_E2E_SHOTS     directory for one screenshot per step (default /tmp/pinakes-e2e-090)
+  PINAKES_E2E_MARC      a small MARC 21 (.mrc) file to import (step 8 is partly skipped without)
+  PINAKES_E2E_ONLY      comma-separated step numbers to run (default: all)
+
+Steps (numbered as in the report):
+  1 hub sections and a module switched off and on from Library settings
+  2 a loan setting changed in the app, checked on the server, restored
+  3 patron types (create, edit, delete), one rules-matrix cell, a closure day
+  4 a reader's patron section: type, card renewal, ledger charge + partial payment, receipt PDF;
+    a late loan returned with the fine waived
+  5 stocktake session on a shelf with two copies: a known and an unknown code, close, report
+  6 visitor log: a reader's card, an unknown card, a guest
+  7 patron CSV import through the system document picker
+  8 suppliers (create, set on a book, delete); MARC export and import through the picker
+  9 statistics overview
+ 10 a staff (not admin) account: admin-only entries hidden, an admin-only action refused in place
+Module switches changed for the run are restored, every record the run created is deleted, the
+app data is cleared at the start and at the end. Exit code 0 only when every step passed.
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+import traceback
+import urllib.request
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ui  # noqa: E402
+import live_smoke as base  # noqa: E402  (Api, strings, navigation, sql)
+from live_smoke import S, s, API, PKG, RUN, SkipStep  # noqa: E402
+
+SHOTS = os.environ.get("PINAKES_E2E_SHOTS", "/tmp/pinakes-e2e-090")
+ONLY = {x.strip() for x in os.environ.get("PINAKES_E2E_ONLY", "").split(",") if x.strip()}
+KEEP_APP = os.environ.get("PINAKES_E2E_KEEP_APP") == "1"   # debugging: no pm clear / re-login
+MARC_FILE = os.environ.get("PINAKES_E2E_MARC", "")
+RESULTS = []      # (step, PASS/FAIL/SKIP, detail)
+BUGS = []         # reproduction notes of app/server bugs found
+SHOT_N = [0]
+
+
+def shot(name):
+    os.makedirs(SHOTS, exist_ok=True)
+    SHOT_N[0] += 1
+    path = os.path.join(SHOTS, f"{SHOT_N[0]:03d}-{re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')}.png")
+    try:
+        ui.screenshot(path)
+    except Exception:  # noqa: BLE001
+        return ""
+    return os.path.basename(path)
+
+
+def bug(text):
+    BUGS.append(text)
+    print("    BUG " + text, flush=True)
+
+
+def step(num, name):
+    def wrap(fn):
+        def run(*a, **kw):
+            if ONLY and num != 0 and str(num) not in ONLY and str(num).rstrip("b") not in ONLY:
+                return True
+            label = f"{num}. {name}"
+            print(f"--> {label}", flush=True)
+            try:
+                detail = fn(*a, **kw)
+                RESULTS.append((label, "PASS", detail or ""))
+                print(f"    PASS {detail or ''}", flush=True)
+                return True
+            except SkipStep as e:
+                RESULTS.append((label, "SKIP", str(e)))
+                print(f"    SKIP {e}", flush=True)
+                return True
+            except Exception as e:  # noqa: BLE001 - report and continue
+                f = shot(f"fail-{num}")
+                RESULTS.append((label, "FAIL", f"{e} [{f}]"))
+                print(f"    FAIL {e} [{f}]", flush=True)
+                traceback.print_exc()
+                return False
+            finally:
+                ui.hide_keyboard()
+        return run
+    return wrap
+
+
+LANG = {"v": "en"}
+
+
+def api(method, path, body=None, headers=None, **kw):
+    """Mobile API call in the device language (server-made labels match what the app shows)."""
+    st, payload, _ = API.call(method, path, body, headers={"Accept-Language": LANG["v"], **(headers or {})}, **kw)
+    return st, payload
+
+
+def sql(q):
+    return base.sql(q)
+
+
+def sql_rows(q):
+    return [line.split("\t") for line in sql(q).splitlines() if line.strip()]
+
+
+def q(v):
+    """SQL string literal (fixtures only: values are generated by the run)."""
+    return "'" + str(v).replace("\\", "\\\\").replace("'", "''") + "'"
+
+
+# ---------------------------------------------------------------- app session
+
+def launch():
+    # `monkey` needs a physical key map that headless emulators lack: start the activity directly.
+    ui.shell(f"am start -W -n {PKG}/.MainActivity")
+
+
+def sign_in(email, password):
+    """Clear the app, onboard on the instance and sign in as [email] (the same path as a user)."""
+    ui.adb("shell", "pm", "clear", PKG)
+    ui.airplane(False)
+    launch()
+    ui.wait(S["onboarding_url_label"], 30)
+    ui.tap(S["onboarding_url_label"])
+    ui.type_text(base.DEVICE_URL)
+    ui.hide_keyboard()
+    ui.tap(S["action_discover_library"])
+    ui.wait(S["action_continue"], 90)
+    ui.tap(S["action_continue"])
+    ui.wait(S["login_email_label"], 30)
+    ui.tap(S["login_email_label"], exact=True)
+    ui.type_text(email)
+    ui.hide_keyboard()
+    ui.tap(S["field_password"], exact=True)
+    ui.type_text(password, secret=True)
+    ui.hide_keyboard()
+    for attempt in range(3):
+        ui.tap(S["login_action_sign_in"])
+        which, _ = ui.wait_any([S["nav_profile"], S["login_error_network"]], 120)
+        if which == S["nav_profile"]:
+            return attempt + 1
+        time.sleep(5)
+    raise AssertionError("sign-in kept failing with a network error")
+
+
+def open_staff_hub():
+    """Profile tab (scrolled back to the top, so it reloads /me and the role) → Admin area."""
+    base.open_tab("nav_profile")
+    for _ in range(3):
+        ui.swipe_down()
+    ui.wait(S["profile_action_edit"], 90)
+    ui.scroll_to(S["profile_action_staff"])
+    ui.tap(S["profile_action_staff"])
+    ui.wait(S["staff_scan"])
+
+
+base.open_staff_hub = open_staff_hub      # live_smoke's version assumes Profile is at the top
+
+
+def hub():
+    """The staff hub, from wherever the app is."""
+    base.back_to_hub()
+
+
+def open_entry(label):
+    hub()
+    ui.scroll_to(label, exact=True)
+    ui.tap(label, exact=True)
+
+
+# ---------------------------------------------------------------- screen helpers
+
+def contains(outer, inner):
+    return outer[0] <= inner[0] and outer[1] <= inner[1] and outer[2] >= inner[2] and outer[3] >= inner[3]
+
+
+def row_of(label, exact=True, nodes=None, kind="checkable"):
+    """The smallest checkable (or clickable) node around the text [label]: a switch row."""
+    nodes = nodes if nodes is not None else ui.dump()
+    text = ui.find(label, exact=exact, nodes=nodes)
+    if text is None:
+        return None
+    rows = [n for n in nodes if getattr(n, kind) and contains(n.bounds, text.bounds)]
+    rows.sort(key=lambda n: (n.bounds[2] - n.bounds[0]) * (n.bounds[3] - n.bounds[1]))
+    return rows[0] if rows else None
+
+
+def switch_state(label):
+    ui.scroll_to(label, exact=True)
+    row = row_of(label)
+    assert row is not None, f"no switch row for {label!r}"
+    return row.checked
+
+
+def set_switch(label, on):
+    ui.scroll_to(label, exact=True)
+    row = row_of(label)
+    assert row is not None, f"no switch row for {label!r}"
+    if row.checked != on:
+        ui.tap_xy(*row.center)
+        time.sleep(0.5)
+        row = row_of(label)
+        assert row is not None and row.checked == on, f"switch {label!r} did not turn {'on' if on else 'off'}"
+
+
+def hub_labels():
+    """Every entry label of the staff hub, top to bottom."""
+    hub()
+    seen = []
+    for _ in range(3):
+        ui.swipe_down()
+    for _ in range(12):
+        before = len(seen)
+        for n in ui.dump():
+            if n.text and n.text not in seen:
+                seen.append(n.text)
+        ui.swipe_up()
+        if len(seen) == before:
+            break
+    return seen
+
+
+def toast_or_text(texts, timeout=30):
+    """One of [texts] shows up (snackbar or screen text)."""
+    return ui.wait_any(texts, timeout)[0]
+
+
+def restart_app():
+    """Kill and relaunch: the app re-reads /health on start."""
+    ui.shell(f"am force-stop {PKG}")
+    launch()
+    ui.wait(S["nav_profile"], 60)
+
+
+def health():
+    _, body = api("GET", "health", auth=False)
+    return (body.get("data") or {}).get("features", {})
+
+
+def field_of(label, nodes=None, exact=True):
+    """The text field whose floating label is [label]."""
+    nodes = nodes if nodes is not None else ui.dump()
+    for n in nodes:
+        if n.cls == "android.widget.TextView" and (n.text.lower() == label.lower() if exact else label.lower() in n.text.lower()):
+            for f in nodes:
+                if f.cls == "android.widget.EditText" and contains(f.bounds, n.center + n.center):
+                    return f
+    return None
+
+
+def set_field(label, value, exact=True, scroll=True, down=True):
+    """Replace the content of the field labelled [label] with [value], as typed by a user.
+    [down]=False never swipes downwards (a swipe down at the top of a bottom sheet closes it)."""
+    if scroll:
+        for p in range(2 if down else 1):
+            for _ in range(8):
+                if field_of(label, exact=exact):
+                    break
+                (ui.swipe_up if p == 0 else ui.swipe_down)()
+            if field_of(label, exact=exact):
+                break
+    f = field_of(label, exact=exact)
+    assert f is not None, f"no field labelled {label!r}"
+    ui.tap_xy(*f.center)
+    ui.shell("input keyevent KEYCODE_MOVE_END")
+    for _ in range((len(f.text) // 10 + 1)):
+        ui.shell("input keyevent " + " ".join(["KEYCODE_DEL"] * 12))
+    if value != "":
+        ui.type_text(str(value))
+    ui.hide_keyboard()
+    return f.text
+
+
+# ---------------------------------------------------------------- fixtures and cleanup
+
+TAG = RUN[-10:]                      # short, unique per run: fits card codes and shelf codes
+FX = {                               # what the run created (ids), for the checks and the cleanup
+    "users": [], "books": [], "shelves": [], "loans": [], "types": [], "closures": [],
+    "suppliers": [], "visits": [], "sessions": [], "imports": [],
+}
+STATE = {"modules_before": None, "loans_before": None}
+READER = {"email": f"e2e-reader-{RUN}@test.local", "card": f"E2ER{TAG}", "name": "E2E", "surname": f"Reader {TAG}"}
+STAFF = {"email": f"e2e-staff-{RUN}@test.local", "card": f"E2ES{TAG}", "name": "E2E", "surname": f"Staff {TAG}",
+         "password": "E2e-" + os.urandom(9).hex()}
+STOCK_TITLE = f"E2E stocktake {TAG}"
+LATE_TITLE = f"E2E late loan {TAG}"
+TYPE_NAME = f"E2E type {TAG}"
+SUPPLIER_NAME = f"E2E supplier {TAG}"
+NEEDED_MODULES = {"stocktake": True, "visitor_log": True, "suppliers": True, "fines": True, "automatic_fines": True}
+DAILY_FINE_CENTS = 50
+
+
+def php_hash(password):
+    """bcrypt hash as Pinakes stores it (password_hash); the password goes through stdin."""
+    res = subprocess.run(["php", "-r", "echo password_hash(trim(fgets(STDIN)), PASSWORD_DEFAULT);"],
+                         input=password + "\n", capture_output=True, text=True, check=True)
+    return res.stdout.strip()
+
+
+def create_user(who, role):
+    pw = php_hash(who.get("password") or os.urandom(12).hex())
+    sql("INSERT INTO utenti (codice_tessera, nome, cognome, email, password, stato, tipo_utente, email_verificata, "
+        "privacy_accettata, data_scadenza_tessera, locale) VALUES "
+        f"({q(who['card'])}, {q(who['name'])}, {q(who['surname'])}, {q(who['email'])}, {q(pw)}, 'attivo', {q(role)}, 1, 1, "
+        "DATE_ADD(CURDATE(), INTERVAL 30 DAY), 'en_US')")
+    uid = int(sql(f"SELECT id FROM utenti WHERE email={q(who['email'])}").strip())
+    FX["users"].append(uid)
+    who["id"] = uid
+    return uid
+
+
+def create_book(title, copies, shelf_id=None, level_id=None):
+    body = {"title": title, "copies": copies}
+    if shelf_id:
+        body.update({"shelf_id": shelf_id, "level_id": level_id})
+    st, b = api("POST", "staff/books", body)
+    assert st in (200, 201), f"create book HTTP {st}: {b}"
+    FX["books"].append(b["data"]["id"])
+    return API.book(b["data"]["id"])
+
+
+def fixtures():
+    """Modules on, a daily fine, a reader, a staff account, a shelf with a two-copy book, an overdue loan."""
+    _, mods = api("GET", "staff/settings/modules")
+    STATE["modules_before"] = {m["key"]: m["stored"] for m in mods["data"]["modules"]}
+    _, loans = api("GET", "staff/settings/loans")
+    STATE["loans_before"] = {"daily_fine_cents": loans["data"]["settings"]["daily_fine_cents"]}
+    st, b = api("PUT", "staff/settings/modules", {"features": NEEDED_MODULES})
+    assert st == 200, f"modules HTTP {st}: {b}"
+    st, b = api("PUT", "staff/settings/loans", {"daily_fine_cents": DAILY_FINE_CENTS})
+    assert st == 200, f"loans HTTP {st}: {b}"
+    create_user(READER, "standard")
+    create_user(STAFF, "staff")
+    st, shelf = api("POST", "staff/shelves", {"code": f"E2E{TAG}", "name": f"E2E shelf {TAG}"})
+    assert st == 201, f"shelf HTTP {st}: {shelf}"
+    FX["shelves"].append(shelf["data"]["id"])
+    st, level = api("POST", f"staff/shelves/{shelf['data']['id']}/levels", {"number": 1})
+    assert st == 201, f"level HTTP {st}: {level}"
+    STATE["shelf"] = shelf["data"]
+    STATE["level"] = level["data"]
+    book = create_book(STOCK_TITLE, 2, shelf["data"]["id"], level["data"]["id"])
+    STATE["stock_codes"] = [c["inventory_number"] for c in book["copies"]]
+    # The overdue loan: lent today by the API, then moved 20 days into the past in the database.
+    late = create_book(LATE_TITLE, 1)
+    code = late["copies"][0]["inventory_number"]
+    st, loan = api("POST", "staff/loans", {"user_id": READER["id"], "book_id": late["id"], "immediate": True, "copy_code": code},
+                   headers={"Idempotency-Key": f"e2e-{RUN}-late"})
+    assert st in (200, 201), f"loan HTTP {st}: {loan}"
+    lid = loan["data"]["id"]
+    FX["loans"].append(lid)
+    sql("UPDATE prestiti SET data_prestito = DATE_SUB(CURDATE(), INTERVAL 20 DAY), "
+        f"data_scadenza = DATE_SUB(CURDATE(), INTERVAL 6 DAY), stato = 'in_ritardo' WHERE id = {int(lid)}")
+    _, detail = api("GET", f"staff/loans/{lid}")
+    fine = (detail["data"].get("late_fine") or {})
+    STATE["late_loan"] = lid
+    STATE["late_fine_cents"] = fine.get("accruing_cents")
+    return (f"reader #{READER['id']}, staff #{STAFF['id']}, shelf #{shelf['data']['id']}, book #{book['id']} "
+            f"{STATE['stock_codes']}, overdue loan #{lid} accruing {fine.get('accruing_cents')} cents")
+
+
+# ---------------------------------------------------------------- steps
+
+def module_label(key):
+    _, mods = api("GET", "staff/settings/modules")
+    return next(m["label"] for m in mods["data"]["modules"] if m["key"] == key)
+
+
+def entries_090():
+    """The 0.9.0 hub entries expected for the modules switched on by the fixtures (admin)."""
+    return [S[k] for k in ("staff090_attendance", "staff090_stocktake", "staff090_user_import", "staff090_marc",
+                           "staff090_copy_cataloging", "staff090_suppliers", "staff090_statistics", "staff090_calendar",
+                           "staff090_circulation_rules", "staff090_settings")]
+
+
+def save_settings():
+    ui.tap(S["action_save"], exact=True)
+    which = toast_or_text([S["staff090_library_saved"], S["staff_error_save"]], 60)
+    assert which == S["staff090_library_saved"], "the save failed in the app"
+
+
+@step(1, "staff hub: 0.9.0 sections, a module switched off and on from Library settings")
+def step_hub_and_module():
+    labels = hub_labels()
+    missing = [e for e in entries_090() if e not in labels]
+    assert not missing, f"hub entries missing with their modules on: {missing}"
+    for section in ("staff090_section_desk", "staff090_section_cataloguing", "staff090_section_library"):
+        assert any(l.lower() == S[section].lower() for l in labels), f"section {S[section]!r} missing"
+    shot("hub-090-entries")
+    sup = module_label("suppliers")
+    open_entry(S["staff090_settings"])
+    ui.tap(S["staff090_library_tab_modules"], exact=True)
+    set_switch(sup, False)
+    save_settings()
+    shot("settings-suppliers-off")
+    assert health().get("suppliers") is False, "/health still has suppliers on after the save"
+    stale = S["staff090_suppliers"] in hub_labels()
+    if stale:
+        bug("Hub keeps a module's entry after the module is switched off from Library settings. Repro: admin, "
+            "Admin area → Library settings → Modules → switch off 'Suppliers' → Save ('Saved', /health suppliers=false) → "
+            "back to Admin area: 'Suppliers' is still listed (tapping it opens a screen saying 'This area is turned off "
+            "on the library server.'); it disappears only after the app is restarted. The hub reads the /health flags "
+            "only at app start (MainActivity.onCreate) and at login; LibrarySettingsScreen does not refresh them after "
+            "a module save. Same the other way: a module switched on stays hidden until a restart.")
+        shot("hub-stale-suppliers")
+        restart_app()
+    labels = hub_labels()
+    assert S["staff090_suppliers"] not in labels, "Suppliers still in the hub after a restart"
+    open_entry(S["staff090_settings"])
+    ui.tap(S["staff090_library_tab_modules"], exact=True)
+    set_switch(sup, True)
+    save_settings()
+    assert health().get("suppliers") is True, "/health suppliers not back on"
+    if S["staff090_suppliers"] not in hub_labels():
+        restart_app()
+    assert S["staff090_suppliers"] in hub_labels(), "Suppliers not back in the hub"
+    shot("hub-suppliers-back")
+    return ("hub has the 10 entries in Front desk / Cataloguing / Library; suppliers off → /health false, entry gone"
+            + (" only after restart (bug)" if stale else "") + "; back on → entry back")
+
+
+@step(2, "library settings: a loan setting changed in the app, checked on the server, restored")
+def step_loan_setting():
+    _, before = api("GET", "staff/settings/loans")
+    old = before["data"]["settings"]["pickup_expiry_days"]
+    new = old + 1 if old < 30 else old - 1
+    open_entry(S["staff090_settings"])
+    ui.tap(S["staff090_library_tab_loans"], exact=True)
+    shown = set_field(S["staff090_library_loan_pickup_days"], str(new))
+    assert shown == str(old), f"the field showed {shown!r}, the server has {old}"
+    save_settings()
+    _, after = api("GET", "staff/settings/loans")
+    got = after["data"]["settings"]["pickup_expiry_days"]
+    assert got == new, f"server pickup_expiry_days {got}, expected {new}"
+    others = {k: v for k, v in after["data"]["settings"].items() if k != "pickup_expiry_days"}
+    assert others == {k: v for k, v in before["data"]["settings"].items() if k != "pickup_expiry_days"}, "other loan settings changed"
+    shot("settings-loans-changed")
+    set_field(S["staff090_library_loan_pickup_days"], str(old))
+    save_settings()
+    _, back = api("GET", "staff/settings/loans")
+    assert back["data"]["settings"]["pickup_expiry_days"] == old, "not restored"
+    return f"pickup_expiry_days {old} → {new} on the server (nothing else changed) → {old}"
+
+
+def type_row_menu(name):
+    nodes = ui.dump()
+    row = ui.find(name, exact=True, nodes=nodes)
+    assert row is not None, f"patron type {name!r} not listed"
+    menu = [n for n in nodes if n.desc == S["staff_more_actions"] and abs(n.center[1] - row.center[1]) < 90]
+    assert menu, f"no actions menu next to {name!r}"
+    ui.tap_xy(*menu[0].center)
+    time.sleep(0.8)
+
+
+def server_type(name):
+    _, b = api("GET", "staff/circulation/types")
+    return next((t for t in b["data"]["types"] if t["name"] == name), None)
+
+
+def tap_last(text):
+    """The last node showing [text] (the dialog's button, not the screen's own action)."""
+    nodes = [n for n in ui.dump() if n.text.lower() == text.lower()]
+    assert nodes, f"no {text!r} on screen"
+    ui.tap_xy(*nodes[-1].center)
+
+
+def open_matrix_cell(type_name, media_label):
+    for _ in range(10):
+        nodes = ui.dump()
+        head = ui.find(type_name, exact=True, nodes=nodes)
+        if head:
+            cells = [n for n in nodes if n.text == media_label and n.center[1] > head.center[1]]
+            if cells and cells[0].center[1] < ui.screen_size()[1] * 0.85:
+                ui.tap_xy(*cells[0].center)
+                time.sleep(1.2)
+                return
+        ui.swipe_up()
+    raise AssertionError(f"matrix cell {type_name} · {media_label} not found")
+
+
+def pick_date(day):
+    """Material date picker: move to the month of [day], tap it, confirm."""
+    import datetime
+    today = datetime.date.today()
+    for _ in range((day.year - today.year) * 12 + day.month - today.month):
+        n = next(n for n in ui.dump() if n.desc == "Change to next month")
+        ui.tap_xy(*n.center)
+    ui.tap(f"{day.strftime('%B')} {day.day}, {day.year}")
+    ui.tap(S["action_confirm"], exact=True)
+
+
+@step(3, "patron types (create, edit), one rules-matrix cell, a closure day")
+def step_types_matrix_closure():
+    import datetime
+    # Patron type: created and edited in the app.
+    open_entry(S["staff090_circulation_rules"])
+    ui.tap(S["staff090_library_type_new"])
+    time.sleep(1.2)
+    set_field(S["staff_field_name"], TYPE_NAME, scroll=False)
+    set_field(S["staff090_library_num_card_duration"], "400", down=False)
+    ui.scroll_to(S["action_save"], exact=True, passes=1)
+    ui.tap(S["action_save"], exact=True)
+    toast_or_text([S["staff090_library_saved"]], 30)
+    t = server_type(TYPE_NAME)
+    assert t and t["card_duration_days"] == 400, f"type on the server: {t}"
+    FX["types"].append(t["id"])
+    shot("type-created")
+    type_row_menu(TYPE_NAME)
+    ui.tap(S["staff090_library_type_edit"], exact=True)
+    time.sleep(1.2)
+    set_field(S["staff090_library_num_card_duration"], "500", down=False)
+    hint = s("staff090_library_inherits", 400)
+    if ui.find(hint, exact=True):
+        bug("Patron type editor: the 'Empty: …' hint of a field the type sets shows the type's OWN value. Repro: "
+            "Patron types and loan rules → a type with Card validity 400 → Edit patron type: the Card validity field "
+            "says 'Empty: 400', but emptying it falls back to the global value (none, '—'). TypeForms.inherited() "
+            "reads type.effective, which already contains the type's own value, instead of the level above (globals).")
+    ui.scroll_to(S["action_save"], exact=True, passes=1)
+    ui.tap(S["action_save"], exact=True)
+    toast_or_text([S["staff090_library_saved"]], 30)
+    t = server_type(TYPE_NAME)
+    assert t["card_duration_days"] == 500, f"edit not saved: {t['card_duration_days']}"
+    # Rules matrix: the new type × DVD loan duration, then back to inherited.
+    ui.tap(S["staff090_library_matrix"])
+    time.sleep(1.5)
+    _, rules = api("GET", "staff/circulation/rules")
+    media = rules["data"]["media"][-2]           # the second-last material (DVD on a default install)
+    open_matrix_cell(TYPE_NAME, media["label"])
+    set_field(S["staff090_library_num_loan_duration"], "14", scroll=False)
+    ui.scroll_to(S["staff090_library_apply"], exact=True, passes=1)
+    ui.tap(S["staff090_library_apply"], exact=True)
+    ui.tap(s("staff090_library_save_cells", 1), exact=True)
+    toast_or_text([S["staff090_library_saved"]], 30)
+
+    def cell():
+        _, r = api("GET", "staff/circulation/rules")
+        return next(c for c in r["data"]["cells"] if c["type_id"] == t["id"] and c["media"] == media["key"])
+    c = cell()
+    assert c["has_rule"] and c["loan_duration_days"] == 14, f"cell on the server: {c}"
+    shot("matrix-cell-saved")
+    open_matrix_cell(TYPE_NAME, media["label"])
+    ui.scroll_to(S["staff090_library_inherit_all"], exact=True, passes=1)
+    ui.tap(S["staff090_library_inherit_all"], exact=True)
+    ui.tap(S["staff090_library_apply"], exact=True)
+    ui.tap(s("staff090_library_save_cells", 1), exact=True)
+    toast_or_text([S["staff090_library_saved"]], 30)
+    c = cell()
+    assert not c["has_rule"] and c["loan_duration_days"] is None, f"cell not restored: {c}"
+    # Closures calendar: a future open day closed in the app, checked in the grid and in availability.
+    _, cal = api("GET", "staff/calendar")
+    today = cal["data"]["today"]
+    open_days = [d["date"] for d in cal["data"]["days"] if not d["closed"] and d["date"] > today]
+    if len(open_days) < 3:
+        _, cal = api("GET", f"staff/calendar?month={cal['data']['next_month']}")
+        open_days = [d["date"] for d in cal["data"]["days"] if not d["closed"]]
+    assert open_days, "no open day in this month or the next"
+    day = datetime.date.fromisoformat(open_days[len(open_days) // 2])
+    STATE["closure_day"] = day.isoformat()
+    open_entry(S["staff090_calendar"])
+    time.sleep(1.5)
+    ui.scroll_to(S["staff090_library_closure_new"], exact=True)
+    ui.tap(S["staff090_library_closure_new"], exact=True)
+    time.sleep(1.2)
+    ui.tap(S["staff_date_pick"], exact=True)
+    time.sleep(1)
+    pick_date(day)
+    desc = f"E2E closure {TAG}"
+    set_field(S["staff_field_description"], desc, scroll=False)
+    ui.tap(S["action_save"], exact=True)
+    toast_or_text([S["staff090_library_saved"]], 30)
+    _, cal = api("GET", f"staff/calendar?month={day.strftime('%Y-%m')}")
+    d = next(x for x in cal["data"]["days"] if x["date"] == day.isoformat())
+    assert d["closed"] and any(r.get("name") == desc for r in d["reasons"]), f"calendar day on the server: {d}"
+    FX["closures"].extend(r["id"] for r in d["reasons"] if r.get("name") == desc)
+    _, avail = api("GET", f"catalog/books/{FX['books'][0]}/availability")
+    assert day.isoformat() in (avail["data"].get("closed_dates") or []), "the day is not in availability closed_dates"
+    for _ in range(4):
+        ui.swipe_down()
+    if day.strftime("%Y-%m") != today[:7]:
+        ui.tap(S["cd_next_month"], exact=True)
+        time.sleep(1.5)
+    cell_node = ui.find(str(day.day), exact=True)
+    ui.tap_xy(*cell_node.center)
+    ui.wait(s("staff090_library_reason_closure", desc), 15)
+    shot("closure-day-in-grid")
+    ui.tap(S["staff090_library_close"], exact=True)
+    ui.scroll_to(desc)
+    ui.tap(desc)
+    time.sleep(1.2)
+    tap_last(S["staff090_library_delete"])
+    time.sleep(0.8)
+    tap_last(S["staff090_library_delete"])
+    toast_or_text([S["staff090_library_deleted"]], 30)
+    _, cal = api("GET", f"staff/calendar?month={day.strftime('%Y-%m')}")
+    d = next(x for x in cal["data"]["days"] if x["date"] == day.isoformat())
+    assert not d["closed"], f"day still closed after the delete: {d}"
+    FX["closures"].clear()
+    return (f"type #{t['id']} created (card 400) and edited (500); matrix {TYPE_NAME} × {media['key']} 14 days then "
+            f"inherited again; closure on {day} closed in the grid, in /staff/calendar and in closed_dates, then deleted")
+
+
+@step("3b", "patron type deleted in the app (its patron goes back to the default type)")
+def step_type_delete():
+    t = server_type(TYPE_NAME)
+    if t is None:
+        raise SkipStep("the type was not created")
+    open_entry(S["staff090_circulation_rules"])
+    time.sleep(1.5)
+    type_row_menu(TYPE_NAME)
+    ui.tap(S["staff090_library_delete"], exact=True)
+    time.sleep(0.8)
+    shot("type-delete-confirm")
+    tap_last(S["staff090_library_delete"])
+    deadline = time.time() + 30
+    while time.time() < deadline and server_type(TYPE_NAME) is not None:
+        time.sleep(1)
+    assert server_type(TYPE_NAME) is None, "type still on the server"
+    FX["types"].remove(t["id"])
+    tid = sql(f"SELECT IFNULL(tipologia_id, 0) FROM utenti WHERE id = {int(READER['id'])}").strip()
+    return f"type #{t['id']} deleted; the reader's tipologia_id is now {tid} (0 = default)"
+
+
+def reader_row():
+    r = sql_rows(f"SELECT IFNULL(tipologia_id, 0), IFNULL(data_scadenza_tessera, ''), stato FROM utenti WHERE id = {int(READER['id'])}")[0]
+    return {"type": int(r[0]), "expiry": r[1], "status": r[2]}
+
+
+def wait_for(fn, timeout=30, what="server state"):
+    deadline = time.time() + timeout
+    last = None
+    while time.time() < deadline:
+        last = fn()
+        if last:
+            return last
+        time.sleep(1)
+    raise AssertionError(f"{what} not reached in {timeout}s (last: {last})")
+
+
+def open_late_loan():
+    open_entry(S["staff_circulation_desk"])
+    ui.tap(S["staff_loans_overdue"], exact=True)
+    ui.tap(LATE_TITLE, timeout=30)
+    ui.wait(S["staff_user_open"], 30)
+
+
+@step(4, "patron section: type, card renewal, ledger charge + partial payment, receipt; late return with the fine waived")
+def step_patron():
+    import datetime
+    t = server_type(TYPE_NAME)
+    if t is None:
+        raise SkipStep("step 3 did not create the patron type")
+    today = datetime.date.fromisoformat(sql("SELECT CURDATE()").strip())
+    # Fixture: the card expired three days ago, so the renewal has something to do.
+    sql(f"UPDATE utenti SET data_scadenza_tessera = DATE_SUB(CURDATE(), INTERVAL 3 DAY), stato = 'scaduto' WHERE id = {int(READER['id'])}")
+    open_late_loan()
+    ui.scroll_to(S["staff_user_open"], exact=True)
+    ui.tap(S["staff_user_open"], exact=True)
+    ui.wait(S["staff090_patrons_renew_card"], 30)
+    shot("patron-section")
+    # Card renewal (no patron type duration yet: one year, the account active again).
+    ui.tap(S["staff090_patrons_renew_card"], exact=True)
+    time.sleep(1)
+    tap_last(S["staff090_patrons_renew_card"])
+    want = (today + datetime.timedelta(days=365)).isoformat()
+    row = wait_for(lambda: (lambda r: r if r["status"] == "attivo" and r["expiry"] == want else None)(reader_row()), 30, "renewed card")
+    renew_detail = f"card renewed: expired → active until {row['expiry']}"
+    # Patron type with the expiry recomputed from its card validity (500 days).
+    ui.scroll_to(S["staff090_patrons_change_type"], exact=True)
+    ui.tap(S["staff090_patrons_change_type"], exact=True)
+    time.sleep(1.2)
+    ui.tap(TYPE_NAME, exact=True)
+    set_switch(S["staff090_patrons_recompute_expiry"], True)
+    ui.tap(S["action_save"], exact=True)
+    want = (today + datetime.timedelta(days=500)).isoformat()
+    row = wait_for(lambda: (lambda r: r if r["type"] == t["id"] and r["expiry"] == want else None)(reader_row()), 30, "patron type")
+    ui.swipe_down()
+    ui.wait(TYPE_NAME, 15)
+    shot("patron-type-assigned")
+    # Ledger: a charge, then a payment of part of it.
+    ui.scroll_to(S["staff090_ledger"], exact=True)
+    ui.tap(S["staff090_ledger"], exact=True)
+    ui.wait(S["staff090_patrons_add_charge"], 30)
+    _, led = api("GET", f"staff/users/{READER['id']}/ledger")
+    base_cents = led["data"]["balance_cents"]
+    currency = led["data"]["currency"]
+    ui.tap(S["staff090_patrons_add_charge"], exact=True)
+    time.sleep(1.2)
+    set_field(s("staff090_patrons_amount", currency), "7.50", scroll=False)
+    set_field(S["staff090_patrons_description"], f"E2E charge {TAG}", scroll=False)
+    tap_last(S["staff090_patrons_add_charge"])
+    wait_for(lambda: api("GET", f"staff/users/{READER['id']}/ledger")[1]["data"]["balance_cents"] == base_cents + 750, 30, "charge")
+    ui.tap(S["staff090_patrons_record_payment"], exact=True)
+    time.sleep(1.2)
+    set_field(s("staff090_patrons_amount", currency), "3.00", scroll=False)
+    method = led["data"]["payment_methods"][0]
+    ui.tap(method["label"], exact=True)
+    tap_last(S["staff090_patrons_record_payment"])
+    wait_for(lambda: api("GET", f"staff/users/{READER['id']}/ledger")[1]["data"]["balance_cents"] == base_cents + 450, 30, "payment")
+    _, led = api("GET", f"staff/users/{READER['id']}/ledger")
+    pay = next(m for m in led["data"]["items"] if m["type"] == "pagamento")
+    assert pay["amount_cents"] == -300 and pay["payment_method"] == method["code"], f"payment row {pay}"
+    shot("ledger-charge-payment")
+    # Receipt PDF of the payment, downloaded into the app's exports.
+    ui.tap(S["staff090_patrons_receipt"], exact=True)
+    ui.wait(S["staff090_patrons_receipt_ready"], 60)
+    nodes = ui.dump()
+    names = [n.text for n in nodes if n.text.lower().endswith(".pdf")]
+    shot("receipt-ready")
+    assert names, "no file name in the receipt dialog"
+    head = ui.adb("exec-out", "run-as", PKG, "head", "-c", "5", f"cache/exports/{names[0]}", check=False)
+    assert head == b"%PDF-", f"cache/exports/{names[0]} is not a PDF ({head[:20]!r})"
+    ui.back()
+    balance_detail = f"balance {base_cents} → +750 charge → -300 {method['code']} = {base_cents + 450} cents; receipt {names[0]} (%PDF)"
+    # The late return with the fine waived, from the reader's open loan.
+    ui.back()
+    ui.scroll_to(LATE_TITLE)
+    nodes = ui.dump()
+    rows = [n for n in nodes if n.text == LATE_TITLE]
+    ui.tap_xy(*rows[-1].center)
+    ui.wait(S["staff_loan_action_return"], 30)
+    lid = STATE["late_loan"]
+    _, loan = api("GET", f"staff/loans/{lid}")
+    accruing = (loan["data"].get("late_fine") or {}).get("accruing_cents")
+    assert accruing and accruing > 0, f"no accruing late fine on loan #{lid}: {loan['data'].get('late_fine')}"
+    ui.tap(S["staff_loan_action_return"], exact=True)
+    time.sleep(1.5)
+    set_switch(S["staff090_patrons_return_waive"], True)
+    reason = f"E2E waiver {TAG}"
+    set_field(S["staff090_patrons_waive_reason"], reason, scroll=False)
+    shot("return-waive")
+    tap_last(S["staff_loan_action_return"])
+    wait_for(lambda: api("GET", f"staff/loans/{lid}")[1]["data"]["status"] == "restituito", 60, "returned loan")
+    _, loan = api("GET", f"staff/loans/{lid}")
+    lf = loan["data"].get("late_fine") or {}
+    _, led = api("GET", f"staff/users/{READER['id']}/ledger")
+    waiver = [m for m in led["data"]["items"] if m["type"] == "condono" and m.get("loan_id") == lid]
+    fine = [m for m in led["data"]["items"] if m["type"] == "multa_ritardo" and m.get("loan_id") == lid]
+    assert lf.get("charged_cents") == 0, f"late fine still charged: {lf}"
+    assert waiver and waiver[0]["amount_cents"] == -accruing and waiver[0]["description"] == reason, f"waiver rows {waiver}"
+    assert led["data"]["balance_cents"] == base_cents + 450, f"balance changed by the waived return: {led['data']['balance_cents']}"
+    ui.wait(S["loan_status_returned"], 30, exact=True)
+    shot("loan-returned")
+    return (f"{renew_detail}; type #{t['id']} assigned, expiry {row['expiry']} (today+500); {balance_detail}; "
+            f"loan #{lid} returned, fine {fine[0]['amount_cents'] if fine else '?'} cents waived ('{reason}'), charged_cents 0")
+
+
+STOCK_SESSION = f"E2E stocktake session {TAG}"
+UNKNOWN_CODE = f"E2E-NOPE-{TAG}"
+
+
+def stock_session():
+    _, b = api("GET", "staff/stocktake/sessions?status=all&limit=50")
+    for row in b.get("data") or []:
+        if row["name"] == STOCK_SESSION:
+            if row["id"] not in FX["sessions"]:
+                FX["sessions"].append(row["id"])
+            return row
+    return None
+
+
+def stock_scan(code):
+    set_field(S["staff090_stocktake_manual_code"], code, scroll=False)
+    ui.tap(S["staff090_stocktake_send_code"])
+    ui.wait(code, 30, exact=True)
+    time.sleep(1)
+
+
+@step(5, "stocktake: a session on a shelf with two copies, a known and an unknown code, close, report")
+def step_stocktake():
+    shelf = STATE["shelf"]
+    shelf_label = f"[{shelf['code']}] {shelf['name']}"
+    open_entry(S["staff090_stocktake"])
+    ui.tap(S["staff090_stocktake_new"])
+    time.sleep(1.2)
+    set_field(S["staff090_stocktake_field_name"], STOCK_SESSION, scroll=False)
+    ui.tap(S["staff090_stocktake_any_shelf"], exact=True)
+    time.sleep(1)
+    ui.tap(S["staff090_stocktake_search_shelf"], exact=True)
+    ui.type_text(shelf["code"])
+    ui.hide_keyboard()
+    ui.tap(shelf_label, exact=True)
+    ui.scroll_to(S["staff090_stocktake_open_session"], exact=True, passes=1)
+    ui.tap(S["staff090_stocktake_open_session"], exact=True)
+    base.deny_camera_prompt()
+    ui.wait(S["staff090_stocktake_manual_code"], 30)
+    sess = wait_for(stock_session, 30, "stocktake session")
+    assert sess["expected_total"] == 2 and sess["filter"]["shelf_id"] == shelf["id"], f"session {sess}"
+    known = STATE["stock_codes"][0]
+    stock_scan(known)
+    found = S["staff090_stocktake_count_found"]
+    shot("stocktake-found")
+    stock_scan(UNKNOWN_CODE)
+    shot("stocktake-unknown")
+    nodes = ui.dump()
+    cards = [n.text for n in nodes if n.text]
+    sm = stock_session()["summary"]
+    assert (sm["expected"], sm["found"], sm["missing"], sm["unknown"], sm["scans"]) == (2, 1, 1, 1, 2), f"server counters {sm}"
+    # The progress counters on screen: the number shown above each label.
+    ui.scroll_to(S["staff090_stocktake_count_unknown"], exact=True, passes=1)
+    nodes = ui.dump()
+
+    def counter(label_key):
+        lab = ui.find(S[label_key], exact=True, nodes=nodes)
+        assert lab is not None, f"counter {S[label_key]!r} not on screen"
+        nums = [n for n in nodes if n.text.isdigit() and n.bounds[3] <= lab.bounds[1] + 4 and abs(n.bounds[0] - lab.bounds[0]) < 60]
+        nums.sort(key=lambda n: lab.bounds[1] - n.bounds[3])
+        return int(nums[0].text) if nums else None
+    shown = {k: counter(k) for k in ("staff090_stocktake_count_found", "staff090_stocktake_count_missing",
+                                      "staff090_stocktake_count_unknown")}
+    assert list(shown.values()) == [1, 1, 1], f"counters on screen {shown}"
+    shot("stocktake-counters")
+    ui.scroll_to(S["staff090_stocktake_close"], exact=True)
+    ui.tap(S["staff090_stocktake_close"], exact=True)
+    time.sleep(1)
+    ui.tap(S["staff090_stocktake_action_none"], exact=True)
+    tap_last(S["staff090_stocktake_close"])
+    sess = wait_for(lambda: (lambda x: x if x and x["status"] == "closed" else None)(stock_session()), 30, "closed session")
+    assert sess["missing_action"] == "none", f"missing_action {sess['missing_action']}"
+    shot("stocktake-closed")
+    rep = next(n for n in ui.dump() if n.desc == S["staff090_stocktake_report"])
+    ui.tap_xy(*rep.center)
+    ui.wait(s("staff090_stocktake_report_rows", 3), 30)
+    for code in (known, STATE["stock_codes"][1], UNKNOWN_CODE):
+        assert ui.find(code, exact=True), f"{code} not in the report"
+    shot("stocktake-report")
+    return (f"session #{sess['id']} on shelf {shelf_label}: expected 2; {known} → {found}, {UNKNOWN_CODE} → unknown; "
+            f"counters found/missing/unknown 1/1/1 on screen and server, scans 2; closed with missing_action=none; "
+            f"report rows 3 (found, missing {STATE['stock_codes'][1]}, unknown)")
+
+
+@step(6, "visitor log: a reader's card, an unknown card, a guest")
+def step_visitors():
+    top = int(sql("SELECT IFNULL(MAX(id), 0) FROM presenze").strip())
+    STATE["presenze_top"] = top
+    open_entry(S["staff090_attendance"])
+    base.deny_camera_prompt()
+    ui.wait(S["staff090_patrons_card_code"], 30)
+    set_field(S["staff090_patrons_card_code"], READER["card"], scroll=False)
+    ui.tap(S["staff090_patrons_check_in"])
+    rows = wait_for(lambda: sql_rows(f"SELECT id, tipo FROM presenze WHERE id > {top} AND utente_id = {int(READER['id'])}"), 30, "member visit")
+    assert rows[0][1] == "socio", f"visit {rows}"
+    ui.wait(f"{READER['name']} {READER['surname'][0]}.", 15)
+    shot("visit-member")
+    set_field(S["staff090_patrons_card_code"], f"E2E-NOCARD-{TAG}", scroll=False)
+    ui.tap(S["staff090_patrons_check_in"])
+    ui.wait(S["staff090_patrons_err_card_not_found"], 30, exact=True)
+    shot("visit-unknown-card")
+    count_after_unknown = int(sql(f"SELECT COUNT(*) FROM presenze WHERE id > {top}").strip())
+    assert count_after_unknown == 1, f"the unknown card recorded something ({count_after_unknown} rows)"
+    guest = f"E2E guest {TAG}"
+    ui.scroll_to(S["staff090_patrons_guest"], exact=True)
+    ui.tap(S["staff090_patrons_guest"], exact=True)
+    time.sleep(1.2)
+    set_field(S["staff090_patrons_guest_name"], guest, scroll=False)
+    set_field(S["staff090_patrons_guest_reason"], "smoke", scroll=False)
+    tap_last(S["staff090_patrons_guest_save"])
+    g = wait_for(lambda: sql_rows(f"SELECT id, tipo, IFNULL(utente_id, 0) FROM presenze WHERE id > {top} AND nome_ospite = {q(guest)}"), 30, "guest visit")
+    assert g[0][1] == "ospite" and g[0][2] == "0", f"guest row {g}"
+    ui.wait(guest, 15, exact=True)
+    shot("visit-guest")
+    FX["visits"] = [int(r[0]) for r in sql_rows(f"SELECT id FROM presenze WHERE id > {top} AND (utente_id = {int(READER['id'])} OR nome_ospite = {q(guest)})")]
+    return f"member visit #{rows[0][0]} (socio), unknown card refused with '{S['staff090_patrons_err_card_not_found']}' and nothing recorded, guest visit #{g[0][0]}"
+
+
+IMPORT_FILE = f"e2e-patrons-{TAG}.csv"
+IMPORT_ROWS = [("E2E", f"Import A {TAG}", f"e2e-imp-a-{RUN}@test.local", f"E2EIA{TAG}"),
+               ("E2E", f"Import B {TAG}", f"e2e-imp-b-{RUN}@test.local", f"E2EIB{TAG}")]
+
+
+def push_download(local, name):
+    """Put a file in the emulator's Downloads, indexed so the system picker lists it."""
+    ui.adb("push", local, f"/sdcard/Download/{name}")
+    ui.shell(f"am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/{name}")
+    STATE.setdefault("pushed", []).append(name)
+    time.sleep(2)
+
+
+def pick_document(name):
+    """The system document picker: the file from Recent, or found through its search."""
+    ui.wait_any([name, "Recent", "Downloads"], 30)
+    if not ui.find(name, exact=True):
+        ui.tap("Search")
+        ui.type_text(name)
+        ui.shell("input keyevent KEYCODE_ENTER")
+        time.sleep(2)
+    ui.tap(name, exact=True, timeout=30)
+
+
+@step(7, "patron CSV import through the system document picker")
+def step_user_import():
+    import tempfile
+    body = "nome;cognome;email;codice_tessera\n" + "".join(";".join(r) + "\n" for r in IMPORT_ROWS)
+    path = os.path.join(tempfile.mkdtemp(prefix="e2e090"), IMPORT_FILE)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(body)
+    push_download(path, IMPORT_FILE)
+    open_entry(S["staff090_user_import"])
+    ui.tap(S["staff_import_choose_file"], exact=True)
+    pick_document(IMPORT_FILE)
+    ui.wait(IMPORT_FILE, 30, exact=True)
+    ui.tap(S["staff090_patrons_import_upload"], exact=True)
+    ui.wait(S["staff090_patrons_import_ready"], 60)
+    shot("user-import-preview")
+    set_switch(S["staff090_patrons_import_invites"], False)
+    ui.scroll_to(S["staff090_patrons_import_start"], exact=True, passes=1)
+    ui.tap(S["staff090_patrons_import_start"], exact=True)
+    which = toast_or_text([S["staff_import_status_done"], S["staff_import_status_failed"], S["staff_import_failed"]], 120)
+    shot("user-import-done")
+    assert which == S["staff_import_status_done"], f"import ended with {which!r}"
+    emails = ",".join(q(r[2]) for r in IMPORT_ROWS)
+    rows = sql_rows(f"SELECT id, email, codice_tessera, tipo_utente, stato FROM utenti WHERE email IN ({emails})")
+    FX["users"].extend(int(r[0]) for r in rows if int(r[0]) not in FX["users"])
+    assert len(rows) == 2, f"created users {rows}"
+    for r in rows:
+        want = next(x for x in IMPORT_ROWS if x[2] == r[1])
+        assert r[2] == want[3] and r[3] == "standard", f"user {r}"
+    created = ui.find(S["staff090_patrons_import_created"], exact=True)
+    return f"{IMPORT_FILE} picked from Downloads, 2 accounts created ({', '.join(r[0] for r in rows)}) with their card codes, no invitation"
+
+
+MARC_NAME = f"e2e-marc-{TAG}.mrc"
+
+
+def marc_titles(path):
+    """245 $a of each record of an ISO 2709 file (to recognise the imported books)."""
+    data = open(path, "rb").read()
+    out = []
+    for rec in [r for r in data.split(b"\x1d") if len(r) > 24]:
+        base_addr = int(rec[12:17])
+        directory = rec[24:base_addr - 1]
+        for i in range(0, len(directory), 12):
+            if directory[i:i + 3] == b"245":
+                ln, st = int(directory[i + 3:i + 7]), int(directory[i + 7:i + 12])
+                field = rec[base_addr + st:base_addr + st + ln].decode("utf-8", "replace")
+                sub = field.split("\x1f")
+                a = next((x[1:] for x in sub[1:] if x.startswith("a")), "")
+                out.append(a.strip(" /:;,.").strip())
+    return out
+
+
+@step(8, "suppliers (create, set on a book, delete); MARC export and import through the picker")
+def step_suppliers_marc():
+    late_book = FX["books"][1]
+    # Supplier created in the app.
+    open_entry(S["staff090_suppliers"])
+    ui.tap(S["staff090_catalogue_supplier_new"])
+    time.sleep(1.2)
+    set_field(S["staff_field_name"], SUPPLIER_NAME, scroll=False)
+    set_field(S["staff_field_email"], f"supplier-{TAG}@test.local", scroll=False)
+    ui.scroll_to(S["action_save"], exact=True, passes=1)
+    ui.tap(S["action_save"], exact=True)
+    ui.wait(SUPPLIER_NAME, 30, exact=True)
+    _, sup = api("GET", "staff/suppliers?q=" + urllib.request.quote(SUPPLIER_NAME))
+    rows = [x for x in sup.get("data") or [] if x["name"] == SUPPLIER_NAME]
+    assert len(rows) == 1 and rows[0]["email"] == f"supplier-{TAG}@test.local", f"supplier on the server {rows}"
+    sid = rows[0]["id"]
+    FX["suppliers"].append(sid)
+    shot("supplier-created")
+    # Set on a book in the book form.
+    open_entry(S["staff_books"])
+    ui.tap(S["staff_books_search"])
+    ui.type_text(LATE_TITLE)
+    ui.hide_keyboard()
+    ui.tap(LATE_TITLE, timeout=30)
+    ui.wait(S["staff_book_save"], 30)
+    for _ in range(12):
+        if field_of(S["staff090_catalogue_supplier"]):
+            break
+        ui.swipe_up()
+    f = field_of(S["staff090_catalogue_supplier"])
+    assert f is not None, "no Supplier field in the book form"
+    ui.tap_xy(*f.center)
+    ui.tap(SUPPLIER_NAME, exact=True)
+    shot("book-form-supplier")
+    ui.tap(S["staff_book_save"])
+    ui.gone(S["staff_book_edit"], 120)
+    book = API.book(late_book)
+    assert book.get("supplier_id") == sid, f"book supplier {book.get('supplier_id')} != {sid}"
+    # Deleted in the app: the book loses the link.
+    open_entry(S["staff090_suppliers"])
+    ui.wait(SUPPLIER_NAME, 30, exact=True)
+    row = ui.find(SUPPLIER_NAME, exact=True)
+    menu = [n for n in ui.dump() if n.desc == S["cd_more_options"] and abs(n.center[1] - row.center[1]) < 90]
+    ui.tap_xy(*menu[0].center)
+    ui.tap(S["staff090_catalogue_supplier_delete"], exact=True)
+    ui.wait(s("staff090_catalogue_supplier_delete_books", SUPPLIER_NAME, 1), 15)
+    shot("supplier-delete-confirm")
+    tap_last(S["staff090_catalogue_supplier_delete"])
+    ui.wait(s("staff090_catalogue_supplier_deleted", 1), 30)
+    _, sup = api("GET", "staff/suppliers?q=" + urllib.request.quote(SUPPLIER_NAME))
+    assert not [x for x in sup.get("data") or [] if x["id"] == sid], "supplier still on the server"
+    FX["suppliers"].remove(sid)
+    assert API.book(late_book).get("supplier_id") is None, "the book kept the deleted supplier"
+    detail = f"supplier #{sid} created, set on book #{late_book} (supplier_id={sid}), deleted ('Books unlinked: 1', book unlinked)"
+    # MARC export of the whole catalogue (the default MARC 21).
+    open_entry(S["staff090_marc"])
+    ui.tap(S["staff090_catalogue_marc_export"], exact=True)
+    ui.tap(S["staff090_catalogue_marc_scope_all"], exact=True)
+    tap_last(S["staff090_catalogue_marc_export_run"])
+    ui.wait(S["staff_share_file"], 180)
+    name = next(n.text for n in ui.dump() if n.text.lower().endswith((".mrc", ".xml")))
+    shot("marc-export-ready")
+    data = ui.adb("exec-out", "run-as", PKG, "cat", f"cache/exports/{name}", check=False)
+    records = data.count(b"\x1d")
+    assert records > 0 and LATE_TITLE.encode() in data, f"{name}: {records} records, run's book present: {LATE_TITLE.encode() in data}"
+    ui.back()
+    detail += f"; export {name}: {len(data)} bytes, {records} records, includes the run's book"
+    # MARC import through the picker.
+    if not MARC_FILE or not os.path.exists(MARC_FILE):
+        raise SkipStep(detail + "; MARC import skipped: PINAKES_E2E_MARC not set")
+    titles = marc_titles(MARC_FILE)
+    STATE["libri_top"] = int(sql("SELECT IFNULL(MAX(id), 0) FROM libri").strip())
+    STATE["autori_top"] = int(sql("SELECT IFNULL(MAX(id), 0) FROM autori").strip())
+    STATE["editori_top"] = int(sql("SELECT IFNULL(MAX(id), 0) FROM editori").strip())
+    push_download(MARC_FILE, MARC_NAME)
+    ui.tap(S["staff090_catalogue_marc_import"], exact=True)
+    ui.tap(S["staff_import_choose_file"], exact=True)
+    pick_document(MARC_NAME)
+    ui.wait(MARC_NAME, 30, exact=True)
+    ui.scroll_to(S["staff090_catalogue_marc_upload"], exact=True)
+    ui.tap(S["staff090_catalogue_marc_upload"], exact=True)
+    run = s("staff090_catalogue_marc_run", len(titles))
+    ui.wait(run, 90, exact=True)
+    shot("marc-import-preview")
+    ui.tap(run, exact=True)
+    which = toast_or_text([S["staff_import_status_done"], S["staff_import_status_failed"], S["staff_import_failed"]], 180)
+    shot("marc-import-done")
+    assert which == S["staff_import_status_done"], f"MARC import ended with {which!r}"
+    new = sql_rows(f"SELECT id FROM libri WHERE id > {STATE['libri_top']} AND deleted_at IS NULL")
+    ids = [int(r[0]) for r in new]
+    got = sorted(API.book(i)["title"] for i in ids)
+    STATE["marc_books"] = ids
+    FX["books"].extend(i for i in ids if i not in FX["books"])
+    assert len(ids) == len(titles) and sorted(titles) == got, f"imported {got}, file has {titles}"
+    return detail + f"; {MARC_NAME} picked and imported: {len(ids)} new books {ids} ({'; '.join(got)})"
+
+
+@step(9, "statistics: the overview opens with the server's numbers")
+def step_statistics():
+    open_entry(S["staff090_statistics"])
+    ui.wait(S["staff090_statistics_books_available"], 60)
+    _, st = api("GET", "staff/statistics")
+    ov = st["data"]["overview"]
+    nodes = ui.dump()
+
+    def value(label_key):
+        lab = ui.find(S[label_key], exact=True, nodes=nodes)
+        assert lab is not None, f"{S[label_key]!r} not on screen"
+        nums = [n for n in nodes if n.text.replace(",", "").replace(".", "").isdigit() and n.bounds[3] <= lab.bounds[1] + 4
+                and abs(n.bounds[0] - lab.bounds[0]) < 60]
+        nums.sort(key=lambda n: lab.bounds[1] - n.bounds[3])
+        return int(nums[0].text.replace(",", "").replace(".", "")) if nums else None
+    pairs = {"books_available": "staff090_statistics_books_available", "active_loans": "staff090_statistics_active_loans",
+             "completed_loans": "staff090_statistics_completed_loans"}
+    shown = {k: value(v) for k, v in pairs.items()}
+    shot("statistics-overview")
+    assert all(shown[k] == ov[k] for k in pairs), f"screen {shown} vs server {ov}"
+    assert ui.find(S["staff090_statistics_by_month"], exact=True, nodes=nodes), "no loans-by-month section"
+    return f"overview on screen {shown} = /staff/statistics"
+
+
+@step(10, "staff account: admin-only entries hidden, an admin-only action refused in place")
+def step_staff():
+    sign_in(STAFF["email"], STAFF["password"])
+    labels = hub_labels()
+    shot("staff-hub")
+    for hidden in ("staff090_circulation_rules", "staff090_calendar"):
+        assert S[hidden] not in labels, f"{S[hidden]!r} shown to staff"
+    for shown in ("staff090_settings", "staff090_stocktake", "staff090_attendance", "staff090_suppliers", "staff090_marc"):
+        assert S[shown] in labels, f"{S[shown]!r} missing for staff"
+    open_entry(S["staff090_settings"])
+    ui.wait(S["staff090_library_modules_read_only"], 30)
+    assert not ui.find(S["action_save"], exact=True), "a Save button on the read-only modules tab"
+    shot("staff-settings-read-only")
+    # An admin-only write refused by the server while the screen is open: the account is an
+    # administrator when the calendar opens and is downgraded to staff before the save.
+    sql(f"UPDATE utenti SET tipo_utente = 'admin' WHERE id = {int(STAFF['id'])}")
+    restart_app()
+    open_staff_hub()
+    open_entry(S["staff090_calendar"])
+    time.sleep(2)
+    sql(f"UPDATE utenti SET tipo_utente = 'staff' WHERE id = {int(STAFF['id'])}")
+    import datetime
+    day = datetime.date.fromisoformat(STATE.get("closure_day") or sql("SELECT DATE_ADD(CURDATE(), INTERVAL 10 DAY)").strip())
+    ui.scroll_to(S["staff090_library_closure_new"], exact=True)
+    ui.tap(S["staff090_library_closure_new"], exact=True)
+    time.sleep(1.2)
+    ui.tap(S["staff_date_pick"], exact=True)
+    time.sleep(1)
+    pick_date(day)
+    set_field(S["staff_field_description"], f"E2E refused {TAG}", scroll=False)
+    # The server's own words for this refusal, asked with the staff account's token.
+    staff_api = base.Api()
+    st, b, _ = staff_api.call("POST", "auth/login", {"email": STAFF["email"], "password": STAFF["password"],
+                                                     "device_name": f"e2e-090-{RUN}", "device_id": f"e2e-090-{RUN}", "platform": "other"}, auth=False)
+    staff_api.token = b["data"]["token"]
+    st, refusal, _ = staff_api.call("POST", "staff/calendar/closures", {"start_date": day.isoformat(), "description": "probe"},
+                                    headers={"Accept-Language": LANG["v"]})
+    staff_api.call("POST", "auth/logout")
+    assert st == 403 and refusal["error"]["code"] == "not_permitted", f"probe answer {st} {refusal}"
+    message = refusal["error"]["message"]
+    fields = (refusal["error"].get("details") or {}).get("fields") or {}
+    expected = [message] + [v for v in fields.values() if isinstance(v, str)]
+    ui.tap(S["action_save"], exact=True)
+    which = toast_or_text(expected, 30)
+    shot("staff-refused-in-place")
+    assert ui.find(S["staff090_library_closure_new"], exact=True), "the closure sheet closed"
+    _, cal = api("GET", f"staff/calendar?month={day.strftime('%Y-%m')}")
+    d = next(x for x in cal["data"]["days"] if x["date"] == day.isoformat())
+    assert not d["closed"], f"a closure was written: {d}"
+    ui.back()
+    ui.back()
+    hub()
+    assert base.on_hub(), "the staff area was lost after the refusal"
+    restart_app()
+    labels = hub_labels()
+    assert S["staff090_calendar"] not in labels and S["staff090_settings"] in labels, "staff hub after the refusal"
+    shot("staff-hub-kept")
+    return (f"staff hub without '{S['staff090_circulation_rules']}' and '{S['staff090_calendar']}', Library settings read-only; "
+            f"closure save after the downgrade → server 403 not_permitted shown in the sheet ('{which}'), nothing written, staff area kept")
+
+
+# ---------------------------------------------------------------- preflight, cleanup, main
+
+DEVICES_BEFORE = set()
+
+
+@step(0, "preflight: API login, fixtures")
+def preflight():
+    API.login()
+    _, me = api("GET", "me")
+    assert me["data"].get("tipo_utente") == "admin", "PINAKES_E2E_EMAIL must be an administrator"
+    STATE["admin_id"] = me["data"]["id"]
+    STATE["started"] = sql("SELECT NOW()").strip()
+    _, devs = api("GET", "me/devices")
+    DEVICES_BEFORE.update(d["id"] for d in devs.get("data") or [])
+    STATE["devices_known"] = True
+    features = health()
+    for flag in ("staff_library_settings", "staff_patrons", "staff_marc", "staff_statistics", "staff_user_import"):
+        assert features.get(flag), f"/health {flag} is off: the server is not on Mobile API 1.10.0"
+    return fixtures()
+
+
+def _try(label, fn):
+    try:
+        out = fn()
+        print(f"    {label}: {out if out is not None else 'ok'}", flush=True)
+    except Exception as e:  # noqa: BLE001 - keep cleaning
+        print(f"    {label}: FAILED {e}", flush=True)
+        CLEANUP_ERRORS.append(f"{label}: {e}")
+
+
+CLEANUP_ERRORS = []
+
+
+def ids(values):
+    return ",".join(str(int(v)) for v in values) or "0"
+
+
+def cleanup():
+    print("--> cleanup", flush=True)
+    _try("airplane mode off", lambda: ui.airplane(False))
+    if API.token:
+        for lid in list(FX["loans"]):
+            def ret(lid=lid):
+                _, loan = api("GET", f"staff/loans/{lid}")
+                if loan.get("data") and "return" in (loan["data"].get("actions") or []):
+                    return api("POST", f"staff/loans/{lid}/return", {"outcome": "restituito"})[0]
+                return "already closed"
+            _try(f"return loan #{lid}", ret)
+        for sid in list(FX["suppliers"]):
+            _try(f"delete supplier #{sid}", lambda sid=sid: api("DELETE", f"staff/suppliers/{sid}")[0])
+        for bid in list(FX["books"]):
+            _try(f"soft-delete book #{bid} (API)", lambda bid=bid: api("DELETE", f"staff/books/{bid}")[0])
+        if STATE.get("modules_before"):
+            restore = {k: bool(STATE["modules_before"].get(k)) for k in NEEDED_MODULES}
+            _try(f"restore modules {restore}", lambda: api("PUT", "staff/settings/modules", {"features": restore})[0])
+        if STATE.get("loans_before"):
+            _try(f"restore loan settings {STATE['loans_before']}", lambda: api("PUT", "staff/settings/loans", STATE["loans_before"])[0])
+        if STATE.get("devices_known"):
+            def revoke():
+                _, devs = api("GET", "me/devices")
+                done = []
+                for d in devs.get("data") or []:
+                    if d["id"] not in DEVICES_BEFORE and not d.get("is_current"):
+                        api("DELETE", f"me/devices/{d['id']}")
+                        done.append(d["id"])
+                return f"revoked {done}"
+            _try("app device tokens issued by this run (admin)", revoke)
+    # Hard clean of the run's own fixtures (slot database only).
+    users, books = FX["users"], FX["books"]
+    _try("closures", lambda: sql(f"DELETE FROM calendario_chiusure WHERE id IN ({ids(FX['closures'])}) OR descrizione LIKE {q('E2E % ' + TAG)}"))
+    _try("patron types", lambda: (sql(f"DELETE FROM regole_prestito WHERE tipologia_id IN (SELECT id FROM tipologie_lettore WHERE nome = {q(TYPE_NAME)})"),
+                                  sql(f"DELETE FROM tipologie_lettore WHERE nome = {q(TYPE_NAME)}")))
+    _try("suppliers", lambda: sql(f"DELETE FROM fornitori WHERE nome = {q(SUPPLIER_NAME)}"))
+    _try("visits", lambda: sql(f"DELETE FROM presenze WHERE id IN ({ids(FX['visits'])}) OR utente_id IN ({ids(users)}) "
+                               f"OR (nome_ospite = {q('E2E guest ' + TAG)})"))
+    _try("stocktake sessions", lambda: sql(f"DELETE FROM inventario_sessioni WHERE id IN ({ids(FX['sessions'])}) OR nome = {q(STOCK_SESSION)}"))
+    _try("import jobs", lambda: sql(f"DELETE FROM mobile_import_jobs WHERE file_name IN ({q(IMPORT_FILE)}, {q(MARC_NAME)})"))
+    _try("loans and reservations", lambda: (sql(f"DELETE FROM prenotazioni WHERE libro_id IN ({ids(books)}) OR utente_id IN ({ids(users)})"),
+                                            sql(f"DELETE FROM prestiti WHERE libro_id IN ({ids(books)}) OR utente_id IN ({ids(users)})")))
+    _try("ledger movements", lambda: sql(f"DELETE FROM movimenti_lettore WHERE utente_id IN ({ids(users)})"))
+    _try("books (hard)", lambda: sql(f"DELETE FROM libri WHERE id IN ({ids(books)})"))
+    if STATE.get("autori_top"):
+        _try("authors created by the MARC import", lambda: sql(
+            f"DELETE FROM autori WHERE id > {int(STATE['autori_top'])} AND id NOT IN (SELECT autore_id FROM libri_autori)"))
+    if STATE.get("editori_top"):
+        _try("publishers created by the MARC import", lambda: sql(
+            f"DELETE FROM editori WHERE id > {int(STATE['editori_top'])} AND id NOT IN (SELECT editore_id FROM libri_editori) "
+            "AND id NOT IN (SELECT editore_id FROM libri WHERE editore_id IS NOT NULL)"))
+    _try("users", lambda: sql(f"DELETE FROM utenti WHERE id IN ({ids(users)}) OR email IN "
+                              f"({q(READER['email'])}, {q(STAFF['email'])}, {', '.join(q(r[2]) for r in IMPORT_ROWS)})"))
+    _try("shelves", lambda: sql(f"DELETE FROM scaffali WHERE id IN ({ids(FX['shelves'])}) OR codice = {q('E2E' + TAG)}"))
+    for name in STATE.get("pushed", []):
+        _try(f"remove /sdcard/Download/{name}", lambda name=name: ui.shell(f"rm -f /sdcard/Download/{name}") or
+             ui.shell(f"am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/{name}") and None)
+    if API.token:
+        API.call("POST", "auth/logout")
+    ui.adb("shell", "pm", "clear", PKG, check=False)
+
+
+def leftovers():
+    """What the run might have left on the server (all zero after a clean run)."""
+    users = ids(FX["users"])
+    checks = {
+        "users": f"SELECT COUNT(*) FROM utenti WHERE id IN ({users}) OR email LIKE {q('e2e-%-' + RUN + '@test.local')}",
+        "books": f"SELECT COUNT(*) FROM libri WHERE id IN ({ids(FX['books'])}) OR titolo LIKE {q('E2E % ' + TAG)}",
+        "loans": f"SELECT COUNT(*) FROM prestiti WHERE utente_id IN ({users}) OR libro_id IN ({ids(FX['books'])})",
+        "ledger": f"SELECT COUNT(*) FROM movimenti_lettore WHERE utente_id IN ({users})",
+        "visits": f"SELECT COUNT(*) FROM presenze WHERE utente_id IN ({users}) OR nome_ospite = {q('E2E guest ' + TAG)}",
+        "stocktake": f"SELECT COUNT(*) FROM inventario_sessioni WHERE nome = {q(STOCK_SESSION)}",
+        "types": f"SELECT COUNT(*) FROM tipologie_lettore WHERE nome = {q(TYPE_NAME)}",
+        "closures": f"SELECT COUNT(*) FROM calendario_chiusure WHERE descrizione LIKE {q('E2E % ' + TAG)}",
+        "suppliers": f"SELECT COUNT(*) FROM fornitori WHERE nome = {q(SUPPLIER_NAME)}",
+        "shelves": f"SELECT COUNT(*) FROM scaffali WHERE codice = {q('E2E' + TAG)}",
+        "import jobs": f"SELECT COUNT(*) FROM mobile_import_jobs WHERE file_name IN ({q(IMPORT_FILE)}, {q(MARC_NAME)})",
+    }
+    out = {}
+    for k, v in checks.items():
+        try:
+            out[k] = int(sql(v).strip())
+        except Exception as e:  # noqa: BLE001
+            out[k] = f"error {e}"
+    return out
+
+
+def main():
+    S.update(base.load_strings())
+    LANG["v"] = (ui.shell("getprop persist.sys.locale").strip() or ui.shell("getprop ro.product.locale").strip() or "en").split("-")[0]
+    if not base.db_configured():
+        sys.exit("PINAKES_E2E_DB_NAME/USER (and _PASSWORD, _SOCKET or _HOST) are required for the 0.9.0 smoke")
+    try:
+        if preflight():
+            signed = False
+            try:
+                sign_in(base.EMAIL, base.PASSWORD)
+                signed = True
+            except Exception as e:  # noqa: BLE001
+                RESULTS.append(("sign-in as admin", "FAIL", str(e)))
+            if signed:
+                for fn in (step_hub_and_module, step_loan_setting, step_types_matrix_closure, step_patron, step_type_delete,
+                           step_stocktake, step_visitors, step_user_import, step_suppliers_marc, step_statistics, step_staff):
+                    fn()
+    finally:
+        cleanup()
+    left = leftovers()
+    passed = sum(1 for r in RESULTS if r[1] == "PASS")
+    skipped = sum(1 for r in RESULTS if r[1] == "SKIP")
+    failed = sum(1 for r in RESULTS if r[1] == "FAIL")
+    print(f"\nlive smoke 0.9.0: {passed} passed, {skipped} skipped, {failed} failed  (screenshots: {SHOTS})")
+    for name, result, detail in RESULTS:
+        print(f"  {result:4} {name}: {detail}")
+    print("\nbugs found:" if BUGS else "\nbugs found: none")
+    for b in BUGS:
+        print("  - " + b)
+    print(f"\nleft on the server after cleanup: {left}")
+    if CLEANUP_ERRORS:
+        print("cleanup errors: " + "; ".join(CLEANUP_ERRORS))
+    dirty = any(v != 0 for v in left.values()) or CLEANUP_ERRORS
+    return 1 if failed or not passed or dirty else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
