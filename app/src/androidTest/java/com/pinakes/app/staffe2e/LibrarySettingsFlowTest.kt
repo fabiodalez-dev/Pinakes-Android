@@ -114,18 +114,31 @@ class LibrarySettingsFlowTest : AppFlowTest() {
         assertEquals("""{"closed_weekdays":[0,6]}""", lastBody("PUT", "staff/calendar/weekdays"))
     }
 
-    @Test fun staffLeavesAnAreaTheAccountMayNotUseAndKeepsTheRole() {
-        launch(role = "staff", health = health) {
-            json("GET me", "me_staff")
+    @Test fun staffSeesLibrarySettingsButNotTheAdministratorTools() {
+        launch(role = "staff", health = health) { json("GET me", "me_staff") }
+        openStaffHub()
+        waitText(text(R.string.staff090_settings))
+        // The server admits only administrators to patron types, loan rules and the calendar.
+        assertFalse(exists(text(R.string.staff090_circulation_rules)))
+        assertFalse(exists(text(R.string.staff090_calendar)))
+    }
+
+    /**
+     * An account the app still takes for an administrator, demoted to Staff on the server: the
+     * area refuses its first load with 403 not_permitted. The screen closes with the server's
+     * message and the stored role stays (only the role gate's `forbidden` drops it).
+     */
+    @Test fun aRefusedFirstLoadClosesTheScreenAndKeepsTheRole() {
+        launch(health = health) {
             json("GET staff/circulation/types", "s090_library_types_staff_refused", status = 403)
         }
         openStaffHub()
         click(text(R.string.staff090_circulation_rules))
         waitRequest("GET", "staff/circulation/types")
-        // 403 not_permitted: back on the hub, staff entries still there.
         waitText(text(R.string.staff_scan_subtitle))
-        assertEquals("staff", deps.session().role.value)
-        waitText(text(R.string.staff090_settings))
+        assertFalse(exists(text(R.string.staff090_library_types).uppercase()))
+        assertEquals("admin", deps.session().role.value)
+        waitText(text(R.string.staff090_calendar))
     }
 
     @Test fun aRefusedSaveShowsTheServerMessageAndStaysOnTheScreen() {
