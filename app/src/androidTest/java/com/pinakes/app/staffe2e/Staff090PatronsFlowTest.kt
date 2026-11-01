@@ -61,7 +61,8 @@ class Staff090PatronsFlowTest : AppFlowTest() {
         waitText("E2E Fines")
         click(text(R.string.staff090_ledger))
         waitRequest("GET", "staff/users/113146/ledger")
-        waitText("Lost library card")
+        // The description is part of the row's detail line ("Lost library card · date").
+        waitFor(androidx.compose.ui.test.hasText("Lost library card", substring = true))
         waitText("Patroncap fine book")
         clickTag("ledger-payment")
         clickTag("method-pos")
@@ -89,7 +90,6 @@ class Staff090PatronsFlowTest : AppFlowTest() {
             json("POST staff/attendance/guests", "s090_patrons_att_guest", status = 201)
         }
         openStaffHub()
-        scrollListTo(text(R.string.staff090_attendance))
         click(text(R.string.staff090_attendance))
         denyCameraPromptIfShown()
         typeIntoTag("card-code-input", "  PCAP090B ")
@@ -115,11 +115,12 @@ class Staff090PatronsFlowTest : AppFlowTest() {
 
     @Test fun anAdministratorOnlyActionRefusedKeepsTheStaffArea() {
         launch(role = "staff", health = health) {
+            // The app refreshes the role from /me: a Staff account's own answer.
+            json("GET me", "me_staff")
             json("GET staff/attendance", "s090_patrons_att_overview")
             json("POST staff/attendance/purge", "s090_patrons_np_purge", status = 403)
         }
         openStaffHub()
-        scrollListTo(text(R.string.staff090_attendance))
         click(text(R.string.staff090_attendance))
         denyCameraPromptIfShown()
         clickTag("tab-stats")
@@ -142,7 +143,6 @@ class Staff090PatronsFlowTest : AppFlowTest() {
                 routeJobs()
             }
             openStaffHub()
-            scrollListTo(text(R.string.staff090_user_import))
             click(text(R.string.staff090_user_import))
             click(text(R.string.staff_import_choose_file))
             pickInDocumentsUi(name)
@@ -171,7 +171,6 @@ class Staff090PatronsFlowTest : AppFlowTest() {
             json("DELETE staff/user-imports/$STARTED", "s090_patrons_ui_cancelled")
         }
         openStaffHub()
-        scrollListTo(text(R.string.staff090_user_import))
         click(text(R.string.staff090_user_import))
         waitText("readers-b.csv")
         waitText(text(R.string.staff090_patrons_import_open_not_started, 2))
@@ -188,7 +187,6 @@ class Staff090PatronsFlowTest : AppFlowTest() {
             json("GET staff/user-imports/$READY", "s090_patrons_ui_job_ready")
         }
         openStaffHub()
-        scrollListTo(text(R.string.staff090_user_import))
         click(text(R.string.staff090_user_import))
         clickTag("open-resume-$READY")
         waitRequest("GET", "staff/user-imports/$READY")
