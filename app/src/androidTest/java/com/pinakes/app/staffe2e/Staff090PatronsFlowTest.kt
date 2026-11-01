@@ -1,5 +1,8 @@
 package com.pinakes.app.staffe2e
 
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performTextReplacement
 import com.pinakes.app.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -79,6 +82,26 @@ class Staff090PatronsFlowTest : AppFlowTest() {
         waitFor(androidx.compose.ui.test.hasTestTag("receipt-19"))
     }
 
+    /**
+     * Type [code] in the desk field and send it with the keyboard's Done, as a wedge reader does,
+     * until the server has seen [posts] check-ins. The field sits under imePadding: while the
+     * keyboard animates in (seconds on a loaded emulator) the whole column moves, so a tap on
+     * the field's icon computed from the old layout can land beside it and send nothing.
+     */
+    private fun checkInAtDesk(code: String, posts: Int) {
+        val field = androidx.compose.ui.test.hasSetTextAction() and androidx.compose.ui.test.hasTestTag("card-code-input")
+        repeat(3) {
+            if (api.recorded("POST", "staff/attendance/check-ins").size >= posts) return@repeat
+            runCatching {
+                waitFor(field)
+                compose.onAllNodes(field).onFirst().performTextReplacement(code)
+                compose.onAllNodes(field).onFirst().performImeAction()
+                compose.waitUntil(5_000) { api.recorded("POST", "staff/attendance/check-ins").size >= posts }
+            }
+        }
+        assertEquals(posts, api.recorded("POST", "staff/attendance/check-ins").size)
+    }
+
     @Test fun theDeskRecordsACardAndSaysWhenItIsUnknown() {
         launch(health = health) {
             json("GET staff/attendance", "s090_patrons_att_overview")
@@ -92,16 +115,14 @@ class Staff090PatronsFlowTest : AppFlowTest() {
         openStaffHub()
         click(text(R.string.staff090_attendance))
         denyCameraPromptIfShown()
-        typeIntoTag("card-code-input", "  PCAP090B ")
-        clickDescription(text(R.string.staff090_patrons_check_in))
+        checkInAtDesk("  PCAP090B ", posts = 1)
         val first = lastBody("POST", "staff/attendance/check-ins")
         assertTrue(first, first.contains("\"card_code\":\"PCAP090B\""))
         assertNotNull(api.recorded("POST", "staff/attendance/check-ins").last().getHeader("Idempotency-Key"))
         waitFor(androidx.compose.ui.test.hasTestTag("visit-welcome"))
         waitText("Marta P.")
 
-        typeIntoTag("card-code-input", "NOPE-PCAP")
-        clickDescription(text(R.string.staff090_patrons_check_in))
+        checkInAtDesk("NOPE-PCAP", posts = 2)
         waitFor(androidx.compose.ui.test.hasTestTag("visit-unknown_card"))
 
         clickTag("guest-open")

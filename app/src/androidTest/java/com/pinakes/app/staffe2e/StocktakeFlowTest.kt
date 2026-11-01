@@ -119,9 +119,13 @@ class StocktakeFlowTest : AppFlowTest() {
     @Test fun closingStatesTheMissingCountAndLeavesThemAlone() {
         launch(role = "staff", health = health) {
             stocktake()
+            // A slow poll: the one in flight when the close lands still says "open".
+            json("GET staff/stocktake/sessions/$sessionId/state", "s090_stocktake_state", delayMs = 8_000)
             json("POST staff/stocktake/sessions/$sessionId/close", "s090_stocktake_closed_none")
         }
         openSession()
+        // Close while a poll is in flight: its stale "open" must not bring the session back.
+        waitRequest("GET", "staff/stocktake/sessions/$sessionId/state")
         scrollAndClick("stocktake-close")
         val missing = fixtureData("s090_stocktake_session_detail")["summary"]!!.jsonObject["missing"]!!.jsonPrimitive.int
         waitText(text(R.string.staff090_stocktake_close_confirm_none, missing))
@@ -132,6 +136,11 @@ class StocktakeFlowTest : AppFlowTest() {
         // The server's sentence about the close, and no close action any more.
         waitText(fixtureData("s090_stocktake_closed_none")["close_result"]!!.jsonObject["message"]!!.jsonPrimitive.content)
         waitGone(androidx.compose.ui.test.hasTestTag("stocktake-close"))
+        // Let the slow poll answer (8 s after it left), then the session must still be closed.
+        Thread.sleep(9_000)
+        compose.waitForIdle()
+        assertFalse(compose.onAllNodes(androidx.compose.ui.test.hasTestTag("stocktake-close")).fetchSemanticsNodes().isNotEmpty())
+        assertTrue(exists(fixtureData("s090_stocktake_closed_none")["close_result"]!!.jsonObject["message"]!!.jsonPrimitive.content))
     }
 
     @Test fun aRefusedMarkLostShowsTheServerMessageAndKeepsTheRole() {
