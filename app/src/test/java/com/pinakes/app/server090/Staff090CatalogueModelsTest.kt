@@ -20,6 +20,7 @@ import com.pinakes.app.data.network.parseErrorBody
 import com.pinakes.app.data.repository.Staff090CatalogueRepository
 import com.pinakes.app.data.staff.ChunkStep
 import com.pinakes.app.data.staff.ImportProgress
+import com.pinakes.app.data.staff.MarcImportRules
 import com.pinakes.app.data.staff.StaffAreas
 import com.pinakes.app.data.store.InstanceFeatures
 import kotlinx.serialization.json.Json
@@ -189,6 +190,22 @@ class Staff090CatalogueModelsTest {
         val c = data<MarcCancelResult>("marc_cancelled")
         assertTrue(c.cancelled)
         assertEquals("ce1b2d36-6abc-4aa9-91fc-8fea6d95e644", c.id)
+    }
+
+    @Test fun jobListOffersOnlyTheOpenJobs() {
+        val e = json.decodeFromString<Envelope<List<MarcImportJob>>>(sample("marc_jobs"))
+        val jobs = e.data!!
+        assertEquals(listOf("ready", "cancelled"), jobs.map { it.status }) // newest first, every status
+        assertEquals(false, e.meta?.hasMore)
+        val open = MarcImportRules.openJobs(jobs, shownId = null)
+        assertEquals(listOf("3232bb79-91dd-427d-afae-ce574c49af04"), open.map { it.id })
+        assertEquals("altro-dispositivo.mrc", open.single().fileName)
+        assertEquals("fill", open.single().duplicates)
+        // The job already on screen is not offered twice.
+        assertTrue(MarcImportRules.openJobs(jobs, shownId = "3232bb79-91dd-427d-afae-ce574c49af04").isEmpty())
+        val page = json.decodeFromString<Envelope<List<MarcImportJob>>>(sample("marc_jobs_page1"))
+        assertEquals("eyJvIjoxfQ", page.meta?.nextCursor)
+        assertEquals(true, page.meta?.hasMore)
     }
 
     // ---------- copy cataloguing ----------

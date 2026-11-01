@@ -159,6 +159,35 @@ class Staff090CatalogueFlowTest : AppFlowTest() {
         }
     }
 
+    private val otherJob = "3232bb79-91dd-427d-afae-ce574c49af04"
+
+    @Test fun aJobStartedElsewhereIsResumedFromTheList() {
+        openCataloguing(R.string.staff090_marc) {
+            json("GET staff/marc/imports", "staff090_catalogue_marc_jobs")
+            body(
+                "POST staff/marc/imports/$otherJob/chunk", 200,
+                FakePinakes.fixture("staff090_catalogue_marc_job_completed").replace("6dd79110-5736-4456-aabb-07e682b77466", otherJob),
+            )
+        }
+        waitText("altro-dispositivo.mrc")
+        // The cancelled job of the same list is not offered.
+        assertFalse(exists("vecchio.mrc"))
+        clickTag("marc-open-resume-$otherJob")
+        waitText(text(R.string.staff_import_status_done), timeoutMs = 20_000)
+        assertEquals(listOf("""{"start":0}"""), api.recorded("POST", "staff/marc/imports/$otherJob/chunk").map { it.body.clone().readUtf8() })
+    }
+
+    @Test fun aListedJobCanBeCancelled() {
+        openCataloguing(R.string.staff090_marc) {
+            json("GET staff/marc/imports", "staff090_catalogue_marc_jobs")
+            body("DELETE staff/marc/imports/$otherJob", 200, """{"data":{"id":"$otherJob","cancelled":true},"meta":{},"error":null}""")
+        }
+        waitText("altro-dispositivo.mrc")
+        clickTag("marc-open-cancel-$otherJob")
+        waitRequest("DELETE", "staff/marc/imports/$otherJob")
+        waitGone(hasText("altro-dispositivo.mrc"))
+    }
+
     @Test fun exportTheWholeCatalogue() {
         openCataloguing(R.string.staff090_marc) {
             body(
