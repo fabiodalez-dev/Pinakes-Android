@@ -7,6 +7,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import com.pinakes.app.ui.common.DateFormat
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.Lifecycle
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -122,6 +128,10 @@ data class MarcUiState(
     val importError: StaffMessage? = null,
     // The job: preview, then chunks
     val job: MarcImportJob? = null,
+    /** The caller's MARC jobs from the server (`GET /staff/marc/imports`), any device. */
+    val jobs: List<MarcImportJob> = emptyList(),
+    val jobsCursor: String? = null,
+    val cancellingId: String? = null,
     val running: Boolean = false,
     /** The server answered 410 `gone`: the job ended elsewhere. */
     val ended: Boolean = false,
@@ -139,6 +149,9 @@ data class MarcUiState(
     /** The upload answered and no record was imported yet: show the preview and the go button. */
     val previewing: Boolean get() = job != null && !running && job.processed == 0 && job.status == "ready" && !ended
     val finished: Boolean get() = job?.let { ImportProgress.isFinished(it.asImportJob()) } == true || ended
+
+    /** Unfinished jobs other than the one on screen: resumable here whoever started them. */
+    val openJobs: List<MarcImportJob> get() = MarcImportRules.openJobs(jobs, job?.id)
 }
 
 /**
@@ -170,6 +183,48 @@ class Staff090CatalogueMarcViewModel @Inject constructor(
     init {
         loadOptions()
         savedState.get<String>(KEY_JOB)?.let(::restore)
+    }
+
+    /**
+     * The caller's jobs on the server: an import started on another device, or whose id this
+     * app lost, can be resumed or cancelled from here. [more] reads the next page.
+     */
+    fun loadJobs(more: Boolean = false) {
+        val cursor = if (more) _state.value.jobsCursor ?: return else null
+        viewModelScope.launch {
+            when (val res = repo.marcImports(cursor)) {
+                is ApiResult.Success -> _state.update {
+                    it.copy(jobs = if (more) (it.jobs + res.data.items).distinctBy { j -> j.id } else res.data.items, jobsCursor = res.data.nextCursor)
+                }
+                // The list is a convenience: a failure leaves the form usable.
+                is ApiResult.Failure -> _state.update { it.copy(forbidden = res.isForbidden()) }
+            }
+        }
+    }
+
+    /** Take [job] on screen and continue its chunks from the server's position. */
+    fun resumeJob(job: MarcImportJob) {
+        if (_state.value.running) return
+        loop?.cancel()
+        savedState[KEY_JOB] = job.id
+        _state.update { it.copy(job = job, ended = false, importError = null) }
+        resume()
+    }
+
+    /** Cancel a listed job (not the one on screen) and drop it from the list. */
+    fun cancelListed(job: MarcImportJob) {
+        if (_state.value.cancellingId != null) return
+        _state.update { it.copy(cancellingId = job.id) }
+        viewModelScope.launch {
+            when (val res = repo.cancelMarcImport(job.id)) {
+                is ApiResult.Success -> _state.update { s ->
+                    s.copy(cancellingId = null, jobs = s.jobs.filterNot { it.id == job.id }, message = StaffMessage(R.string.staff_import_status_cancelled))
+                }
+                is ApiResult.Failure -> _state.update {
+                    it.copy(cancellingId = null, forbidden = res.isForbidden(), message = res.toCatalogueMessage(R.string.staff_error_save))
+                }
+            }
+        }
     }
 
     fun loadOptions() {
@@ -338,7 +393,7 @@ class Staff090CatalogueMarcViewModel @Inject constructor(
             when (val res = repo.cancelMarcImport(id)) {
                 is ApiResult.Success -> {
                     savedState.remove<String>(KEY_JOB)
-                    _state.update { it.copy(job = null, ended = false, message = StaffMessage(R.string.staff_import_status_cancelled)) }
+                    _state.update { s -> s.copy(job = null, ended = false, jobs = s.jobs.filterNot { it.id == id }, message = StaffMessage(R.string.staff_import_status_cancelled)) }
                 }
                 is ApiResult.Failure -> _state.update { it.copy(forbidden = res.isForbidden(), importError = res.toCatalogueMessage(R.string.staff_error_save)) }
             }
@@ -350,6 +405,7 @@ class Staff090CatalogueMarcViewModel @Inject constructor(
         pause()
         savedState.remove<String>(KEY_JOB)
         _state.update { it.copy(job = null, ended = false, importError = null) }
+        loadJobs()
     }
 
     // ---- Export ----
@@ -415,6 +471,12 @@ fun Staff090CatalogueMarcScreen(onNavigateUp: () -> Unit) {
     val snackbar = remember { SnackbarHostState() }
     ForbiddenExit(state.forbidden, onNavigateUp)
     LeaveWhen(!areas.s090.marc, onNavigateUp)
+    val owner = LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) vm.loadJobs() }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
     StaffSnackbarEffect(state.message, snackbar, vm::consumeMessage)
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument(), vm::onPicked)
 
@@ -454,6 +516,7 @@ private fun LazyListScope.importTab(state: MarcUiState, vm: Staff090CatalogueMar
     val options = state.options ?: return
     val job = state.job
     if (job == null) {
+        openJobs(state, vm)
         item(key = "form") { ImportForm(state, options, vm, onPick) }
         return
     }
@@ -538,6 +601,33 @@ private fun LazyListScope.importTab(state: MarcUiState, vm: Staff090CatalogueMar
         }
     }
     item(key = "bottom") { Spacer(Modifier.height(Spacing.xxl)) }
+}
+
+/** Unfinished imports on the server (this device or another one), each with Resume and Cancel. */
+private fun LazyListScope.openJobs(state: MarcUiState, vm: Staff090CatalogueMarcViewModel) {
+    val open = state.openJobs
+    if (open.isEmpty()) return
+    item(key = "open-title") { FormSectionTitle(stringResource(R.string.staff_import_open_jobs)) }
+    items(open, key = { "open-${it.id}" }) { job ->
+        InfoCard(Modifier.padding(vertical = Spacing.xs).testTag("marc-open-${job.id}")) {
+            Text(job.fileName, style = MaterialTheme.typography.titleSmall)
+            InfoLine(stringResource(R.string.staff_import_result), stringResource(R.string.staff090_catalogue_marc_progress, job.processed, job.totalRows))
+            InfoLine(stringResource(R.string.staff_import_when), job.createdAt?.let(DateFormat::dateTime))
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = Spacing.xs)) {
+                PrimaryButton(
+                    stringResource(R.string.staff_import_resume), onClick = { vm.resumeJob(job) }, enabled = !state.running,
+                    modifier = Modifier.weight(1f).testTag("marc-open-resume-${job.id}"),
+                )
+                SecondaryButton(
+                    stringResource(R.string.staff_import_cancel), onClick = { vm.cancelListed(job) }, enabled = state.cancellingId == null,
+                    modifier = Modifier.weight(1f).testTag("marc-open-cancel-${job.id}"),
+                )
+            }
+        }
+    }
+    if (state.jobsCursor != null) {
+        item(key = "open-more") { SecondaryButton(stringResource(R.string.action_load_more), onClick = { vm.loadJobs(more = true) }, modifier = Modifier.fillMaxWidth()) }
+    }
 }
 
 @Composable

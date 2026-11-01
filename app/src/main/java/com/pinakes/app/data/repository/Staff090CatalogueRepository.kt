@@ -97,6 +97,10 @@ class Staff090CatalogueRepository @Inject constructor(
         }.first
     }
 
+    /** One page of the caller's MARC jobs (finished ones included: the screen keeps the open ones). */
+    suspend fun marcImports(cursor: String? = null, limit: Int = 30): ApiResult<StaffPage<MarcImportJob>> =
+        call { api.marcImports(limit, cursor) }.first.toPage()
+
     suspend fun marcImport(id: String): ApiResult<MarcImportJob> = call { api.marcImport(id) }.first
 
     /** One chunk from [start]; with cover downloads the server may need minutes. */

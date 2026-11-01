@@ -67,6 +67,10 @@ interface Staff090CatalogueApi {
         @Part("supplier_id") supplierId: RequestBody?,
     ): Envelope090<MarcImportJob>
 
+    /** The caller's unexpired MARC jobs, newest first (every status), paged like `/staff/imports`. */
+    @GET("staff/marc/imports")
+    suspend fun marcImports(@Query("limit") limit: Int? = null, @Query("cursor") cursor: String? = null): Envelope090<List<MarcImportJob>>
+
     @GET("staff/marc/imports/{id}")
     suspend fun marcImport(@Path("id") id: String): Envelope090<MarcImportJob>
 

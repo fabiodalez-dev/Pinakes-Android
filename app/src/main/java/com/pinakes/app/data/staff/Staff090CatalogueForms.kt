@@ -1,5 +1,6 @@
 package com.pinakes.app.data.staff
 
+import com.pinakes.app.data.model.MarcImportJob
 import com.pinakes.app.data.model.StaffBook
 import com.pinakes.app.data.model.StaffLookups
 import com.pinakes.app.data.model.Supplier
@@ -201,6 +202,13 @@ object MarcImportRules {
         val ext = name.substringAfterLast('.', "").lowercase()
         return ext.isNotEmpty() && ext in extensions.ifEmpty { DEFAULT_EXTENSIONS }.map { it.lowercase() }
     }
+
+    /**
+     * The jobs the import tab offers to resume or cancel: not finished (ready or running), and
+     * not the one already on screen. A job started on another device is one of them.
+     */
+    fun openJobs(jobs: List<MarcImportJob>, shownId: String?): List<MarcImportJob> =
+        jobs.filter { !ImportProgress.isFinished(it.asImportJob()) && it.id != shownId }
 
     /** The encoding only applies to ISO 2709: a MARCXML file declares its own. */
     fun encodingApplies(fileName: String?): Boolean {
