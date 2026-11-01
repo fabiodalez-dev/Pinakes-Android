@@ -141,7 +141,7 @@ class RulesMatrixViewModel @Inject constructor(
             _state.update {
                 when (val res = saved.result) {
                     is ApiResult.Success -> it.copy(saving = false, data = res.data, edits = emptyMap(), message = StaffMessage(R.string.staff090_library_saved))
-                    is ApiResult.Failure -> it.copy(saving = false, exit = res.exitMessage(), fieldErrors = saved.fields, formError = res.toLibraryMessage(R.string.staff_error_save))
+                    is ApiResult.Failure -> it.copy(saving = false, fieldErrors = saved.fields, formError = res.toLibraryMessage(R.string.staff_error_save))
                 }
             }
         }

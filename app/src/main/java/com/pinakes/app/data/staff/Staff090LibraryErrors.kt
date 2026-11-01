@@ -3,7 +3,6 @@ package com.pinakes.app.data.staff
 import androidx.annotation.StringRes
 import com.pinakes.app.R
 import com.pinakes.app.data.network.ApiResult
-import com.pinakes.app.data.network.ErrorCodes
 
 /**
  * Error codes of the library settings areas (Mobile API 1.10.0): settings, patron types and
@@ -11,6 +10,9 @@ import com.pinakes.app.data.network.ErrorCodes
  * [StaffErrors] / the server message. Pure.
  */
 object Staff090LibraryErrors {
+
+    /** 403: this staff account may not do this one thing (an administrator may); the role stays. */
+    const val NOT_PERMITTED = "not_permitted"
 
     @StringRes
     fun messageRes(code: String): Int? = when (code) {
@@ -22,11 +24,17 @@ object Staff090LibraryErrors {
     }
 
     /**
-     * True when the failure means this screen is not for this user or this server: an
-     * administrator-only area answered 403, or the module is off for Staff (404
-     * `feature_disabled`). The screen leaves, showing the server's message.
+     * The server explains `not_permitted` itself (which role or permission it takes): its
+     * message is shown, our generic wording only when it sent none.
+     */
+    fun isNotPermitted(failure: ApiResult.Failure): Boolean = failure.fromEnvelope && failure.code == NOT_PERMITTED
+
+    /**
+     * True when the failure of a screen's first load means the screen is not for this user or
+     * this server: the area refused this account (`not_permitted`) or the module is off for
+     * Staff (404 `feature_disabled`). The screen closes with the server's message; the staff
+     * area stays. A refused action inside a screen only shows the message.
      */
     fun closesScreen(failure: ApiResult.Failure): Boolean =
-        (failure.httpStatus == 403 || failure.code == ErrorCodes.FORBIDDEN) && failure.fromEnvelope ||
-            failure.code == "feature_disabled"
+        failure.fromEnvelope && (failure.code == NOT_PERMITTED || failure.code == "feature_disabled")
 }

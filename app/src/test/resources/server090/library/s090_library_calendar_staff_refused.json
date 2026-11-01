@@ -1,1 +1,1 @@
-{"data":null,"meta":{},"error":{"code":"forbidden","message":"Operazione riservata agli amministratori"}}
+{"data":null,"meta":{},"error":{"code":"not_permitted","message":"Operazione riservata agli amministratori"}}

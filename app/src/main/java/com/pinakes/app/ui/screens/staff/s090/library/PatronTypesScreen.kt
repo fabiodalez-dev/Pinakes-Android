@@ -164,7 +164,7 @@ class PatronTypesViewModel @Inject constructor(
                     load()
                 }
                 is ApiResult.Failure -> _state.update {
-                    it.copy(saving = false, exit = res.exitMessage(), fieldErrors = saved.fields, formError = res.toLibraryMessage(R.string.staff_error_save))
+                    it.copy(saving = false, fieldErrors = saved.fields, formError = res.toLibraryMessage(R.string.staff_error_save))
                 }
             }
         }
@@ -184,7 +184,7 @@ class PatronTypesViewModel @Inject constructor(
                     load()
                 }
                 // The default type: the server's own explanation (it names what to do first).
-                is ApiResult.Failure -> _state.update { it.copy(busy = false, exit = res.exitMessage(), message = res.toLibraryMessage(R.string.staff_error_save)) }
+                is ApiResult.Failure -> _state.update { it.copy(busy = false, message = res.toLibraryMessage(R.string.staff_error_save)) }
             }
         }
     }
@@ -199,7 +199,7 @@ class PatronTypesViewModel @Inject constructor(
             _state.update {
                 when (res) {
                     is ApiResult.Success -> it.copy(busy = false, data = res.data)
-                    is ApiResult.Failure -> it.copy(busy = false, exit = res.exitMessage(), message = res.toLibraryMessage(R.string.staff_error_save))
+                    is ApiResult.Failure -> it.copy(busy = false, message = res.toLibraryMessage(R.string.staff_error_save))
                 }
             }
         }
@@ -215,7 +215,7 @@ class PatronTypesViewModel @Inject constructor(
                     _state.update { it.copy(busy = false, message = StaffMessage(R.string.staff090_library_saved)) }
                     load()
                 }
-                is ApiResult.Failure -> _state.update { it.copy(busy = false, exit = res.exitMessage(), message = res.toLibraryMessage(R.string.staff_error_save)) }
+                is ApiResult.Failure -> _state.update { it.copy(busy = false, message = res.toLibraryMessage(R.string.staff_error_save)) }
             }
         }
     }

@@ -38,7 +38,7 @@ class Staff090LibraryErrorsTest {
         assertNull(f.exitMessage())
     }
 
-    @Test fun anAdministratorOnlyAreaClosesWithTheServerMessage() {
+    @Test fun aScreenTheAccountMayNotUseClosesWithTheServerMessage() {
         val forbidden = failure("s090_library_types_staff_refused", 403)
         assertTrue(Staff090LibraryErrors.closesScreen(forbidden))
         assertEquals("Operazione riservata agli amministratori", forbidden.exitMessage()?.text)
@@ -53,17 +53,28 @@ class Staff090LibraryErrorsTest {
         assertFalse(Staff090LibraryErrors.closesScreen(parseErrorBody("<html>Forbidden</html>", 403)))
     }
 
-    /**
-     * The admin-only refusal uses the same `forbidden` the staff role gate uses: that is why
-     * the repository double-checks before dropping the role (see Staff090LibraryRepository).
-     */
-    @Test fun anAdministratorOnlyRefusalLooksLikeTheRoleGate() {
-        assertTrue(failure("s090_library_types_staff_refused", 403).isForbidden())
+    /** `not_permitted` refuses one action and keeps the role; only the role gate's `forbidden` drops it. */
+    @Test fun aRefusedActionIsNotTheRoleGate() {
+        val refused = failure("s090_library_types_staff_refused", 403)
+        assertEquals(Staff090LibraryErrors.NOT_PERMITTED, refused.code)
+        assertFalse(refused.isForbidden())
+        assertTrue(Staff090LibraryErrors.isNotPermitted(refused))
+        val gate = failure("s090_library_role_gate_forbidden", 403)
+        assertTrue(gate.isForbidden())
+        assertFalse(Staff090LibraryErrors.closesScreen(gate))   // the role is dropped instead: the areas close
+    }
+
+    @Test fun aRefusedSaveShowsTheServerMessageAndStays() {
+        val f = failure("s090_library_loans_staff_refused", 403)
+        assertEquals("Operazione riservata agli amministratori", f.toLibraryMessage(R.string.staff_error_save).text)
+        assertEquals(mapOf("daily_fine_cents" to "Operazione riservata agli amministratori"), Staff090LibraryRepository.fieldErrors(raw("s090_library_loans_staff_refused")))
+        // An empty server text still reads as a refusal (parseErrorBody's wording for a 403), never as blank.
+        assertTrue(parseErrorBody("""{"data":null,"meta":{},"error":{"code":"not_permitted","message":""}}""", 403)
+            .toLibraryMessage(R.string.staff_error_save).text!!.isNotBlank())
     }
 
     @Test fun fieldMessagesComeFromMetaFields() {
         assertEquals(mapOf("loan_duration_days" to "Valore non valido."), Staff090LibraryRepository.fieldErrors(raw("s090_library_loans_invalid")))
-        assertEquals(mapOf("daily_fine_cents" to "Operazione riservata agli amministratori"), Staff090LibraryRepository.fieldErrors(raw("s090_library_loans_staff_refused")))
         assertEquals(mapOf("cells.0.max_loans" to "Valore non valido."), Staff090LibraryRepository.fieldErrors(raw("s090_library_rules_invalid")))
         assertEquals("Indica il nome della festività.", Staff090LibraryRepository.fieldErrors(raw("s090_library_custom_invalid"))["name"])
         assertEquals(setOf("ics_file"), Staff090LibraryRepository.fieldErrors(raw("s090_library_ics_invalid")).keys)

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -248,7 +249,10 @@ fun LibrarySettingsScreen(onNavigateUp: () -> Unit) {
                 loading = state.loading, error = state.error, isEmpty = false,
                 emptyTitle = "", emptyIcon = Icons.Outlined.Settings, onRetry = vm::load,
             ) {
-                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, bottom = 48.dp)) {
+                val list = rememberLazyListState()
+                // A refused save explains itself in the banner at the top: bring it into view.
+                LaunchedEffect(state.formError) { if (state.formError != null) list.animateScrollToItem(0) }
+                LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, bottom = 48.dp)) {
                     item(key = "banner") { state.formError?.let { InlineErrorBanner(message = it.resolve(), modifier = Modifier.padding(top = Spacing.sm)) } }
                     when (state.tab) {
                         SettingsTab.MODULES -> state.modules?.let { m -> item(key = "modules") { ModulesTab(m, state, vm::setModule, vm::setRetention) } }

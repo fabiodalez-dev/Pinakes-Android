@@ -114,17 +114,36 @@ class LibrarySettingsFlowTest : AppFlowTest() {
         assertEquals("""{"closed_weekdays":[0,6]}""", lastBody("PUT", "staff/calendar/weekdays"))
     }
 
-    @Test fun staffLeavesAnAdministratorOnlyAreaAndKeepsTheRole() {
+    @Test fun staffLeavesAnAreaTheAccountMayNotUseAndKeepsTheRole() {
         launch(role = "staff", health = health) {
             json("GET me", "me_staff")
             json("GET staff/circulation/types", "s090_library_types_staff_refused", status = 403)
-            json("GET staff/settings/modules", "s090_library_modules_staff")
         }
         openStaffHub()
         click(text(R.string.staff090_circulation_rules))
-        // The refusal is checked against a route every staff member reads: the role stays.
-        waitRequest("GET", "staff/settings/modules")
+        waitRequest("GET", "staff/circulation/types")
+        // 403 not_permitted: back on the hub, staff entries still there.
         waitText(text(R.string.staff_scan_subtitle))
+        assertEquals("staff", deps.session().role.value)
+        waitText(text(R.string.staff090_settings))
+    }
+
+    @Test fun aRefusedSaveShowsTheServerMessageAndStaysOnTheScreen() {
+        launch(role = "staff", health = health) {
+            json("GET me", "me_staff")
+            json("GET staff/settings/modules", "s090_library_modules_staff")
+            json("GET staff/settings/loans", "s090_library_loans_staff")
+            json("GET staff/settings/cards", "s090_library_cards_staff_disabled", status = 404)
+            json("PUT staff/settings/loans", "s090_library_loans_staff_refused", status = 403)
+        }
+        openStaffHub()
+        click(text(R.string.staff090_settings))
+        click(text(R.string.staff090_library_tab_loans))
+        replace("loan-max_renewals", "4")
+        clickTag("settings-save")
+        waitRequest("PUT", "staff/settings/loans")
+        waitText("Operazione riservata agli amministratori")
+        assertTrue(compose.onAllNodes(hasTestTag("loan-max_renewals")).fetchSemanticsNodes().isNotEmpty())
         assertEquals("staff", deps.session().role.value)
     }
 }

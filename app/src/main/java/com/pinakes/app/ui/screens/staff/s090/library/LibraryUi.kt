@@ -32,12 +32,14 @@ import com.pinakes.app.ui.theme.Spacing
 // Small pieces shared by the library settings screens; everything else is the staff kit.
 
 /** Our wording for the codes of these areas, else the usual staff mapping (server text included). */
-internal fun ApiResult.Failure.toLibraryMessage(fallback: Int): StaffMessage =
-    Staff090LibraryErrors.messageRes(code)?.let { StaffMessage(it) } ?: toStaffMessage(fallback)
+internal fun ApiResult.Failure.toLibraryMessage(fallback: Int): StaffMessage = when {
+    Staff090LibraryErrors.isNotPermitted(this) -> serverMessage()?.let { StaffMessage(text = it) } ?: StaffMessage(R.string.staff090_library_admin_only)
+    else -> Staff090LibraryErrors.messageRes(code)?.let { StaffMessage(it) } ?: toStaffMessage(fallback)
+}
 
 /**
- * Why the screen closes (administrator-only area refused, module off for Staff): the server's
- * own message, else ours. Null while the screen may stay.
+ * Why the screen closes after its first load failed (area refused to this account, module off
+ * for Staff): the server's own message, else ours. Null while the screen may stay.
  */
 internal fun ApiResult.Failure.exitMessage(): StaffMessage? =
     if (!Staff090LibraryErrors.closesScreen(this)) null

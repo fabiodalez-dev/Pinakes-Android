@@ -312,7 +312,7 @@ class ClosuresCalendarViewModel @Inject constructor(
                         countries = res.data.countries, preset = res.data.preset, loading = false,
                         selected = res.data.holidays.filter { it.checked }.map { it.id }.toSet(),
                     ))
-                    is ApiResult.Failure -> s.copy(exit = res.exitMessage(), holidays = h.copy(loading = false, error = res.toLibraryMessage(R.string.staff_error_load)))
+                    is ApiResult.Failure -> s.copy(holidays = h.copy(loading = false, error = res.toLibraryMessage(R.string.staff_error_load)))
                 }
             }
         }
@@ -337,7 +337,7 @@ class ClosuresCalendarViewModel @Inject constructor(
                     _state.update { it.copy(holidays = null, message = res.data.message.takeIf { m -> m.isNotBlank() }?.let { m -> StaffMessage(text = m) } ?: StaffMessage(R.string.staff090_library_saved)) }
                     load()
                 }
-                is ApiResult.Failure -> _state.update { it.copy(exit = res.exitMessage(), holidays = it.holidays?.copy(applying = false, error = res.toLibraryMessage(R.string.staff_error_save))) }
+                is ApiResult.Failure -> _state.update { it.copy(holidays = it.holidays?.copy(applying = false, error = res.toLibraryMessage(R.string.staff_error_save))) }
             }
         }
     }
@@ -402,7 +402,7 @@ class ClosuresCalendarViewModel @Inject constructor(
                     load()
                 }
                 is ApiResult.Failure -> _state.update {
-                    it.copy(icsUploading = false, exit = res.exitMessage(),
+                    it.copy(icsUploading = false,
                         icsError = saved.fields["ics_file"]?.let { m -> StaffMessage(text = m) } ?: res.toLibraryMessage(R.string.staff090_library_ics_failed))
                 }
             }
@@ -417,7 +417,7 @@ class ClosuresCalendarViewModel @Inject constructor(
                 _state.update { close(it).copy(saving = false, message = StaffMessage(R.string.staff090_library_saved)) }
                 load()
             }
-            is ApiResult.Failure -> _state.update { it.copy(saving = false, exit = res.exitMessage(), fieldErrors = fields, formError = res.toLibraryMessage(R.string.staff_error_save)) }
+            is ApiResult.Failure -> _state.update { it.copy(saving = false, fieldErrors = fields, formError = res.toLibraryMessage(R.string.staff_error_save)) }
         }
     }
 
@@ -430,7 +430,7 @@ class ClosuresCalendarViewModel @Inject constructor(
                     _state.update { it.copy(busy = false, message = done?.let { r -> StaffMessage(r) }) }
                     load()
                 }
-                is ApiResult.Failure -> _state.update { it.copy(busy = false, exit = res.exitMessage(), message = res.toLibraryMessage(R.string.staff_error_save)) }
+                is ApiResult.Failure -> _state.update { it.copy(busy = false, message = res.toLibraryMessage(R.string.staff_error_save)) }
             }
         }
     }
