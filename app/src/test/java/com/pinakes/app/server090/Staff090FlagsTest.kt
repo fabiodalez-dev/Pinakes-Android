@@ -54,9 +54,14 @@ class Staff090FlagsTest {
         assertTrue(areas.stocktake)
         assertTrue(areas.marc)
         assertTrue(areas.userImport)
-        // Configuring a module stays reachable: the server decides whether the user may.
-        assertTrue(areas.circulationRules)
         assertFalse(areas.admin)
+        // Patron types, rules and the calendar are an administrator's tools.
+        assertFalse(areas.circulationRules)
+        assertFalse(areas.closuresCalendar)
+        assertTrue(areas.librarySettings)
+        // An administrator keeps them in catalogue mode too: configuring stays reachable.
+        val adminAreas = StaffAreas.of("admin", f, online = true).s090
+        assertTrue(adminAreas.circulationRules && adminAreas.closuresCalendar)
     }
 
     @Test fun appAccessOffHidesEverything() {

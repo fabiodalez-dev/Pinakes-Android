@@ -6,7 +6,8 @@ import com.pinakes.app.data.store.InstanceFeatures
  * Which Pinakes 0.9.0 staff tools (Mobile API 1.10.0) the app shows. Each one needs the staff
  * area, the server's `staff_<area>` flag and a connection: they all act on the server, so
  * offline they are hidden, never shown disabled. Whether the user may change a setting is the
- * server's answer (`can_configure`, `can_edit`, ...); [admin] only orders and labels. Pure.
+ * server's answer (`can_configure`, `can_edit`, ...); [admin] only hides the screens an administrator
+ * alone can use. Pure.
  */
 data class Staff090Areas(
     val admin: Boolean = false,
@@ -38,8 +39,9 @@ data class Staff090Areas(
         fun of(role: String?, features: InstanceFeatures, online: Boolean): Staff090Areas {
             if (!online) return None
             val f = features.staff090
+            val admin = role == "admin"
             return Staff090Areas(
-                admin = role == "admin",
+                admin = admin,
                 patrons = f.staffPatrons,
                 patronTypes = f.staffPatrons && features.circulationRulesAvailable,
                 patronCards = f.staffPatrons && f.patronCards,
@@ -47,8 +49,11 @@ data class Staff090Areas(
                 ledger = f.staffLedger,
                 stocktake = f.staffStocktake,
                 librarySettings = f.staffLibrarySettings,
-                circulationRules = f.staffCirculationRules,
-                closuresCalendar = f.staffClosuresCalendar,
+                // Patron types, loan rules and the closures calendar are configured by
+                // administrators only (the web's mayConfigure()): a Staff account would get
+                // nothing but a refusal, so the entries are an administrator's.
+                circulationRules = f.staffCirculationRules && admin,
+                closuresCalendar = f.staffClosuresCalendar && admin,
                 suppliers = f.staffSuppliers,
                 rdaTypes = f.rdaTypes,
                 catalogueCards = f.staffCatalogueCards,
