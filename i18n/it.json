@@ -2099,5 +2099,9 @@
   "staff090_statistics_collected": "Incassato",
   "staff090_statistics_waived": "Condonato",
   "staff090_statistics_reversed": "Stornato",
-  "staff090_statistics_fines_csv": "Scarica il report delle multe (CSV)"
+  "staff090_statistics_fines_csv": "Scarica il report delle multe (CSV)",
+  "staff090_patrons_balance_owed_staff": "Importo che l'utente deve alla biblioteca.",
+  "staff090_patrons_balance_credit_staff": "Credito a favore dell'utente.",
+  "staff090_patrons_debt_blocked_body_staff": "Il saldo dell'utente supera la soglia di %1$s fissata dalla biblioteca: nuovi prestiti e rinnovi sono bloccati finché non viene saldato.",
+  "staff090_patrons_debt_blocked_body_plain_staff": "Nuovi prestiti e rinnovi sono bloccati finché il saldo dell'utente non viene saldato."
 }

@@ -2099,5 +2099,9 @@
   "staff090_statistics_collected": "Collected",
   "staff090_statistics_waived": "Waived",
   "staff090_statistics_reversed": "Reversed",
-  "staff090_statistics_fines_csv": "Download the fines report (CSV)"
+  "staff090_statistics_fines_csv": "Download the fines report (CSV)",
+  "staff090_patrons_balance_owed_staff": "Amount the patron owes the library.",
+  "staff090_patrons_balance_credit_staff": "Credit in the patron's favour.",
+  "staff090_patrons_debt_blocked_body_staff": "The patron's balance is above the library's limit of %1$s: new loans and renewals are blocked until it is settled.",
+  "staff090_patrons_debt_blocked_body_plain_staff": "New loans and renewals are blocked until the patron's balance is settled."
 }

@@ -294,7 +294,7 @@ fun Staff090LedgerScreen(onNavigateUp: () -> Unit) {
                         contentPadding = PaddingValues(top = Spacing.sm, bottom = 48.dp),
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        item(key = "balance") { BalanceCard(ledger.toPayload(), money) }
+                        item(key = "balance") { BalanceCard(ledger.toPayload(), money, staff = true) }
                         val actions = LedgerRules.actions(ledger)
                         if (actions.isNotEmpty()) item(key = "actions") {
                             FlowRow(

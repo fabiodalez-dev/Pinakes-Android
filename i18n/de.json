@@ -2099,5 +2099,9 @@
   "staff090_statistics_collected": "Eingenommen",
   "staff090_statistics_waived": "Erlassen",
   "staff090_statistics_reversed": "Storniert",
-  "staff090_statistics_fines_csv": "Gebührenbericht herunterladen (CSV)"
+  "staff090_statistics_fines_csv": "Gebührenbericht herunterladen (CSV)",
+  "staff090_patrons_balance_owed_staff": "Betrag, den die Person der Bibliothek schuldet.",
+  "staff090_patrons_balance_credit_staff": "Guthaben zugunsten der Person.",
+  "staff090_patrons_debt_blocked_body_staff": "Der Saldo der Person liegt über der Grenze der Bibliothek von %1$s: Neue Ausleihen und Verlängerungen sind gesperrt, bis er ausgeglichen ist.",
+  "staff090_patrons_debt_blocked_body_plain_staff": "Neue Ausleihen und Verlängerungen sind gesperrt, bis der Saldo der Person ausgeglichen ist."
 }

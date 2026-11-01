@@ -320,9 +320,18 @@ object TypeForms {
         return out.takeIf { it.isNotEmpty() }
     }
 
-    /** The value an empty field falls back to: the type's effective policy, else the global one. */
-    fun inherited(n: TypeNumber, type: Staff090LibraryPatronType?, globals: Staff090LibraryTypeValues): Int? =
-        type?.effective?.let { n.of(it) } ?: n.of(globals)
+    /**
+     * The value an empty field falls back to. While the type leaves the field empty its
+     * `effective` policy is exactly that; once the type sets its own value `effective` holds
+     * that value instead, so the fallback comes from the globals (an empty renewal period
+     * still follows the loan duration the type would get).
+     */
+    fun inherited(n: TypeNumber, type: Staff090LibraryPatronType?, globals: Staff090LibraryTypeValues): Int? {
+        if (type == null || n.of(type) == null) return type?.effective?.let { n.of(it) } ?: n.of(globals)
+        return n.of(globals) ?: if (n == TypeNumber.RENEWAL_DAYS) {
+            TypeNumber.LOAN_DURATION.of(type) ?: TypeNumber.LOAN_DURATION.of(globals)
+        } else null
+    }
 }
 
 // =============================================================================================

@@ -567,7 +567,8 @@ private fun JobHeader(job: UserImportJob, state: UserImportUiState, vm: Staff090
         } else {
             InfoLine(stringResource(R.string.staff090_patrons_import_rows), job.totalRows.toString())
         }
-        if (job.reportAvailable) {
+        // The server keeps a report for every finished job; offer it only when it has rows.
+        if (job.reportAvailable && job.errors.isNotEmpty()) {
             SecondaryButton(
                 stringResource(R.string.staff_import_errors_csv), onClick = vm::downloadErrors, leadingIcon = Icons.Outlined.Download,
                 modifier = Modifier.fillMaxWidth().testTag("user-import-errors"),
