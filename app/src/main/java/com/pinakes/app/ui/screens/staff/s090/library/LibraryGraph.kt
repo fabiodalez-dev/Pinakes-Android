@@ -1,22 +1,27 @@
 package com.pinakes.app.ui.screens.staff.s090.library
 
-import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
-import com.pinakes.app.R
-import com.pinakes.app.ui.screens.staff.s090.Staff090Placeholder
 import com.pinakes.app.ui.screens.staff.s090.Staff090Routes
 import com.pinakes.app.ui.screens.staff.s090.Staff090Transitions
 
+/** Library area routes beyond the hub's entry doors. */
+internal object LibraryRoutes {
+    const val RULES_MATRIX = "staff/s090/circulation-rules/matrix"
+}
+
 internal fun NavGraphBuilder.libraryGraph(nav: NavHostController, t: Staff090Transitions) {
     composable(Staff090Routes.LIBRARY_SETTINGS, enterTransition = t.enter, popExitTransition = t.exit) {
-        Staff090Placeholder(stringResource(R.string.staff090_settings)) { nav.popBackStack() }
+        LibrarySettingsScreen(onNavigateUp = { nav.popBackStack() })
     }
     composable(Staff090Routes.CIRCULATION_RULES, enterTransition = t.enter, popExitTransition = t.exit) {
-        Staff090Placeholder(stringResource(R.string.staff090_circulation_rules)) { nav.popBackStack() }
+        PatronTypesScreen(onNavigateUp = { nav.popBackStack() }, onOpenMatrix = { nav.navigate(LibraryRoutes.RULES_MATRIX) })
+    }
+    composable(LibraryRoutes.RULES_MATRIX, enterTransition = t.enter, popExitTransition = t.exit) {
+        RulesMatrixScreen(onNavigateUp = { nav.popBackStack() })
     }
     composable(Staff090Routes.CLOSURES_CALENDAR, enterTransition = t.enter, popExitTransition = t.exit) {
-        Staff090Placeholder(stringResource(R.string.staff090_calendar)) { nav.popBackStack() }
+        ClosuresCalendarScreen(onNavigateUp = { nav.popBackStack() })
     }
 }
