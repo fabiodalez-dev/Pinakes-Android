@@ -404,29 +404,18 @@ def step_hub_and_module():
     save_settings()
     shot("settings-suppliers-off")
     assert health().get("suppliers") is False, "/health still has suppliers on after the save"
-    stale = S["staff090_suppliers"] in hub_labels()
-    if stale:
-        bug("Hub keeps a module's entry after the module is switched off from Library settings. Repro: admin, "
-            "Admin area → Library settings → Modules → switch off 'Suppliers' → Save ('Saved', /health suppliers=false) → "
-            "back to Admin area: 'Suppliers' is still listed (tapping it opens a screen saying 'This area is turned off "
-            "on the library server.'); it disappears only after the app is restarted. The hub reads the /health flags "
-            "only at app start (MainActivity.onCreate) and at login; LibrarySettingsScreen does not refresh them after "
-            "a module save. Same the other way: a module switched on stays hidden until a restart.")
-        shot("hub-stale-suppliers")
-        restart_app()
-    labels = hub_labels()
-    assert S["staff090_suppliers"] not in labels, "Suppliers still in the hub after a restart"
+    # Back to the hub with no restart: the module save refreshes /health, the entry is gone.
+    assert S["staff090_suppliers"] not in hub_labels(), "Suppliers still in the hub after switching it off (no restart)"
+    shot("hub-suppliers-gone")
     open_entry(S["staff090_settings"])
     ui.tap(S["staff090_library_tab_modules"], exact=True)
     set_switch(sup, True)
     save_settings()
     assert health().get("suppliers") is True, "/health suppliers not back on"
-    if S["staff090_suppliers"] not in hub_labels():
-        restart_app()
-    assert S["staff090_suppliers"] in hub_labels(), "Suppliers not back in the hub"
+    assert S["staff090_suppliers"] in hub_labels(), "Suppliers not back in the hub after switching it on (no restart)"
     shot("hub-suppliers-back")
-    return ("hub has the 10 entries in Front desk / Cataloguing / Library; suppliers off → /health false, entry gone"
-            + (" only after restart (bug)" if stale else "") + "; back on → entry back")
+    return ("hub has the 10 entries in Front desk / Cataloguing / Library; suppliers off → /health false and the "
+            "entry gone at once; back on → entry back at once (no restart)")
 
 
 @step(2, "library settings: a loan setting changed in the app, checked on the server, restored")
@@ -518,13 +507,21 @@ def step_types_matrix_closure():
     type_row_menu(TYPE_NAME)
     ui.tap(S["staff090_library_type_edit"], exact=True)
     time.sleep(1.2)
+    for _ in range(8):
+        if field_of(S["staff090_library_num_card_duration"]):
+            break
+        ui.swipe_up()
+    _, types = api("GET", "staff/circulation/types")
+    glob = types["data"]["globals"].get("card_duration_days")
+    want_hint = s("staff090_library_inherits", glob if glob is not None else "—")
+    nodes = ui.dump()
+    card = field_of(S["staff090_library_num_card_duration"], nodes=nodes)
+    assert card is not None, "Card validity field not on screen"
+    hints = [n.text for n in nodes if n.cls == "android.widget.TextView" and contains(card.bounds, n.center + n.center)
+             and n.text != S["staff090_library_num_card_duration"]]
+    assert want_hint in hints, f"Card validity hint {hints} is not the global fallback {want_hint!r}"
+    shot("type-edit-hint")
     set_field(S["staff090_library_num_card_duration"], "500", down=False)
-    hint = s("staff090_library_inherits", 400)
-    if ui.find(hint, exact=True):
-        bug("Patron type editor: the 'Empty: …' hint of a field the type sets shows the type's OWN value. Repro: "
-            "Patron types and loan rules → a type with Card validity 400 → Edit patron type: the Card validity field "
-            "says 'Empty: 400', but emptying it falls back to the global value (none, '—'). TypeForms.inherited() "
-            "reads type.effective, which already contains the type's own value, instead of the level above (globals).")
     ui.scroll_to(S["action_save"], exact=True, passes=1)
     ui.tap(S["action_save"], exact=True)
     toast_or_text([S["staff090_library_saved"]], 30)
@@ -924,8 +921,10 @@ def step_user_import():
     for r in rows:
         want = next(x for x in IMPORT_ROWS if x[2] == r[1])
         assert r[2] == want[3] and r[3] == "standard", f"user {r}"
-    created = ui.find(S["staff090_patrons_import_created"], exact=True)
-    return f"{IMPORT_FILE} picked from Downloads, 2 accounts created ({', '.join(r[0] for r in rows)}) with their card codes, no invitation"
+    nodes = ui.dump()
+    assert ui.find(S["staff090_patrons_import_created"], exact=True, nodes=nodes), "no created counter"
+    assert not ui.find(S["staff_import_errors_csv"], exact=True, nodes=nodes), "an errors-download button after 0 errors"
+    return f"{IMPORT_FILE} picked from Downloads, 2 accounts created ({', '.join(r[0] for r in rows)}) with their card codes, no invitation, no errors-download button"
 
 
 MARC_NAME = f"e2e-marc-{TAG}.mrc"
