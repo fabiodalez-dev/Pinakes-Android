@@ -1,0 +1,1 @@
+{"data":null,"meta":{"field":"mapping","fields":{"mapping":"The field \"Last Name\" is mapped to more than one column."}},"error":{"code":"validation","message":"The field \"Last Name\" is mapped to more than one column."}}

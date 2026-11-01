@@ -1,0 +1,1 @@
+{"data":null,"meta":{"reason":"amount_exceeds_balance","balance_cents":1250},"error":{"code":"amount_exceeds_balance","message":"The amount exceeds what the reader owes."}}

@@ -126,7 +126,7 @@ private fun MovementsContent(data: MovementsPayload) {
 }
 
 @Composable
-private fun BalanceCard(data: MovementsPayload, money: (Int) -> String) {
+internal fun BalanceCard(data: MovementsPayload, money: (Int) -> String) {
     val kind = MoneyFormat.balanceKind(data.balanceTotalCents)
     Column(Modifier.padding(horizontal = Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Surface(
@@ -177,7 +177,7 @@ private fun BalanceCard(data: MovementsPayload, money: (Int) -> String) {
 }
 
 @Composable
-private fun AccruedRow(fine: AccruedFine, money: (Int) -> String) {
+internal fun AccruedRow(fine: AccruedFine, money: (Int) -> String) {
     LedgerRow(
         title = fine.title?.takeIf { it.isNotBlank() } ?: stringResource(R.string.movements_untitled),
         subtitle = stringResource(R.string.movements_accrued_row, DateFormat.date(fine.dueAt), fine.daysLate),
@@ -187,7 +187,7 @@ private fun AccruedRow(fine: AccruedFine, money: (Int) -> String) {
 }
 
 @Composable
-private fun MovementRow(m: Movement, money: (Int) -> String) {
+internal fun MovementRow(m: Movement, money: (Int) -> String) {
     val title = m.typeLabel?.takeIf { it.isNotBlank() } ?: m.type
     val detail = listOfNotNull(
         m.bookTitle?.takeIf { it.isNotBlank() },
@@ -199,7 +199,7 @@ private fun MovementRow(m: Movement, money: (Int) -> String) {
 }
 
 @Composable
-private fun LedgerRow(title: String, subtitle: String, amount: String, owed: Boolean) {
+internal fun LedgerRow(title: String, subtitle: String, amount: String, owed: Boolean) {
     Surface(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerLow,

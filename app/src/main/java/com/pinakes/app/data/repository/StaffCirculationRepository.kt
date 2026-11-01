@@ -86,8 +86,11 @@ class StaffCirculationRepository(
     suspend fun cancelPickup(id: Int, reason: String?): ApiResult<StaffLoan> =
         session.staffCall { api.cancelPickup(id, ReasonRequest(reason.blankToNull()?.take(500))) }
 
-    suspend fun returnLoan(id: Int, outcome: String, notes: String?, penalty: Double?): ApiResult<StaffLoan> =
-        session.staffCall { api.returnLoan(id, ReturnRequest(outcome, notes.blankToNull(), penalty)) }
+    /** [waiveReason] non-null waives the late fine this return charges (Mobile API 1.10.0). */
+    suspend fun returnLoan(id: Int, outcome: String, notes: String?, penalty: Double?, waiveReason: String? = null): ApiResult<StaffLoan> =
+        session.staffCall {
+            api.returnLoan(id, ReturnRequest(outcome, notes.blankToNull(), penalty, waiveFine = waiveReason?.let { true }, waiveReason = waiveReason?.trim()?.take(255)))
+        }
 
     suspend fun returnByCode(code: String, outcome: String, notes: String?, penalty: Double?): ApiResult<StaffLoan> =
         session.staffCall { api.returnByCode(ReturnByCodeRequest(CopyCodeCodec.normalize(code), outcome, notes.blankToNull(), penalty)) }

@@ -1,0 +1,1 @@
+{"data":null,"meta":{"field":"idempotency_key","fields":{"idempotency_key":"An idempotency key is required: send the Idempotency-Key header."}},"error":{"code":"validation","message":"An idempotency key is required: send the Idempotency-Key header."}}

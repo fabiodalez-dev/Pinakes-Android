@@ -286,6 +286,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onNavigateUp = { navController.popBackStack() },
                 onOpenLoan = { navController.navigate(Routes.staffLoan(it)) },
                 onNewLoan = { navController.navigate(Routes.staffLoanNew(userId = it)) },
+                onOpenLedger = { navController.navigate(com.pinakes.app.ui.screens.staff.s090.Staff090Routes.patronLedger(it)) },
             )
         }
         // ---- Staff book tools (Mobile API 1.7.0) ----
