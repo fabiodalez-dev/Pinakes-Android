@@ -41,6 +41,28 @@ class Staff090CatalogueFlowTest : AppFlowTest() {
         }
     }
 
+    /**
+     * Open the dropdown tagged [tag] and pick [option]. The first tap right after typing can
+     * land while the keyboard closes and the form moves, so the tap is repeated until the menu shows.
+     */
+    private fun pickFromMenu(tag: String, option: String) {
+        repeat(3) {
+            if (exists(option)) return@repeat
+            runCatching { clickTag(tag); compose.waitUntil(3_000) { exists(option) } }
+        }
+        click(option)
+    }
+
+    /** Tap [tag] until the server has seen [count] supplier POSTs (a tap can land while the sheet moves). */
+    private fun tapUntilPosted(tag: String, count: Int) {
+        repeat(3) {
+            if (api.recorded("POST", "staff/suppliers").size < count) {
+                runCatching { clickTag(tag); compose.waitUntil(3_000) { api.recorded("POST", "staff/suppliers").size >= count } }
+            }
+        }
+        assertEquals(count, api.recorded("POST", "staff/suppliers").size)
+    }
+
     // ---------- suppliers ----------
 
     @Test fun aSupplierFieldErrorIsShownThenTheRetryKeepsItsKey() {
@@ -50,12 +72,17 @@ class Staff090CatalogueFlowTest : AppFlowTest() {
         }
         waitText("Libreria Cat090 Prova")
         clickDescription(text(R.string.staff090_catalogue_supplier_new))
-        typeIntoTag("supplier-field-name", "Libreria Nuova")
-        clickTag("supplier-save")
+        // The sheet slides in: type only once it is up, and check the text landed in the field.
+        waitFor(androidx.compose.ui.test.hasTestTag("supplier-save"))
+        compose.waitForIdle()
+        repeat(3) {
+            if (!exists("Libreria Nuova")) runCatching { typeIntoTag("supplier-field-name", "Libreria Nuova") }
+        }
+        tapUntilPosted("supplier-save", 1)
         // The server's own text, under its field.
         waitText("Il nome del fornitore è obbligatorio.")
         // The field error moved the button: tap again until the retry reaches the server.
-        repeat(3) { if (api.recorded("POST", "staff/suppliers").size < 2) runCatching { clickTag("supplier-save"); compose.waitUntil(3_000) { api.recorded("POST", "staff/suppliers").size >= 2 } } }
+        tapUntilPosted("supplier-save", 2)
         waitGone(androidx.compose.ui.test.hasTestTag("supplier-save"))
         val posts = api.recorded("POST", "staff/suppliers")
         assertEquals(2, posts.size)
@@ -93,10 +120,8 @@ class Staff090CatalogueFlowTest : AppFlowTest() {
         click(text(R.string.staff_add_manual))
         waitText(text(R.string.staff_field_title))
         compose.onAllNodes(hasSetTextAction() and hasText(text(R.string.staff_field_title), substring = true)).onFirst().performTextInput("Libro con fornitore")
-        clickTag("book-supplier")
-        click("Libreria Cat090 Prova")
-        clickTag("book-rda-content")
-        click("Parola parlata")
+        pickFromMenu("book-supplier", "Libreria Cat090 Prova")
+        pickFromMenu("book-rda-content", "Parola parlata")
         click(text(R.string.staff_book_save))
         waitRequest("POST", "staff/books")
         val body = Json.parseToJsonElement(api.recorded("POST", "staff/books").single().body.readUtf8()).jsonObject
@@ -140,8 +165,7 @@ class Staff090CatalogueFlowTest : AppFlowTest() {
             click(text(R.string.staff_import_choose_file))
             pickInDocumentsUi(name)
             waitText(name, timeoutMs = 15_000)
-            clickTag("marc-supplier")
-            click("Libreria Cat090 Prova")
+            pickFromMenu("marc-supplier", "Libreria Cat090 Prova")
             clickTag("marc-upload")
             waitText(text(R.string.staff090_catalogue_marc_preview))
             val upload = api.recorded("POST", "staff/marc/imports").single().body.clone().readUtf8()
@@ -163,7 +187,9 @@ class Staff090CatalogueFlowTest : AppFlowTest() {
 
     @Test fun aJobStartedElsewhereIsResumedFromTheList() {
         openCataloguing(R.string.staff090_marc) {
-            json("GET staff/marc/imports", "staff090_catalogue_marc_jobs")
+            // The list answers after the form is drawn, as on a slow connection: the jobs must
+            // still show at the top, not above it.
+            json("GET staff/marc/imports", "staff090_catalogue_marc_jobs", delayMs = 1_500)
             body(
                 "POST staff/marc/imports/$otherJob/chunk", 200,
                 FakePinakes.fixture("staff090_catalogue_marc_job_completed").replace("6dd79110-5736-4456-aabb-07e682b77466", otherJob),
@@ -179,7 +205,9 @@ class Staff090CatalogueFlowTest : AppFlowTest() {
 
     @Test fun aListedJobCanBeCancelled() {
         openCataloguing(R.string.staff090_marc) {
-            json("GET staff/marc/imports", "staff090_catalogue_marc_jobs")
+            // The list answers after the form is drawn, as on a slow connection: the jobs must
+            // still show at the top, not above it.
+            json("GET staff/marc/imports", "staff090_catalogue_marc_jobs", delayMs = 1_500)
             body("DELETE staff/marc/imports/$otherJob", 200, """{"data":{"id":"$otherJob","cancelled":true},"meta":{},"error":null}""")
         }
         waitText("altro-dispositivo.mrc")
