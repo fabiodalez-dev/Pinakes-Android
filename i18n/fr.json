@@ -2099,5 +2099,9 @@
   "staff090_statistics_collected": "Encaissé",
   "staff090_statistics_waived": "Remis",
   "staff090_statistics_reversed": "Annulé",
-  "staff090_statistics_fines_csv": "Télécharger le rapport des amendes (CSV)"
+  "staff090_statistics_fines_csv": "Télécharger le rapport des amendes (CSV)",
+  "staff090_patrons_balance_owed_staff": "Montant que l'usager doit à la bibliothèque.",
+  "staff090_patrons_balance_credit_staff": "Crédit en faveur de l'usager.",
+  "staff090_patrons_debt_blocked_body_staff": "Le solde de l'usager dépasse le seuil de %1$s fixé par la bibliothèque : les nouveaux prêts et les renouvellements sont bloqués jusqu'à son règlement.",
+  "staff090_patrons_debt_blocked_body_plain_staff": "Les nouveaux prêts et les renouvellements sont bloqués jusqu'au règlement du solde de l'usager."
 }

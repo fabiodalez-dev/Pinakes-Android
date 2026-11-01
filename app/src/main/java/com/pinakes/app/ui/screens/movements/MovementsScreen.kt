@@ -125,8 +125,9 @@ private fun MovementsContent(data: MovementsPayload) {
     }
 }
 
+/** [staff]: the same card read by a librarian at the desk, so the wording speaks about the patron. */
 @Composable
-internal fun BalanceCard(data: MovementsPayload, money: (Int) -> String) {
+internal fun BalanceCard(data: MovementsPayload, money: (Int) -> String, staff: Boolean = false) {
     val kind = MoneyFormat.balanceKind(data.balanceTotalCents)
     Column(Modifier.padding(horizontal = Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Surface(
@@ -145,8 +146,8 @@ internal fun BalanceCard(data: MovementsPayload, money: (Int) -> String) {
                 Text(
                     stringResource(
                         when (kind) {
-                            BalanceKind.Owed -> R.string.movements_balance_owed
-                            BalanceKind.Credit -> R.string.movements_balance_credit
+                            BalanceKind.Owed -> if (staff) R.string.staff090_patrons_balance_owed_staff else R.string.movements_balance_owed
+                            BalanceKind.Credit -> if (staff) R.string.staff090_patrons_balance_credit_staff else R.string.movements_balance_credit
                             BalanceKind.Settled -> R.string.movements_balance_settled
                         },
                     ),
@@ -165,8 +166,8 @@ internal fun BalanceCard(data: MovementsPayload, money: (Int) -> String) {
                     Text(stringResource(R.string.movements_debt_blocked_title), style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onErrorContainer)
                     Text(
-                        data.debtBlockThresholdCents?.let { stringResource(R.string.movements_debt_blocked_body, money(it)) }
-                            ?: stringResource(R.string.movements_debt_blocked_body_plain),
+                        data.debtBlockThresholdCents?.let { stringResource(if (staff) R.string.staff090_patrons_debt_blocked_body_staff else R.string.movements_debt_blocked_body, money(it)) }
+                            ?: stringResource(if (staff) R.string.staff090_patrons_debt_blocked_body_plain_staff else R.string.movements_debt_blocked_body_plain),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                     )
