@@ -311,6 +311,8 @@ private fun BookForm(state: StaffBookEditUiState, vm: StaffBookEditViewModel) {
             )
             // Digital Library plugin (`staff_digital_library`): eBook / audiobook upload.
             com.pinakes.app.ui.screens.staff.content.StaffDigitalSection(onMessage = vm::showMessage, onForbidden = vm::markForbidden)
+            // Pinakes 0.9.0: catalogue card PDF and MARC export of this record.
+            com.pinakes.app.ui.screens.staff.s090.catalogue.Staff090CatalogueBookTools(onMessage = vm::showMessage, onForbidden = vm::markForbidden)
         } else {
             QuantityStepper(stringResource(R.string.staff_copies), f.copies, { n -> vm.edit { it.copy(copies = n) } },
                 range = StaffBookForm.COPIES_RANGE)
@@ -321,6 +323,10 @@ private fun BookForm(state: StaffBookEditUiState, vm: StaffBookEditViewModel) {
         TextRow(stringResource(R.string.staff_field_acquisition_date), f.acquisitionDate, placeholder = "2026-01-31") { v -> vm.edit { it.copy(acquisitionDate = v) } }
         LookupField(stringResource(R.string.staff_field_acquisition_type), f.acquisitionType, state.lookups.acquisitionTypeOptions,
             { v -> vm.edit { it.copy(acquisitionType = v) } }, Modifier.fillMaxWidth())
+        // Pinakes 0.9.0: supplier and RDA types, each only while the server's lookups carry it.
+        com.pinakes.app.ui.screens.staff.s090.catalogue.Staff090CatalogueBookFields(state.lookups, state.original, f.cataloguing) { c ->
+            vm.edit { it.copy(cataloguing = c) }
+        }
         PinakesTextField(
             value = f.price, onValueChange = { v -> vm.edit { it.copy(price = v) } }, label = stringResource(R.string.staff_field_price),
             isError = FormField.PRICE in errors, errorText = stringResource(R.string.staff_field_invalid),

@@ -22,6 +22,7 @@ import com.pinakes.app.data.network.ErrorCodes
 import com.pinakes.app.data.repository.StaffRepository
 import com.pinakes.app.data.repository.isDuplicate
 import com.pinakes.app.data.repository.isForbidden
+import com.pinakes.app.data.staff.CataloguingModules
 import com.pinakes.app.data.staff.CoverImageEncoder
 import com.pinakes.app.data.staff.FormField
 import com.pinakes.app.data.staff.IsbnCodec
@@ -335,10 +336,10 @@ class StaffBookEditViewModel @Inject constructor(
                     _state.update { it.copy(saving = false) }
                     return@launch
                 }
-                val patch = StaffBookWrite.update(original, s.form)
+                val patch = StaffBookWrite.update(original, s.form, CataloguingModules.from(s.lookups))
                 if (patch.isEmpty()) ApiResult.Success(original) else staff.updateBook(bookId, patch)
             } else {
-                staff.createBook(StaffBookWrite.create(createForm))
+                staff.createBook(StaffBookWrite.create(createForm, CataloguingModules.from(s.lookups)))
             }
             when (result) {
                 is ApiResult.Success -> {
