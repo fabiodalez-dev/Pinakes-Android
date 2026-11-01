@@ -41,6 +41,7 @@ import com.pinakes.app.data.model.Staff090LibraryLoans
 import com.pinakes.app.data.model.Staff090LibraryModule
 import com.pinakes.app.data.model.Staff090LibraryModules
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.repository.AuthRepository
 import com.pinakes.app.data.repository.Staff090LibraryRepository
 import com.pinakes.app.ui.common.AppLocale
 import com.pinakes.app.ui.common.AppViewModel
@@ -115,6 +116,7 @@ data class LibrarySettingsUiState(
 @HiltViewModel
 class LibrarySettingsViewModel @Inject constructor(
     private val repo: Staff090LibraryRepository,
+    private val auth: AuthRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(LibrarySettingsUiState())
     val state: StateFlow<LibrarySettingsUiState> = _state.asStateFlow()
@@ -170,7 +172,12 @@ class LibrarySettingsViewModel @Inject constructor(
                     val saved = repo.saveModules(s.modulesBody ?: return@launch)
                     finish(saved.result, saved.fields) { st, data -> st.withModules(data) }
                     // A module switched on or off changes what the loans tab and the cards tab show.
-                    if (saved.result is ApiResult.Success) refreshSecondary()
+                    // The hub's entries follow /health: re-read it so a module switched off
+                    // disappears now instead of on the next app start.
+                    if (saved.result is ApiResult.Success) {
+                        refreshSecondary()
+                        auth.refreshHealth()
+                    }
                 }
                 SettingsTab.LOANS -> {
                     val saved = repo.saveLoans(s.loansBody ?: return@launch)

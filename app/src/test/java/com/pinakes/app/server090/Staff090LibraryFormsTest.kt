@@ -190,6 +190,20 @@ class Staff090LibraryFormsTest {
         assertEquals(30, TypeForms.inherited(TypeNumber.LOAN_DURATION, null, types.globals))
     }
 
+    @Test fun aTypesOwnValueIsNeverShownAsWhatClearingTheFieldGives() {
+        val types = data("s090_library_types_two", Staff090LibraryTypes.serializer())
+        val standard = types.types.single { x -> x.isDefault }
+        // The live run: card validity 400 on the type, so `effective` says 400 too.
+        val own = standard.copy(
+            cardDurationDays = 400, loanDurationDays = 60, renewalDays = 10,
+            effective = (standard.effective ?: types.globals).copy(cardDurationDays = 400, loanDurationDays = 60, renewalDays = 10),
+        )
+        assertEquals(types.globals.cardDurationDays, TypeForms.inherited(TypeNumber.CARD_DURATION, own, types.globals))
+        assertEquals(30, TypeForms.inherited(TypeNumber.LOAN_DURATION, own, types.globals))
+        // An empty global renewal period follows the loan duration this type gets.
+        assertEquals(60, TypeForms.inherited(TypeNumber.RENEWAL_DAYS, own, types.globals))
+    }
+
     // ---------- rules matrix ----------
 
     @Test fun onlyChangedCellsAndOnlyTheirChangedValuesAreSent() {
