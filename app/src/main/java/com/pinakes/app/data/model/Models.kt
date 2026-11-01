@@ -126,6 +126,34 @@ data class HealthFeatures(
     // and `circulation_rules` off, `loanable` can still be false. A server that predates the
     // split omits the key and ties consultation to `circulation_rules`, as before.
     @SerialName("consultation_only") val consultationOnly: Boolean = false,
+    // Mobile API 1.10.0: the effective state of every other Pinakes 0.9.0 module.
+    val stocktake: Boolean = false,
+    val marc: Boolean = false,
+    @SerialName("visitor_log") val visitorLog: Boolean = false,
+    @SerialName("catalogue_cards") val catalogueCards: Boolean = false,
+    val suppliers: Boolean = false,
+    @SerialName("rda_types") val rdaTypes: Boolean = false,
+    @SerialName("patron_cards") val patronCards: Boolean = false,
+    @SerialName("user_import") val userImport: Boolean = false,
+    @SerialName("patron_photos") val patronPhotos: Boolean = false,
+    @SerialName("automatic_card_expiry") val automaticCardExpiry: Boolean = false,
+    @SerialName("automatic_fines") val automaticFines: Boolean = false,
+    @SerialName("debt_block") val debtBlock: Boolean = false,
+    @SerialName("loss_penalties") val lossPenalties: Boolean = false,
+    @SerialName("attendance_retention") val attendanceRetention: Boolean = false,
+    // Mobile API 1.10.0 staff areas of the 0.9.0 modules. Older servers omit them: hidden.
+    @SerialName("staff_patrons") val staffPatrons: Boolean = false,
+    @SerialName("staff_ledger") val staffLedger: Boolean = false,
+    @SerialName("staff_stocktake") val staffStocktake: Boolean = false,
+    @SerialName("staff_library_settings") val staffLibrarySettings: Boolean = false,
+    @SerialName("staff_circulation_rules") val staffCirculationRules: Boolean = false,
+    @SerialName("staff_closures_calendar") val staffClosuresCalendar: Boolean = false,
+    @SerialName("staff_suppliers") val staffSuppliers: Boolean = false,
+    @SerialName("staff_catalogue_cards") val staffCatalogueCards: Boolean = false,
+    @SerialName("staff_marc") val staffMarc: Boolean = false,
+    @SerialName("staff_attendance") val staffAttendance: Boolean = false,
+    @SerialName("staff_statistics") val staffStatistics: Boolean = false,
+    @SerialName("staff_user_import") val staffUserImport: Boolean = false,
 )
 
 // ---------- Auth ----------

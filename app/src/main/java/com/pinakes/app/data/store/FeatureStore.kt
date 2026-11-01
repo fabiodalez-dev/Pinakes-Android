@@ -85,6 +85,8 @@ data class InstanceFeatures(
     val circulationRulesAvailable: Boolean = false,
     /** `features.consultation_only`: consultation-only copies apply on their own switch. */
     val consultationOnlyAvailable: Boolean = false,
+    /** Pinakes 0.9.0 modules and staff areas (Mobile API 1.10.0). */
+    val staff090: Staff090Flags = Staff090Flags.None,
 ) {
     /** Library tab (loans + reservations) is shown only when at least one of them is enabled. */
     val showLibrary: Boolean get() = loans || reservations
@@ -157,6 +159,7 @@ data class InstanceFeatures(
                 closuresCalendarAvailable = f.closuresCalendar && app && circulation,
                 circulationRulesAvailable = f.circulationRules && app && circulation,
                 consultationOnlyAvailable = f.consultationOnly && app && circulation,
+                staff090 = Staff090Flags.from(f, appAccess = app, circulation = circulation),
             )
         }
     }
@@ -226,6 +229,7 @@ class FeatureStore(context: Context) {
             .putBoolean(KEY_CLOSURES_CALENDAR, value.closuresCalendarAvailable)
             .putBoolean(KEY_CIRCULATION_RULES, value.circulationRulesAvailable)
             .putBoolean(KEY_CONSULTATION_ONLY, value.consultationOnlyAvailable)
+            .putString(KEY_STAFF090, staff090Json.encodeToString(Staff090Flags.serializer(), value.staff090))
             .apply()
         _features.value = value
     }
@@ -289,6 +293,9 @@ class FeatureStore(context: Context) {
             closuresCalendarAvailable = prefs.getBoolean(KEY_CLOSURES_CALENDAR, false),
             circulationRulesAvailable = prefs.getBoolean(KEY_CIRCULATION_RULES, false),
             consultationOnlyAvailable = prefs.getBoolean(KEY_CONSULTATION_ONLY, false),
+            staff090 = prefs.getString(KEY_STAFF090, null)
+                ?.let { runCatching { staff090Json.decodeFromString(Staff090Flags.serializer(), it) }.getOrNull() }
+                ?: Staff090Flags.None,
         )
     }
 
@@ -328,5 +335,7 @@ class FeatureStore(context: Context) {
         private const val KEY_CLOSURES_CALENDAR = "f_closures_calendar"
         private const val KEY_CIRCULATION_RULES = "f_circulation_rules"
         private const val KEY_CONSULTATION_ONLY = "f_consultation_only"
+        private const val KEY_STAFF090 = "f_staff090"
+        private val staff090Json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
     }
 }

@@ -24,6 +24,8 @@ data class StaffAreas(
     val works: Boolean = false,
     val digital: Boolean = false,
     val libraryThing: Boolean = false,
+    /** Pinakes 0.9.0 tools (Mobile API 1.10.0). */
+    val s090: Staff090Areas = Staff090Areas.None,
 ) {
     /** At least one entry of the "Books" section beyond the Phase 1 ones. */
     val anyBooksTool: Boolean get() = series || merges || imports || covers || labels
@@ -53,6 +55,7 @@ data class StaffAreas(
                 works = features.staffFrbrAvailable,
                 digital = features.staffDigitalLibraryAvailable,
                 libraryThing = features.staffLibraryThingAvailable && features.staffImportsAvailable,
+                s090 = Staff090Areas.of(role, features, online),
             )
         }
     }

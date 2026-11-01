@@ -61,6 +61,8 @@ data class StaffHubPhase2(
     val onPeriodicals: () -> Unit = {},
     val onClubs: () -> Unit = {},
     val onWorks: () -> Unit = {},
+    /** Pinakes 0.9.0 tools: receives a [com.pinakes.app.ui.screens.staff.s090.Staff090Routes] entry. */
+    val onStaff090: (String) -> Unit = {},
 )
 
 /**
@@ -152,6 +154,8 @@ fun StaffHubScreen(
                 if (areas.bookClub) StaffActionRow(Icons.Outlined.Groups, stringResource(R.string.staff_clubs), stringResource(R.string.staff_clubs_subtitle), phase2.onClubs)
                 if (areas.works) StaffActionRow(Icons.Outlined.AccountTree, stringResource(R.string.staff_works), stringResource(R.string.staff_works_subtitle), phase2.onWorks)
             }
+
+            com.pinakes.app.ui.screens.staff.s090.Staff090HubSections(areas.s090, phase2.onStaff090)
         }
     }
 

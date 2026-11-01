@@ -1,6 +1,8 @@
 package com.pinakes.app.ui.navigation
 
 import androidx.compose.animation.AnimatedContentTransitionScope
+import com.pinakes.app.ui.screens.staff.s090.Staff090Transitions
+import com.pinakes.app.ui.screens.staff.s090.staff090Graph
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -218,6 +220,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                     onPeriodicals = { navController.navigate(Routes.STAFF_PERIODICALS) },
                     onClubs = { navController.navigate(Routes.STAFF_CLUBS) },
                     onWorks = { navController.navigate(Routes.STAFF_WORKS) },
+                    onStaff090 = { navController.navigate(it) },
                 ),
             )
         }
@@ -623,5 +626,8 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
         ) {
             IssueDetailScreen(onNavigateUp = { navController.popBackStack() }, onOpenArticle = { navController.navigate(Routes.standaloneArticle(it)) }, onFindArticles = { navController.navigate(Routes.standaloneArticles(issueId = it)) })
         }
+
+        // ---- Pinakes 0.9.0 staff tools (Mobile API 1.10.0) ----
+        staff090Graph(navController, Staff090Transitions(slideIn, slideOut))
     }
 }
