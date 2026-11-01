@@ -105,6 +105,10 @@ interface Staff090PatronsApi {
 
     // ---- Patron CSV import ----
 
+    /** The caller's unexpired jobs, newest first (finished ones included until they expire). */
+    @GET("staff/user-imports")
+    suspend fun userImports(@Query("cursor") cursor: String? = null, @Query("limit") limit: Int? = null): Envelope<List<UserImportJob>>
+
     @Multipart
     @POST("staff/user-imports")
     suspend fun createUserImport(@Part file: MultipartBody.Part, @Part("delimiter") delimiter: RequestBody): Envelope<UserImportJob>

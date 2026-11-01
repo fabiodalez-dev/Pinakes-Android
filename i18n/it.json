@@ -1983,5 +1983,7 @@
   "staff090_catalogue_err_copy_unavailable": "La catalogazione derivata non è disponibile su questo server.",
   "staff090_catalogue_err_job_cancelled": "L'importazione è stata annullata mentre era in corso.",
   "staff090_catalogue_err_schema_missing": "Questa funzione sarà disponibile al termine dell'aggiornamento del database del server.",
-  "staff090_catalogue_err_search_gone": "Questi risultati non sono più disponibili: ripeti la ricerca."
+  "staff090_catalogue_err_search_gone": "Questi risultati non sono più disponibili: ripeti la ricerca.",
+  "staff090_patrons_import_open_started": "Avviata · %1$s",
+  "staff090_patrons_import_open_not_started": "Non ancora avviata · righe: %1$d"
 }

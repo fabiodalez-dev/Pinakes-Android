@@ -164,6 +164,39 @@ class Staff090PatronsFlowTest : AppFlowTest() {
         }
     }
 
+    @Test fun anImportLeftOpenElsewhereIsResumedOrCancelled() {
+        launch(health = health) {
+            sequence("GET staff/user-imports", 200 to "s090_patrons_ui_list", 200 to "s090_patrons_ui_list_after")
+            json("GET staff/user-imports/$READY", "s090_patrons_ui_job_ready")
+            json("DELETE staff/user-imports/$STARTED", "s090_patrons_ui_cancelled")
+        }
+        openStaffHub()
+        scrollListTo(text(R.string.staff090_user_import))
+        click(text(R.string.staff090_user_import))
+        waitText("readers-b.csv")
+        waitText(text(R.string.staff090_patrons_import_open_not_started, 2))
+        // Cancel the started one without opening it: the list is read again.
+        clickTag("open-cancel-$STARTED")
+        waitRequest("DELETE", "staff/user-imports/$STARTED")
+        waitText(text(R.string.staff090_patrons_import_cancelled))
+        compose.waitUntil(10_000) { api.recorded("GET", "staff/user-imports").size >= 2 }
+    }
+
+    @Test fun anImportNotStartedYetReopensOnItsMapping() {
+        launch(health = health) {
+            json("GET staff/user-imports", "s090_patrons_ui_list")
+            json("GET staff/user-imports/$READY", "s090_patrons_ui_job_ready")
+        }
+        openStaffHub()
+        scrollListTo(text(R.string.staff090_user_import))
+        click(text(R.string.staff090_user_import))
+        clickTag("open-resume-$READY")
+        waitRequest("GET", "staff/user-imports/$READY")
+        waitFor(androidx.compose.ui.test.hasTestTag("user-import-preview"))
+        waitFor(androidx.compose.ui.test.hasTestTag("user-import-start"))
+        assertTrue(api.recorded("POST", "staff/user-imports/$READY/chunk").isEmpty())
+    }
+
     private fun FakePinakes.routeJobs() {
         json("POST staff/user-imports/$JOB/start", "s090_patrons_ui_start")
         json("POST staff/user-imports/$JOB/chunk", "s090_patrons_ui_chunk")
@@ -172,5 +205,8 @@ class Staff090PatronsFlowTest : AppFlowTest() {
 
     private companion object {
         const val JOB = "74151523-1959-4ac8-b635-0bd862ae9a27"
+        /** The open jobs of s090_patrons_ui_list: readers-a (not started) and readers-b (started). */
+        const val READY = "f15dde31-c5f2-4184-8f16-1a6df05246b8"
+        const val STARTED = "7eb8631a-3ab1-46ec-b464-ee47f50aa144"
     }
 }

@@ -1983,5 +1983,7 @@
   "staff090_catalogue_err_copy_unavailable": "Le catalogage dérivé n'est pas disponible sur ce serveur.",
   "staff090_catalogue_err_job_cancelled": "L'import a été annulé pendant son exécution.",
   "staff090_catalogue_err_schema_missing": "Cet outil sera disponible une fois la mise à jour de la base de données du serveur terminée.",
-  "staff090_catalogue_err_search_gone": "Ces résultats ne sont plus disponibles : relancez la recherche."
+  "staff090_catalogue_err_search_gone": "Ces résultats ne sont plus disponibles : relancez la recherche.",
+  "staff090_patrons_import_open_started": "Lancé · %1$s",
+  "staff090_patrons_import_open_not_started": "Pas encore lancé · lignes : %1$d"
 }

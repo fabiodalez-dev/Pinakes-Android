@@ -1983,5 +1983,7 @@
   "staff090_catalogue_err_copy_unavailable": "Copy cataloguing is not available on this library server.",
   "staff090_catalogue_err_job_cancelled": "The import was cancelled while it was running.",
   "staff090_catalogue_err_schema_missing": "This tool will be available once the library server finishes its database update.",
-  "staff090_catalogue_err_search_gone": "These results are no longer available: search again."
+  "staff090_catalogue_err_search_gone": "These results are no longer available: search again.",
+  "staff090_patrons_import_open_started": "Started · %1$s",
+  "staff090_patrons_import_open_not_started": "Not started yet · rows: %1$d"
 }

@@ -1983,5 +1983,7 @@
   "staff090_catalogue_err_copy_unavailable": "Die Fremddatenübernahme ist auf diesem Server nicht verfügbar.",
   "staff090_catalogue_err_job_cancelled": "Der Import wurde abgebrochen, während er lief.",
   "staff090_catalogue_err_schema_missing": "Dieses Werkzeug ist verfügbar, sobald der Server sein Datenbank-Update abgeschlossen hat.",
-  "staff090_catalogue_err_search_gone": "Diese Treffer sind nicht mehr verfügbar: Bitte erneut suchen."
+  "staff090_catalogue_err_search_gone": "Diese Treffer sind nicht mehr verfügbar: Bitte erneut suchen.",
+  "staff090_patrons_import_open_started": "Gestartet · %1$s",
+  "staff090_patrons_import_open_not_started": "Noch nicht gestartet · Zeilen: %1$d"
 }
