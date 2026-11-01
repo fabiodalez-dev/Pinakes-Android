@@ -142,12 +142,16 @@ internal fun ReturnSheet(
     saving: Boolean,
     onConfirm: (outcome: ReturnOutcome, notes: String, penalty: Double?) -> Unit,
     onDismiss: () -> Unit,
+    /** Mobile API 1.10.0: the loan's late fine; with [onConfirmWaiving] the desk may waive it. */
+    lateFine: com.pinakes.app.data.model.StaffLoanLateFine? = null,
+    onConfirmWaiving: ((outcome: ReturnOutcome, notes: String, penalty: Double?, waiveReason: String?) -> Unit)? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var outcome by rememberSaveable { mutableStateOf(ReturnOutcome.RETURNED) }
     var notes by rememberSaveable { mutableStateOf("") }
     var penalty by rememberSaveable { mutableStateOf("") }
     val parsed = LoanActions.parsePenalty(penalty, outcome)
+    val fine = com.pinakes.app.ui.screens.staff.s090.patrons.rememberReturnFineState(lateFine.takeIf { onConfirmWaiving != null })
     ModalBottomSheet(onDismissRequest = { if (!saving) onDismiss() }, sheetState = sheetState, containerColor = MaterialTheme.colorScheme.background) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.lg).navigationBarsPadding().imePadding(),
@@ -181,9 +185,13 @@ internal fun ReturnSheet(
                     modifier = Modifier.fillMaxWidth().testTag("penalty-field"),
                 )
             }
+            fine.Content()
             PrimaryButton(
-                stringResource(R.string.staff_loan_action_return), loading = saving, enabled = parsed !is PenaltyInput.Invalid,
-                onClick = { onConfirm(outcome, notes, (parsed as? PenaltyInput.Amount)?.value) },
+                stringResource(R.string.staff_loan_action_return), loading = saving, enabled = parsed !is PenaltyInput.Invalid && fine.canConfirm,
+                onClick = {
+                    val amount = (parsed as? PenaltyInput.Amount)?.value
+                    if (onConfirmWaiving != null) onConfirmWaiving(outcome, notes, amount, fine.waiveReason()) else onConfirm(outcome, notes, amount)
+                },
                 modifier = Modifier.fillMaxWidth().testTag("return-confirm"),
             )
             Spacer(Modifier.height(Spacing.lg))

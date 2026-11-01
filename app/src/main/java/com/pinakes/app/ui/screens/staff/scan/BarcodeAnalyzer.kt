@@ -38,6 +38,9 @@ class BarcodeAnalyzer(
         /** Copy inventory labels (CODE 128, CODE 39) plus EAN-13 for libraries that label with it. */
         val COPY_FORMATS: List<BarcodeFormat> = listOf(BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.EAN_13)
 
+        /** Library cards (visitor log): the card prints its code as CODE 128 or as a QR code. */
+        val PATRON_CARD_FORMATS: List<BarcodeFormat> = listOf(BarcodeFormat.CODE_128, BarcodeFormat.QR_CODE, BarcodeFormat.CODE_39)
+
         /**
          * The decoded text, with the EAN 2/5-digit add-on appended when [appendEanAddOn] asks for
          * it. A periodical issue is identified by the 13-digit masthead code PLUS its add-on (the
