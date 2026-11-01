@@ -45,12 +45,16 @@ class Staff090LibraryModelsTest {
     private fun <T> data(name: String, serializer: KSerializer<T>): T =
         requireNotNull(json.decodeFromString(Envelope.serializer(serializer), raw(name)).data) { "no data in $name" }
 
-    @Test fun healthAdvertisesTheThreeAreasAndTheyShowForStaff() {
+    @Test fun healthAdvertisesTheThreeAreasStaffSeesSettingsAndAdminsEverything() {
         val health = data("s090_library_health", HealthPayload.serializer())
         assertTrue(health.features.staffLibrarySettings && health.features.staffCirculationRules && health.features.staffClosuresCalendar)
-        val areas = Staff090Areas.of("staff", InstanceFeatures.from(health), online = true)
-        assertTrue(areas.librarySettings && areas.circulationRules && areas.closuresCalendar && areas.anyLibrary)
-        assertFalse(Staff090Areas.of("staff", InstanceFeatures.from(health), online = false).anyLibrary)
+        val staff = Staff090Areas.of("staff", InstanceFeatures.from(health), online = true)
+        assertTrue(staff.librarySettings && staff.anyLibrary)
+        // Patron types, loan rules and the calendar are configured by administrators only.
+        assertFalse(staff.circulationRules || staff.closuresCalendar)
+        val admin = Staff090Areas.of("admin", InstanceFeatures.from(health), online = true)
+        assertTrue(admin.librarySettings && admin.circulationRules && admin.closuresCalendar)
+        assertFalse(Staff090Areas.of("admin", InstanceFeatures.from(health), online = false).anyLibrary)
     }
 
     @Test fun modulesAsAdministratorAndAsStaff() {
