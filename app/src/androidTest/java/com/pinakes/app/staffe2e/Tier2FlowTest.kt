@@ -77,8 +77,15 @@ class Tier2FlowTest : AppFlowTest() {
         openStaffHub()
         click(text(R.string.staff_clubs))
         clickDescription(text(R.string.staff_club_new))
+        // The form sheet slides in: wait for it, then tap Save until the create reaches the server
+        // (a tap computed while the sheet still moves can land beside the button).
+        waitFor(hasTestTag("form-save"))
         compose.onAllNodes(hasSetTextAction() and hasTestTag("club-name")).onFirst().performTextReplacement("Lettori del giovedì")
-        clickTag("form-save")
+        repeat(3) {
+            if (api.recorded("POST", "bookclub/staff/clubs").isEmpty()) {
+                runCatching { clickTag("form-save"); compose.waitUntil(3_000) { api.recorded("POST", "bookclub/staff/clubs").isNotEmpty() } }
+            }
+        }
         val body = lastBody("POST", "bookclub/staff/clubs")
         assertTrue(body, body.contains("\"name\":\"Lettori del giovedì\"") && body.contains("\"privacy\":\"public\""))
         waitText("Ada Rossi")
