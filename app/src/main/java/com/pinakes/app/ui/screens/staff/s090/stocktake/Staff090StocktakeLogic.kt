@@ -265,6 +265,21 @@ object Staff090StocktakeMerge {
 
     /** Polling runs only while the session takes scans. */
     fun shouldPoll(session: Staff090StocktakeSession?): Boolean = session?.isOpen == true
+
+    /**
+     * A first page read again by the poll, applied to the outcome list. Until the operator loads a
+     * further page it replaces the list. Afterwards the scans newer than the list go on top and the
+     * pages already read stay, with their cursor: replacing them dropped every row past the first
+     * page a few seconds after "Show more", and offered "Show more" again on a list at its end.
+     */
+    fun refreshedFiltered(
+        current: List<Staff090StocktakeScan>,
+        currentCursor: String?,
+        paged: Boolean,
+        firstPage: List<Staff090StocktakeScan>,
+        firstCursor: String?,
+    ): Pair<List<Staff090StocktakeScan>, String?> =
+        if (!paged) firstPage to firstCursor else (firstPage + current).distinctBy(Staff090StocktakeScan::id) to currentCursor
 }
 
 /** The statistics bars and labels. Pure. */

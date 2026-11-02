@@ -7,6 +7,7 @@ import com.pinakes.app.data.model.Staff090Statistics
 import com.pinakes.app.data.model.Staff090StocktakeColor
 import com.pinakes.app.data.model.Staff090StocktakeLimits
 import com.pinakes.app.data.model.Staff090StocktakeOptions
+import com.pinakes.app.data.model.Staff090StocktakeScan
 import com.pinakes.app.data.model.Staff090StocktakeScanResult
 import com.pinakes.app.data.model.Staff090StocktakeSession
 import com.pinakes.app.data.model.Staff090StocktakeState
@@ -311,5 +312,22 @@ class Staff090StocktakeLogicTest {
         assertEquals("staff/statistics/fines.csv", Staff090StatisticsRepository.finesCsvPath(null, " "))
         assertEquals("staff/stocktake/sessions/41/report.csv", Staff090StocktakeRepository.reportCsvPath(41))
         assertEquals("staff/stocktake/sessions/41/report.pdf", Staff090StocktakeRepository.reportPdfPath(41))
+    }
+
+    @Test fun aPagedOutcomeListKeepsItsPagesWhenThePollReadsThePageOneAgain() {
+        fun scans(range: IntProgression) = range.map { Staff090StocktakeScan(id = it, code = "C$it") }
+        val pageOne = scans(60 downTo 11)
+        // Not paged yet: the poll's first page replaces the list.
+        assertEquals(pageOne to "next", Staff090StocktakeMerge.refreshedFiltered(scans(55 downTo 6), "old", false, pageOne, "next"))
+        // Paged to the end (cursor null): the 55 rows stay, no "Show more" comes back.
+        val all = scans(55 downTo 1)
+        val (kept, cursor) = Staff090StocktakeMerge.refreshedFiltered(all, null, true, scans(55 downTo 6), "page2")
+        assertEquals(all, kept)
+        assertEquals(null, cursor)
+        // A scan recorded meanwhile goes on top, once.
+        val (withNew, _) = Staff090StocktakeMerge.refreshedFiltered(all, null, true, scans(56 downTo 7), "page2")
+        assertEquals(56, withNew.first().id)
+        assertEquals(1, withNew.last().id)
+        assertEquals(56, withNew.size)
     }
 }

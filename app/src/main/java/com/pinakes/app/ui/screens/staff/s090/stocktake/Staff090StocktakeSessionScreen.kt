@@ -141,6 +141,8 @@ data class StocktakeSessionUiState(
     val outcomeFilter: String? = null,
     val filtered: List<Staff090StocktakeScan> = emptyList(),
     val filteredCursor: String? = null,
+    /** The operator loaded pages past the first: a refresh adds the newer scans on top and keeps them. */
+    val filteredPaged: Boolean = false,
     val filteredLoading: Boolean = false,
     val lastResult: Staff090StocktakeScan? = null,
     /** Codes read and not answered yet. */
@@ -366,28 +368,30 @@ class StocktakeSessionViewModel @Inject constructor(
     }
 
     fun setMine(value: Boolean) {
-        _state.update { it.copy(mine = value) }
+        _state.update { it.copy(mine = value, filtered = emptyList(), filteredCursor = null, filteredPaged = false) }
         viewModelScope.launch { poll() }
         if (_state.value.outcomeFilter != null) refreshFiltered()
     }
 
     fun setOutcomeFilter(code: String?) {
-        _state.update { it.copy(outcomeFilter = code, filtered = emptyList(), filteredCursor = null) }
+        _state.update { it.copy(outcomeFilter = code, filtered = emptyList(), filteredCursor = null, filteredPaged = false) }
         if (code != null) refreshFiltered()
     }
 
     private fun refreshFiltered() {
         val s = _state.value
         val outcome = s.outcomeFilter ?: return
-        // Keep a list the operator paged through: the poll refreshes only the first page.
-        if (s.filteredCursor != null && s.filtered.size > Staff090StocktakeRepository.PAGE) return
         _state.update { it.copy(filteredLoading = it.filtered.isEmpty()) }
         viewModelScope.launch {
             val res = repo.scans(sessionId, outcome, s.mine)
             if (_state.value.outcomeFilter != outcome) return@launch
             _state.update {
                 when (res) {
-                    is ApiResult.Success -> it.copy(filtered = res.data.items, filteredCursor = res.data.nextCursor, filteredLoading = false)
+                    is ApiResult.Success -> {
+                        // The poll reads only the first page: a list the operator paged through keeps its pages.
+                        val (items, cursor) = Staff090StocktakeMerge.refreshedFiltered(it.filtered, it.filteredCursor, it.filteredPaged, res.data.items, res.data.nextCursor)
+                        it.copy(filtered = items, filteredCursor = cursor, filteredLoading = false)
+                    }
                     is ApiResult.Failure -> it.copy(filteredLoading = false, forbidden = res.isForbidden(), message = res.toStocktakeMessage(R.string.staff_error_load))
                 }
             }
@@ -405,7 +409,7 @@ class StocktakeSessionViewModel @Inject constructor(
             if (_state.value.outcomeFilter != outcome) return@launch
             _state.update {
                 when (res) {
-                    is ApiResult.Success -> it.copy(filtered = (it.filtered + res.data.items).distinctBy(Staff090StocktakeScan::id), filteredCursor = res.data.nextCursor, filteredLoading = false)
+                    is ApiResult.Success -> it.copy(filtered = (it.filtered + res.data.items).distinctBy(Staff090StocktakeScan::id), filteredCursor = res.data.nextCursor, filteredPaged = true, filteredLoading = false)
                     is ApiResult.Failure -> it.copy(filteredLoading = false, forbidden = res.isForbidden(), message = res.toStocktakeMessage(R.string.staff_error_load))
                 }
             }
