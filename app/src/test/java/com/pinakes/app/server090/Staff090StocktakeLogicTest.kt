@@ -201,6 +201,11 @@ class Staff090StocktakeLogicTest {
         assertFalse(closed.canScan || closed.canUpload || closed.canClose || closed.canCancel)
         assertFalse(Staff090StocktakeMerge.shouldPoll(closed))
         assertEquals(detail, Staff090StocktakeMerge.withStatus(detail, "open"))
+        // A poll read before the close still says "open": a closed or cancelled session stays so.
+        assertEquals(closed, Staff090StocktakeMerge.withStatus(closed, "open"))
+        val cancelled = Staff090StocktakeMerge.withStatus(detail, "cancelled")
+        assertEquals(cancelled, Staff090StocktakeMerge.withStatus(cancelled, "open"))
+        assertFalse(Staff090StocktakeMerge.withStatus(closed, "open").canClose)
         assertFalse(Staff090StocktakeMerge.shouldPoll(null))
     }
 

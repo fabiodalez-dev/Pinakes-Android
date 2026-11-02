@@ -253,9 +253,13 @@ object Staff090StocktakeMerge {
     fun prepend(list: List<Staff090StocktakeScan>, scan: Staff090StocktakeScan, max: Int = 50): List<Staff090StocktakeScan> =
         (listOf(scan) + list.filter { it.id != scan.id }).take(max)
 
-    /** The session after a status change seen by a scan answer or a poll: no more scanning once not open. */
+    /**
+     * The session after a status change seen by a scan answer or a poll: no more scanning once not
+     * open. Closed and cancelled are final: an answer still saying "open" was read before the
+     * session ended (a poll in flight during the close) and never reopens it.
+     */
     fun withStatus(session: Staff090StocktakeSession, status: String): Staff090StocktakeSession =
-        if (status == session.status || status.isBlank()) session
+        if (status == session.status || status.isBlank() || (session.status != "open" && status == "open")) session
         else session.copy(status = status, canScan = status == "open" && session.canScan, canUpload = status == "open" && session.canUpload,
             canClose = status == "open" && session.canClose, canCancel = status == "open" && session.canCancel)
 

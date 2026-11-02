@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -273,7 +274,12 @@ fun Staff090CatalogueSuppliersScreen(onNavigateUp: () -> Unit) {
                     emptyTitle = stringResource(R.string.staff090_catalogue_suppliers_empty), emptyIcon = Icons.Outlined.LocalShipping,
                     onRetry = vm::refresh, emptySubtitle = stringResource(R.string.staff090_suppliers_subtitle),
                 ) {
-                    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, bottom = 96.dp)) {
+                    val listState = rememberLazyListState()
+                    // A supplier created before the first row would land above the top (the list
+                    // keeps its first visible row in place): stay at the top while the user is there.
+                    val first = state.items.firstOrNull()?.id
+                    LaunchedEffect(first) { if (listState.firstVisibleItemIndex <= 1) listState.scrollToItem(0) }
+                    LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, bottom = 96.dp)) {
                         items(state.items, key = { it.id }) { supplier ->
                             SupplierRow(
                                 supplier = supplier, deleting = state.deletingId == supplier.id,

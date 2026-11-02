@@ -516,6 +516,15 @@ private fun LazyListScope.importTab(state: MarcUiState, vm: Staff090CatalogueMar
     val options = state.options ?: return
     val job = state.job
     if (job == null) {
+        // The list keeps its first visible item in place when items are inserted before it:
+        // the open jobs arrive after the form is drawn, so a fixed first row keeps them in view
+        // instead of above the top of the screen.
+        item(key = "import-hint") {
+            Text(
+                stringResource(R.string.staff090_catalogue_marc_import_hint), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = Spacing.md),
+            )
+        }
         openJobs(state, vm)
         item(key = "form") { ImportForm(state, options, vm, onPick) }
         return
@@ -632,8 +641,7 @@ private fun LazyListScope.openJobs(state: MarcUiState, vm: Staff090CatalogueMarc
 
 @Composable
 private fun ImportForm(state: MarcUiState, options: MarcOptions, vm: Staff090CatalogueMarcViewModel, onPick: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = Spacing.md)) {
-        Text(stringResource(R.string.staff090_catalogue_marc_import_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = Spacing.sm)) {
         state.importError?.let { InlineErrorBanner(message = it.resolve()) }
         PickerRow(
             label = stringResource(R.string.staff_import_file), value = state.file?.name,

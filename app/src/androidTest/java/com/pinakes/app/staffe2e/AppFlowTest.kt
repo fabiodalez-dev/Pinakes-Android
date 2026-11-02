@@ -186,6 +186,21 @@ abstract class AppFlowTest {
         compose.waitForIdle()
     }
 
+    /**
+     * Tap the button tagged [tag] until one more [method] [path] request reaches the fake server
+     * (at most three taps, never a second request). A form in a sheet moves while the sheet
+     * slides in and the keyboard animates above it (seconds on a loaded emulator): a tap computed
+     * from the previous layout can land beside the button and send nothing.
+     */
+    protected fun tapUntilSent(tag: String, method: String, path: String) {
+        val before = api.recorded(method, path).size
+        waitFor(androidx.compose.ui.test.hasTestTag(tag))
+        repeat(3) {
+            if (api.recorded(method, path).size > before) return@repeat
+            runCatching { clickTag(tag); compose.waitUntil(3_000) { api.recorded(method, path).size > before } }
+        }
+    }
+
     /** The UTF-8 body of the last [method] [path] request. */
     protected fun lastBody(method: String, path: String): String {
         waitRequest(method, path)

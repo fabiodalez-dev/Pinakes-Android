@@ -232,7 +232,11 @@ class StocktakeSessionViewModel @Inject constructor(
     }
 
     private suspend fun poll() {
+        val asked = _state.value.session?.status
         val res = repo.state(sessionId, _state.value.mine)
+        // The session changed while the poll was in flight (this device closed or cancelled it):
+        // the answer describes the old state, so it is dropped.
+        if (_state.value.session?.status != asked) return
         if (res is ApiResult.Failure) {
             // A missed poll is retried by the next one; only a refusal or the module going away ends the screen.
             if (res.isForbidden() || Staff090StocktakeErrors.moduleOff(res)) _state.update { it.copy(forbidden = res.isForbidden(), leave = Staff090StocktakeErrors.moduleOff(res)) }
