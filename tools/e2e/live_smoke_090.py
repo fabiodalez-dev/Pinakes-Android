@@ -835,6 +835,178 @@ def step_stocktake():
             f"report rows 3 (found, missing {STATE['stock_codes'][1]}, unknown)")
 
 
+
+PAGED_SESSION = f"E2E stocktake paging {TAG}"
+PAGED_COPIES = 60          # more than one page (the app asks for 50) of report rows
+PAGED_SCANS = 55           # more than one page of found scans
+
+
+def merge_visible(acc, visible):
+    """Append a screen's rows to the rows seen so far, aligned on the overlap with the previous screen."""
+    for k in range(min(len(acc), len(visible)), 0, -1):
+        if acc[-k:] == visible[:k]:
+            return acc + visible[k:]
+    return acc + visible
+
+
+def visible_codes(prefix_text):
+    nodes = sorted((n for n in ui.dump() if n.text.startswith(prefix_text)), key=lambda n: n.bounds[1])
+    return [n.text for n in nodes]
+
+
+def scroll_collect(prefix_text, until=None, max_swipes=60):
+    """Scroll a list to its end collecting the rows whose text starts with [prefix_text], in screen order."""
+    acc, still = [], 0
+    for _ in range(max_swipes):
+        before = len(acc)
+        acc = merge_visible(acc, visible_codes(prefix_text))
+        if until and ui.find(until, exact=True):
+            break
+        still = still + 1 if len(acc) == before else 0
+        if still >= 3:
+            break
+        ui.swipe_up()
+        time.sleep(0.8)
+    return acc
+
+
+def api_all(path):
+    rows, cursor = [], None
+    for _ in range(50):
+        sep = "&" if "?" in path else "?"
+        st, b = api("GET", f"{path}{sep}limit=50" + (f"&cursor={urllib.request.quote(cursor)}" if cursor else ""))
+        assert st == 200, f"GET {path} HTTP {st}: {b}"
+        rows += b.get("data") or []
+        cursor = (b.get("meta") or {}).get("next_cursor")
+        if not cursor:
+            return rows
+    raise AssertionError(f"{path}: more than 50 pages")
+
+
+@step("5b", "stocktake paging: a code list over one page, the scan list and the report loaded page by page")
+def step_stocktake_paging():
+    import tempfile
+    _, shelf = api("POST", "staff/shelves", {"code": f"E2P{TAG}", "name": f"E2E paging shelf {TAG}"})
+    FX["shelves"].append(shelf["data"]["id"])
+    _, level = api("POST", f"staff/shelves/{shelf['data']['id']}/levels", {"number": 1})
+    book = create_book(f"E2E paging {TAG}", PAGED_COPIES, shelf["data"]["id"], level["data"]["id"])
+    codes = sorted(c["inventory_number"] for c in book["copies"])
+    assert len(codes) == PAGED_COPIES, f"{len(codes)} copies created"
+    pfx = codes[0].rsplit("-C", 1)[0] + "-C"
+    scanned = codes[:PAGED_SCANS]
+    name = f"e2e-codes-{TAG}.txt"
+    path = os.path.join(tempfile.mkdtemp(prefix="e2e090"), name)
+    with open(path, "w") as fh:
+        fh.write("\n".join(scanned) + "\n")
+    push_download(path, name)
+    shelf_label = f"[{shelf['data']['code']}] {shelf['data']['name']}"
+    open_entry(S["staff090_stocktake"])
+    ui.tap(S["staff090_stocktake_new"])
+    time.sleep(1.2)
+    set_field(S["staff090_stocktake_field_name"], PAGED_SESSION, scroll=False)
+    ui.tap(S["staff090_stocktake_any_shelf"], exact=True)
+    time.sleep(1)
+    ui.tap(S["staff090_stocktake_search_shelf"], exact=True)
+    ui.type_text(shelf["data"]["code"])
+    ui.hide_keyboard()
+    ui.tap(shelf_label, exact=True)
+    ui.scroll_to(S["staff090_stocktake_open_session"], exact=True, passes=1)
+    ui.tap(S["staff090_stocktake_open_session"], exact=True)
+    base.deny_camera_prompt()
+    ui.wait(S["staff090_stocktake_upload"], 30)
+
+    def sess():
+        _, b = api("GET", "staff/stocktake/sessions?status=all&limit=50")
+        row = next((r for r in b.get("data") or [] if r["name"] == PAGED_SESSION), None)
+        if row and row["id"] not in FX["sessions"]:
+            FX["sessions"].append(row["id"])
+        return row
+    sid = wait_for(sess, 30, "paging session")["id"]
+    ui.tap(S["staff090_stocktake_upload"], exact=True)
+    pick_document(name)
+    ui.wait(S["staff090_stocktake_upload_done"], 120)
+    sm = wait_for(lambda: (lambda r: r if r["summary"]["found"] == PAGED_SCANS else None)(sess()), 60, "uploaded scans")["summary"]
+    assert (sm["expected"], sm["found"], sm["missing"]) == (PAGED_COPIES, PAGED_SCANS, PAGED_COPIES - PAGED_SCANS), f"summary {sm}"
+    # The server's own paging: every row once.
+    api_scans = api_all(f"staff/stocktake/sessions/{sid}/scans?outcome=found")
+    api_report = api_all(f"staff/stocktake/sessions/{sid}/report")
+    scan_codes = [r.get("code") or r.get("scanned_code") or (r.get("copy") or {}).get("inventory_number") for r in api_scans]
+    report_codes = [r.get("code") or r.get("scanned_code") or (r.get("copy") or {}).get("inventory_number") for r in api_report]
+    notes = []
+    if sorted(scan_codes) != sorted(scanned) or len(set(scan_codes)) != len(scan_codes):
+        notes.append(f"API scans: {len(scan_codes)} rows, {len(set(scan_codes))} distinct, expected {PAGED_SCANS}")
+    if sorted(report_codes) != codes or len(set(report_codes)) != len(report_codes):
+        notes.append(f"API report: {len(report_codes)} rows, {len(set(report_codes))} distinct, expected {PAGED_COPIES}")
+    # The scan list in the app, filter "found", then "Show more" until it goes away.
+    ui.scroll_to(S["staff090_stocktake_recent"], exact=True)
+    _, opts = api("GET", "staff/stocktake/options")
+    found_label = next((o["label"] for o in (opts["data"].get("outcomes") or []) if o.get("code") == "found"), S["staff090_stocktake_count_found"])
+    chips = [n for n in ui.dump() if n.text == found_label]
+    ui.tap_xy(*chips[-1].center)
+    time.sleep(2)
+    # Newest first: page one ends at scanned[5], the second page holds the five oldest scans.
+    oldest = scanned[0]
+
+    def to_list_end():
+        for _ in range(40):
+            nodes = ui.dump()
+            more = ui.find(S["staff090_stocktake_more"], exact=True, nodes=nodes)
+            if more or ui.find(S["staff090_stocktake_details"], exact=True, nodes=nodes):
+                return more, visible_codes(pfx)
+            ui.swipe_up()
+            time.sleep(0.3)
+        return None, visible_codes(pfx)
+    more, rows_seen = to_list_end()
+    assert more is not None, "no 'Show more' under the first page of found scans"
+    ui.tap_xy(*more.center)
+    time.sleep(2)
+    more, rows_now = to_list_end()
+    appended = oldest in rows_now and more is None
+    time.sleep(9)                                   # two polls of the session screen (every 4 s)
+    for _ in range(4):
+        ui.swipe_down()
+    more, rows_later = to_list_end()
+    shot("paging-scan-list")
+    if not appended:
+        notes.append(f"app scan list: after 'Show more' the second page is not on screen (last rows {rows_now[-3:]}, 'Show more' still "
+                     f"shown: {more is not None}); the app fetches it (GET .../scans?cursor=...) but the 4-second poll, which "
+                     "refreshFiltered() lets through once filteredCursor is null, puts page one back")
+    elif more is not None or oldest not in rows_later:
+        notes.append("app scan list: the second page loaded with 'Show more' (the oldest scan %s at the end) is dropped again "
+                     "within a few seconds: the list is back to the first %d rows ending at %s and 'Show more' is shown again "
+                     "(the 4-second poll refreshFiltered() replaces the list with page one once filteredCursor is null)"
+                     % (oldest, 50, rows_later[-1] if rows_later else "?"))
+    seen = rows_later
+    # The report in the app: scrolling loads the next page.
+    rep = next(n for n in ui.dump() if n.desc == S["staff090_stocktake_report"])
+    ui.tap_xy(*rep.center)
+    ui.wait(s("staff090_stocktake_report_rows", PAGED_COPIES), 60)
+    rows = scroll_collect(pfx)
+    shot("paging-report-end")
+    dup_rows = sorted({c for c in rows if rows.count(c) > 1})
+    if len(rows) != PAGED_COPIES or dup_rows or sorted(rows) != codes:
+        notes.append(f"app report: {len(rows)} rows, {len(set(rows))} distinct (expected {PAGED_COPIES}), repeated {dup_rows[:5]}, "
+                     f"missing {sorted(set(codes) - set(rows))[:5]}")
+    if [c for c in rows if c in report_codes] != [c for c in report_codes if c in rows]:
+        notes.append("app report order differs from the server's order")
+    for n in notes:
+        bug("Stocktake paging (session #%d, %d copies, %d found by a code list): %s" % (sid, PAGED_COPIES, PAGED_SCANS, n))
+    # Cancel the session from its screen: the button sits above the (long) scan list.
+    ui.back()
+    for _ in range(40):
+        if ui.find(S["staff090_stocktake_cancel"], exact=True):
+            break
+        ui.swipe_down()
+    ui.tap(S["staff090_stocktake_cancel"], exact=True)
+    time.sleep(1)
+    tap_last(S["action_confirm"]) if ui.find(S["action_confirm"], exact=True) else tap_last(S["staff090_stocktake_cancel"])
+    wait_for(lambda: (lambda r: r if r["status"] == "cancelled" else None)(sess()), 30, "cancelled paging session")
+    assert not notes, "; ".join(notes)
+    return (f"session #{sid}: {PAGED_SCANS} codes uploaded from {name} through the picker; API scans {len(scan_codes)} / report "
+            f"{len(report_codes)} rows, each once; app scan list keeps the second page after 'Show more' and the polls, report {len(rows)} rows "
+            f"after scrolling, no repeats, server order")
+
+
 @step(6, "visitor log: a reader's card, an unknown card, a guest")
 def step_visitors():
     top = int(sql("SELECT IFNULL(MAX(id), 0) FROM presenze").strip())
@@ -1204,7 +1376,7 @@ def cleanup():
     _try("suppliers", lambda: sql(f"DELETE FROM fornitori WHERE nome = {q(SUPPLIER_NAME)}"))
     _try("visits", lambda: sql(f"DELETE FROM presenze WHERE id IN ({ids(FX['visits'])}) OR utente_id IN ({ids(users)}) "
                                f"OR (nome_ospite = {q('E2E guest ' + TAG)})"))
-    _try("stocktake sessions", lambda: sql(f"DELETE FROM inventario_sessioni WHERE id IN ({ids(FX['sessions'])}) OR nome = {q(STOCK_SESSION)}"))
+    _try("stocktake sessions", lambda: sql(f"DELETE FROM inventario_sessioni WHERE id IN ({ids(FX['sessions'])}) OR nome IN ({q(STOCK_SESSION)}, {q(PAGED_SESSION)})"))
     _try("import jobs", lambda: sql(f"DELETE FROM mobile_import_jobs WHERE file_name IN ({q(IMPORT_FILE)}, {q(MARC_NAME)})"))
     _try("loans and reservations", lambda: (sql(f"DELETE FROM prenotazioni WHERE libro_id IN ({ids(books)}) OR utente_id IN ({ids(users)})"),
                                             sql(f"DELETE FROM prestiti WHERE libro_id IN ({ids(books)}) OR utente_id IN ({ids(users)})")))
@@ -1219,7 +1391,7 @@ def cleanup():
             "AND id NOT IN (SELECT editore_id FROM libri WHERE editore_id IS NOT NULL)"))
     _try("users", lambda: sql(f"DELETE FROM utenti WHERE id IN ({ids(users)}) OR email IN "
                               f"({q(READER['email'])}, {q(STAFF['email'])}, {', '.join(q(r[2]) for r in IMPORT_ROWS)})"))
-    _try("shelves", lambda: sql(f"DELETE FROM scaffali WHERE id IN ({ids(FX['shelves'])}) OR codice = {q('E2E' + TAG)}"))
+    _try("shelves", lambda: sql(f"DELETE FROM scaffali WHERE id IN ({ids(FX['shelves'])}) OR codice IN ({q('E2E' + TAG)}, {q('E2P' + TAG)})"))
     for name in STATE.get("pushed", []):
         _try(f"remove /sdcard/Download/{name}", lambda name=name: ui.shell(f"rm -f /sdcard/Download/{name}") or
              ui.shell(f"am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/{name}") and None)
@@ -1237,11 +1409,11 @@ def leftovers():
         "loans": f"SELECT COUNT(*) FROM prestiti WHERE utente_id IN ({users}) OR libro_id IN ({ids(FX['books'])})",
         "ledger": f"SELECT COUNT(*) FROM movimenti_lettore WHERE utente_id IN ({users})",
         "visits": f"SELECT COUNT(*) FROM presenze WHERE utente_id IN ({users}) OR nome_ospite = {q('E2E guest ' + TAG)}",
-        "stocktake": f"SELECT COUNT(*) FROM inventario_sessioni WHERE nome = {q(STOCK_SESSION)}",
+        "stocktake": f"SELECT COUNT(*) FROM inventario_sessioni WHERE nome IN ({q(STOCK_SESSION)}, {q(PAGED_SESSION)})",
         "types": f"SELECT COUNT(*) FROM tipologie_lettore WHERE nome = {q(TYPE_NAME)}",
         "closures": f"SELECT COUNT(*) FROM calendario_chiusure WHERE descrizione LIKE {q('E2E % ' + TAG)}",
         "suppliers": f"SELECT COUNT(*) FROM fornitori WHERE nome = {q(SUPPLIER_NAME)}",
-        "shelves": f"SELECT COUNT(*) FROM scaffali WHERE codice = {q('E2E' + TAG)}",
+        "shelves": f"SELECT COUNT(*) FROM scaffali WHERE codice IN ({q('E2E' + TAG)}, {q('E2P' + TAG)})",
         "import jobs": f"SELECT COUNT(*) FROM mobile_import_jobs WHERE file_name IN ({q(IMPORT_FILE)}, {q(MARC_NAME)})",
     }
     out = {}
@@ -1268,7 +1440,7 @@ def main():
                 RESULTS.append(("sign-in as admin", "FAIL", str(e)))
             if signed:
                 for fn in (step_hub_and_module, step_loan_setting, step_types_matrix_closure, step_patron, step_type_delete,
-                           step_stocktake, step_visitors, step_user_import, step_suppliers_marc, step_statistics, step_staff):
+                           step_stocktake, step_stocktake_paging, step_visitors, step_user_import, step_suppliers_marc, step_statistics, step_staff):
                     fn()
     finally:
         cleanup()
