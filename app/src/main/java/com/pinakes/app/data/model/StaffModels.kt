@@ -39,6 +39,12 @@ data class StaffLookups(
     // Mobile API 1.7.0 additions.
     @SerialName("series_types") val seriesTypes: List<JsonElement> = emptyList(),
     @SerialName("return_outcomes") val returnOutcomes: List<JsonElement> = emptyList(),
+    // Mobile API 1.10.0 (Pinakes 0.9.0): present only while their module is on, so null means
+    // "module off" and the book form leaves the field out.
+    val suppliers: List<IdName>? = null,
+    @SerialName("rda_content_types") val rdaContentTypes: List<JsonElement>? = null,
+    @SerialName("rda_media_types") val rdaMediaTypes: List<JsonElement>? = null,
+    @SerialName("rda_carrier_types") val rdaCarrierTypes: List<JsonElement>? = null,
 ) {
     val languageOptions: List<LookupOption> get() = options(languages)
     val mediaTypeOptions: List<LookupOption> get() = options(mediaTypes)
@@ -206,6 +212,8 @@ data class StaffCopy(
     val available: Boolean? = null,
     /** Copy-code lookup only: the open loan on this copy. */
     val loan: StaffLoan? = null,
+    /** Kept for consultation in the library (Pinakes 0.9.0); absent on older servers. */
+    @SerialName("consultation_only") val consultationOnly: Boolean = false,
 )
 
 @Serializable
@@ -255,6 +263,14 @@ data class StaffBook(
     @SerialName("is_wanted") val isWanted: Boolean = false,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
+    // Mobile API 1.10.0 (Pinakes 0.9.0), sent only while their module is on: the supplier
+    // (`suppliers`) and the RDA overrides with the effective triple (`rda_types`).
+    @SerialName("supplier_id") val supplierId: Int? = null,
+    val supplier: IdName? = null,
+    @SerialName("rda_content_type") val rdaContentType: String? = null,
+    @SerialName("rda_media_type") val rdaMediaType: String? = null,
+    @SerialName("rda_carrier_type") val rdaCarrierType: String? = null,
+    @SerialName("rda_effective") val rdaEffective: RdaEffective? = null,
 )
 
 /** Row of `GET /staff/books`: the public summary plus operator-only fields. */

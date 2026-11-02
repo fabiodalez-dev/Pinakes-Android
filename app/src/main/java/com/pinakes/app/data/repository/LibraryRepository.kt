@@ -45,6 +45,12 @@ class LibraryRepository(
         return res
     }
 
+    /** The reader's balance and movements (fines ledger). Not cached: money must be current. */
+    suspend fun movements(): ApiResult<com.pinakes.app.data.model.MovementsPayload> {
+        val api = network.api()
+        return apiCall { api.movements() }
+    }
+
     /** The last loans the server returned, or null when nothing was ever cached. */
     suspend fun loansCached(): LoansData? {
         val rows = cache?.loans(CachedLoan.LOAN_BUCKETS) ?: return null

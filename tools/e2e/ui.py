@@ -40,6 +40,9 @@ class Node:
         self.cls = el.get("class") or ""
         self.clickable = el.get("clickable") == "true"
         self.checked = el.get("checked") == "true"
+        self.checkable = el.get("checkable") == "true"
+        self.enabled = el.get("enabled") != "false"
+        self.scrollable = el.get("scrollable") == "true"
         b = [int(v) for v in re.findall(r"\d+", el.get("bounds", "[0,0][0,0]"))]
         self.bounds = b
         self.center = ((b[0] + b[2]) // 2, (b[1] + b[3]) // 2)

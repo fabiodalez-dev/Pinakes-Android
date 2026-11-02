@@ -31,7 +31,7 @@ class DigitalLinkRefreshFlowTest : AppFlowTest() {
         lateinit var vm: BookDetailViewModel
         instrumentation.runOnMainSync {
             vm = BookDetailViewModel(SavedStateHandle(mapOf(Routes.ARG_BOOK_ID to 1)),
-                deps.catalogRepository(), deps.libraryRepository(), deps.wishlistRepository(), deps.connectivity())
+                deps.catalogRepository(), deps.libraryRepository(), deps.wishlistRepository(), deps.connectivity(), deps.featureStore())
             store.put("digital", vm)
         }
         compose.waitUntil(10_000) { vm.state.value.content is UiState.Success }

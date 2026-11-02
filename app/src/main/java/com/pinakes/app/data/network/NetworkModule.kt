@@ -119,6 +119,11 @@ class NetworkModule(private val session: SessionStore, private val cacheDir: Fil
     @Volatile
     private var cachedLongPluginsBaseUrl: String? = null
 
+    /** Pinakes 0.9.0 staff areas: one Retrofit service per area, created on demand by type. */
+    private val cachedTypedApis = mutableMapOf<Class<*>, Any>()
+    private val cachedLongTypedApis = mutableMapOf<Class<*>, Any>()
+    private var cachedLongTypedBaseUrl: String? = null
+
     /**
      * The same client with an 11-minute read timeout, for the synchronous server jobs that may
      * run up to 600 s (covers sync, an enrichment batch, an import chunk with scraping). Only
@@ -154,6 +159,7 @@ class NetworkModule(private val session: SessionStore, private val cacheDir: Fil
         cachedStaffContentApi = null
         cachedStaffPluginsApi = null
         cachedStaffTier2Api = null
+        cachedTypedApis.clear()
         return retrofit
     }
 
@@ -266,6 +272,38 @@ class NetworkModule(private val session: SessionStore, private val cacheDir: Fil
         return api
     }
 
+    /**
+     * A Retrofit service of the Pinakes 0.9.0 staff areas (Mobile API 1.10.0), same base URL
+     * and bearer token as [api]. Each area declares its own interface and asks for it here,
+     * so adding an area touches no accessor of this class.
+     */
+    @Synchronized
+    fun <T : Any> typedApi(type: Class<T>, baseUrl: String? = null): T {
+        val retrofit = retrofit(baseUrl)
+        @Suppress("UNCHECKED_CAST")
+        return cachedTypedApis.getOrPut(type) { retrofit.create(type) } as T
+    }
+
+    /** [typedApi] on the long-timeout client, for uploads and chunks the server runs synchronously. */
+    @Synchronized
+    fun <T : Any> longTypedApi(type: Class<T>): T {
+        val target = requireNotNull(session.instanceUrl) { "No instance URL configured. Complete onboarding first." }
+        val normalized = if (target.endsWith("/")) target else "$target/"
+        if (normalized != cachedLongTypedBaseUrl) {
+            cachedLongTypedApis.clear()
+            cachedLongTypedBaseUrl = normalized
+        }
+        @Suppress("UNCHECKED_CAST")
+        return cachedLongTypedApis.getOrPut(type) {
+            Retrofit.Builder()
+                .baseUrl(normalized)
+                .client(longOkHttpClient)
+                .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+                .build()
+                .create(type)
+        } as T
+    }
+
     /** Drop the cached Retrofit so the next [api] call rebuilds against a new instance URL. */
     @Synchronized
     fun invalidate() {
@@ -284,6 +322,9 @@ class NetworkModule(private val session: SessionStore, private val cacheDir: Fil
         cachedLongBaseUrl = null
         cachedLongPluginsApi = null
         cachedLongPluginsBaseUrl = null
+        cachedTypedApis.clear()
+        cachedLongTypedApis.clear()
+        cachedLongTypedBaseUrl = null
     }
 
     /**

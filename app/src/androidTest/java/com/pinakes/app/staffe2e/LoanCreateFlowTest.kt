@@ -58,6 +58,6 @@ class LoanCreateFlowTest : AppFlowTest() {
         typeIntoTag("picker-search", "Orl")
         click("Orlando")
         click(text(R.string.staff_loan_create))
-        waitText(text(R.string.staff_err_not_eligible))
+        waitText(text(R.string.staff_err_user_suspended))
     }
 }

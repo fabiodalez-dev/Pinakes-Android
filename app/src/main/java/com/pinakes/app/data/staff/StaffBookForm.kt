@@ -64,6 +64,8 @@ data class StaffBookForm(
     val coverUrl: String = "",
     /** Create only: author biography from the scraper (`scraped.author_bio`). */
     val authorBio: String = "",
+    /** Pinakes 0.9.0: supplier and RDA types, sent only while their module is on. */
+    val cataloguing: BookCataloguing = BookCataloguing(),
 ) {
     /** Every field that currently blocks saving. [isEdit] skips create-only checks. */
     fun validate(isEdit: Boolean = false): Set<FormField> = buildSet {
@@ -129,6 +131,7 @@ data class StaffBookForm(
             // (the screen still shows the stored label) instead of an invalid form.
             shelfId = book.location?.takeIf { it.levelId != null }?.shelfId,
             levelId = book.location?.takeIf { it.shelfId != null }?.levelId,
+            cataloguing = BookCataloguing.from(book),
         )
 
         /**
@@ -188,7 +191,7 @@ data class StaffBookForm(
  */
 object StaffBookWrite {
 
-    fun create(form: StaffBookForm): JsonObject = buildJsonObject {
+    fun create(form: StaffBookForm, modules: CataloguingModules = CataloguingModules.Off): JsonObject = buildJsonObject {
         textFields(form).forEach { (key, value) -> if (value.isNotBlank()) put(key, value.trim()) }
         numberField(form.year)?.let { put("year", it) }
         numberField(form.pages)?.let { put("pages", it) }
@@ -204,9 +207,10 @@ object StaffBookWrite {
         }
         if (StaffBookForm.isHttpUrl(form.coverUrl)) put("cover_url", form.coverUrl.trim())
         if (form.authorBio.isNotBlank()) put("scraped", buildJsonObject { put("author_bio", form.authorBio.trim()) })
+        BookCataloguingWrite.putCreate(this, form.cataloguing, modules)
     }
 
-    fun update(original: StaffBook, form: StaffBookForm): JsonObject {
+    fun update(original: StaffBook, form: StaffBookForm, modules: CataloguingModules = CataloguingModules.Off): JsonObject {
         val before = StaffBookForm.from(original)
         return buildJsonObject {
             val old = textFields(before).toMap()
@@ -240,6 +244,7 @@ object StaffBookWrite {
                     else -> Unit
                 }
             }
+            BookCataloguingWrite.putUpdate(this, before.cataloguing, form.cataloguing, modules)
         }
     }
 

@@ -1,0 +1,1 @@
+{"data":{"retention":{"days":400,"max_days":3650,"default_days":365,"continues_when_off":false},"message":"Retention updated: visits older than 400 days will be deleted."},"meta":{},"error":null}

@@ -180,11 +180,12 @@ class StaffLoanDetailViewModel @Inject constructor(
         }
     }
 
-    fun returnLoan(outcome: ReturnOutcome, notes: String, penalty: Double?) {
+    /** [waiveReason] non-null waives the late fine (Mobile API 1.10.0). */
+    fun returnLoan(outcome: ReturnOutcome, notes: String, penalty: Double?, waiveReason: String? = null) {
         val id = _state.value.loan?.id ?: return
         _state.update { it.copy(pending = null) }
         mutate(LoanAction.RETURN, R.string.staff_loan_returned, retryOnConcurrent = true) {
-            circulation.returnLoan(id, outcome.wire, notes, penalty)
+            circulation.returnLoan(id, outcome.wire, notes, penalty, waiveReason)
         }
     }
 
@@ -410,8 +411,10 @@ fun StaffLoanDetailScreen(onNavigateUp: () -> Unit, onOpenUser: (Int) -> Unit, o
         LoanAction.RETURN -> ReturnSheet(
             title = stringResource(R.string.staff_return_title),
             saving = state.busy == LoanAction.RETURN,
-            onConfirm = vm::returnLoan,
+            onConfirm = { outcome, notes, penalty -> vm.returnLoan(outcome, notes, penalty) },
             onDismiss = vm::dismissPending,
+            lateFine = state.loan?.lateFine,
+            onConfirmWaiving = vm::returnLoan,
         )
         else -> Unit
     }

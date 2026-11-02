@@ -159,6 +159,10 @@ interface PinakesApi {
     @GET("me/loans")
     suspend fun loans(): Envelope<LoansData>
 
+    /** Balance and ledger of the fines module (Mobile API 1.9.0); 404 `feature_disabled` when off. */
+    @GET("me/movements")
+    suspend fun movements(): Envelope<com.pinakes.app.data.model.MovementsPayload>
+
     @GET("me/reservations")
     suspend fun reservations(): Envelope<List<ReservationItem>>
 

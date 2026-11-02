@@ -1,6 +1,8 @@
 package com.pinakes.app.ui.navigation
 
 import androidx.compose.animation.AnimatedContentTransitionScope
+import com.pinakes.app.ui.screens.staff.s090.Staff090Transitions
+import com.pinakes.app.ui.screens.staff.s090.staff090Graph
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -42,6 +44,7 @@ import com.pinakes.app.ui.screens.periodicals.StandaloneArticlesScreen
 import com.pinakes.app.ui.screens.periodicals.StandaloneArticleScreen
 import com.pinakes.app.ui.screens.periodicals.PeriodicalsScreen
 import com.pinakes.app.ui.screens.reviews.MyReviewsScreen
+import com.pinakes.app.ui.screens.movements.MovementsScreen
 import com.pinakes.app.ui.screens.staff.StaffAuthorsScreen
 import com.pinakes.app.ui.screens.staff.StaffBookEditScreen
 import com.pinakes.app.ui.screens.staff.StaffBooksScreen
@@ -153,6 +156,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                 onOpenContact = { navController.navigate(Routes.CONTACT) },
                 onOpenMyReviews = { navController.navigate(Routes.MY_REVIEWS) },
+                onOpenMovements = { navController.navigate(Routes.MOVEMENTS) },
                 onOpenBookClub = { navController.navigate(Routes.BOOK_CLUB) },
                 onOpenPeriodicals = { navController.navigate(Routes.PERIODICALS) },
                 onOpenArticles = { navController.navigate(Routes.standaloneArticles()) },
@@ -216,6 +220,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                     onPeriodicals = { navController.navigate(Routes.STAFF_PERIODICALS) },
                     onClubs = { navController.navigate(Routes.STAFF_CLUBS) },
                     onWorks = { navController.navigate(Routes.STAFF_WORKS) },
+                    onStaff090 = { navController.navigate(it) },
                 ),
             )
         }
@@ -281,6 +286,7 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
                 onNavigateUp = { navController.popBackStack() },
                 onOpenLoan = { navController.navigate(Routes.staffLoan(it)) },
                 onNewLoan = { navController.navigate(Routes.staffLoanNew(userId = it)) },
+                onOpenLedger = { navController.navigate(com.pinakes.app.ui.screens.staff.s090.Staff090Routes.patronLedger(it)) },
             )
         }
         // ---- Staff book tools (Mobile API 1.7.0) ----
@@ -490,6 +496,14 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
         }
 
         composable(
+            Routes.MOVEMENTS,
+            enterTransition = slideIn,
+            popExitTransition = slideOut,
+        ) {
+            MovementsScreen(onNavigateUp = { navController.popBackStack() })
+        }
+
+        composable(
             Routes.BOOK_CLUB,
             enterTransition = slideIn,
             popExitTransition = slideOut,
@@ -613,5 +627,8 @@ fun PinakesNavHost(navController: NavHostController = rememberNavController()) {
         ) {
             IssueDetailScreen(onNavigateUp = { navController.popBackStack() }, onOpenArticle = { navController.navigate(Routes.standaloneArticle(it)) }, onFindArticles = { navController.navigate(Routes.standaloneArticles(issueId = it)) })
         }
+
+        // ---- Pinakes 0.9.0 staff tools (Mobile API 1.10.0) ----
+        staff090Graph(navController, Staff090Transitions(slideIn, slideOut))
     }
 }

@@ -101,7 +101,7 @@ internal fun userStatusLabel(status: String?): Int? = when (status) {
 /** A borrower at the desk: card, status, open loans and active reservations. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StaffUserScreen(onNavigateUp: () -> Unit, onOpenLoan: (Int) -> Unit, onNewLoan: (Int) -> Unit) {
+fun StaffUserScreen(onNavigateUp: () -> Unit, onOpenLoan: (Int) -> Unit, onNewLoan: (Int) -> Unit, onOpenLedger: (Int) -> Unit = {}) {
     val vm: StaffUserViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val app: AppViewModel = hiltViewModel()
@@ -133,11 +133,19 @@ fun StaffUserScreen(onNavigateUp: () -> Unit, onOpenLoan: (Int) -> Unit, onNewLo
                             InfoLine(stringResource(R.string.staff_reservations), user.activeReservations.toString())
                             if (!user.eligible) {
                                 Text(
-                                    stringResource(R.string.staff_user_not_eligible, user.eligibilityReason ?: user.status.orEmpty()),
+                                    // A known reason (debt block, expired card, suspension) in our words.
+                                    com.pinakes.app.data.staff.StaffErrors.eligibilityRes(user.eligibilityReason)?.let { stringResource(it) }
+                                        ?: stringResource(R.string.staff_user_not_eligible, user.eligibilityReason ?: user.status.orEmpty()),
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
                                 )
                             }
                         }
+                    }
+                    // Pinakes 0.9.0: photo, patron type, card renewal and printout, balance.
+                    item(key = "s090-patron") {
+                        com.pinakes.app.ui.screens.staff.s090.patrons.Staff090PatronSection(
+                            user, areas.s090, onChanged = vm::refresh, onOpenLedger = onOpenLedger, onForbidden = onNavigateUp,
+                        )
                     }
                     item(key = "new") {
                         PrimaryButton(stringResource(R.string.staff_loan_new), onClick = { onNewLoan(user.id) }, enabled = user.eligible,

@@ -62,6 +62,8 @@ data class StaffLoan(
     @SerialName("updated_at") val updatedAt: String? = null,
     /** Presentation hint computed server-side; unknown values are ignored by the app. */
     val actions: List<String> = emptyList(),
+    /** Mobile API 1.10.0: the late fine (detail and return answers); null while fines are off. */
+    @SerialName("late_fine") val lateFine: StaffLoanLateFine? = null,
 )
 
 @Serializable
@@ -95,6 +97,13 @@ data class StaffUser(
     @SerialName("active_reservations") val activeReservations: Int = 0,
     val eligible: Boolean = true,
     @SerialName("eligibility_reason") val eligibilityReason: String? = null,
+    // Mobile API 1.10.0 (Pinakes 0.9.0 patron fields): absent on older servers.
+    @SerialName("patron_type") val patronType: StaffPatronTypeRef? = null,
+    @SerialName("has_photo") val hasPhoto: Boolean = false,
+    @SerialName("photo_url") val photoUrl: String? = null,
+    val ledger: StaffLedgerSummary? = null,
+    /** The caller may change this record (patron type, photo): the web editor's rule. */
+    @SerialName("can_edit") val canEdit: Boolean = false,
 )
 
 /** `GET /staff/users/{id}`: the user plus open loans and active reservations. */
@@ -111,6 +120,13 @@ data class StaffUserDetail(
     @SerialName("active_reservations") val activeReservations: Int = 0,
     val eligible: Boolean = true,
     @SerialName("eligibility_reason") val eligibilityReason: String? = null,
+    // Mobile API 1.10.0 (Pinakes 0.9.0 patron fields): absent on older servers.
+    @SerialName("patron_type") val patronType: StaffPatronTypeRef? = null,
+    @SerialName("has_photo") val hasPhoto: Boolean = false,
+    @SerialName("photo_url") val photoUrl: String? = null,
+    val ledger: StaffLedgerSummary? = null,
+    /** The caller may change this record (patron type, photo): the web editor's rule. */
+    @SerialName("can_edit") val canEdit: Boolean = false,
     val loans: List<StaffLoan> = emptyList(),
     val reservations: List<StaffReservation> = emptyList(),
 )
@@ -164,6 +180,9 @@ data class ReturnRequest(
     val outcome: String,
     val notes: String? = null,
     val penalty: Double? = null,
+    /** Mobile API 1.10.0: waive the late fine this return charges; needs [waiveReason]. */
+    @SerialName("waive_fine") val waiveFine: Boolean? = null,
+    @SerialName("waive_reason") val waiveReason: String? = null,
 )
 
 @Serializable
@@ -218,4 +237,7 @@ data class ReservationWrite(
     @SerialName("expires_at") val expiresAt: String? = null,
     @SerialName("requested_from") val requestedFrom: String? = null,
     @SerialName("requested_to") val requestedTo: String? = null,
+    // Pinakes 0.9.0: staff may ignore the patron type's reservation limits, as the website's
+    // "new reservation" form allows. Null is omitted, so an older server never sees the key.
+    @SerialName("override_limits") val overrideLimits: Boolean? = null,
 )

@@ -117,6 +117,43 @@ data class HealthFeatures(
     @SerialName("staff_frbr") val staffFrbr: Boolean = false,
     @SerialName("staff_digital_library") val staffDigitalLibrary: Boolean = false,
     @SerialName("staff_librarything") val staffLibraryThing: Boolean = false,
+    // Pinakes 0.9.0 feature toggles (Mobile API 1.9.1), each already false in catalogue mode.
+    // Older servers omit them: no fines ledger, no closures calendar, no patron-type rules.
+    val fines: Boolean = false,
+    @SerialName("closures_calendar") val closuresCalendar: Boolean = false,
+    @SerialName("circulation_rules") val circulationRules: Boolean = false,
+    // Pinakes 0.9.0 splits consultation-only copies off the rules matrix: with this switch on
+    // and `circulation_rules` off, `loanable` can still be false. A server that predates the
+    // split omits the key and ties consultation to `circulation_rules`, as before.
+    @SerialName("consultation_only") val consultationOnly: Boolean = false,
+    // Mobile API 1.10.0: the effective state of every other Pinakes 0.9.0 module.
+    val stocktake: Boolean = false,
+    val marc: Boolean = false,
+    @SerialName("visitor_log") val visitorLog: Boolean = false,
+    @SerialName("catalogue_cards") val catalogueCards: Boolean = false,
+    val suppliers: Boolean = false,
+    @SerialName("rda_types") val rdaTypes: Boolean = false,
+    @SerialName("patron_cards") val patronCards: Boolean = false,
+    @SerialName("user_import") val userImport: Boolean = false,
+    @SerialName("patron_photos") val patronPhotos: Boolean = false,
+    @SerialName("automatic_card_expiry") val automaticCardExpiry: Boolean = false,
+    @SerialName("automatic_fines") val automaticFines: Boolean = false,
+    @SerialName("debt_block") val debtBlock: Boolean = false,
+    @SerialName("loss_penalties") val lossPenalties: Boolean = false,
+    @SerialName("attendance_retention") val attendanceRetention: Boolean = false,
+    // Mobile API 1.10.0 staff areas of the 0.9.0 modules. Older servers omit them: hidden.
+    @SerialName("staff_patrons") val staffPatrons: Boolean = false,
+    @SerialName("staff_ledger") val staffLedger: Boolean = false,
+    @SerialName("staff_stocktake") val staffStocktake: Boolean = false,
+    @SerialName("staff_library_settings") val staffLibrarySettings: Boolean = false,
+    @SerialName("staff_circulation_rules") val staffCirculationRules: Boolean = false,
+    @SerialName("staff_closures_calendar") val staffClosuresCalendar: Boolean = false,
+    @SerialName("staff_suppliers") val staffSuppliers: Boolean = false,
+    @SerialName("staff_catalogue_cards") val staffCatalogueCards: Boolean = false,
+    @SerialName("staff_marc") val staffMarc: Boolean = false,
+    @SerialName("staff_attendance") val staffAttendance: Boolean = false,
+    @SerialName("staff_statistics") val staffStatistics: Boolean = false,
+    @SerialName("staff_user_import") val staffUserImport: Boolean = false,
 )
 
 // ---------- Auth ----------
@@ -231,6 +268,8 @@ data class UserProfile(
     @SerialName("custom_fields") val customFields: List<CustomFieldValue> = emptyList(),
     /** Fields the library hides (`sesso`, `cod_fiscale`); their keys are omitted from `/me`. */
     @SerialName("hidden_fields") val hiddenFields: List<String> = emptyList(),
+    /** The reader's patron type (Pinakes 0.9.0 circulation rules); null when the server omits it. */
+    @SerialName("patron_type") val patronType: PatronTypeRef? = null,
 ) {
     val fullName: String get() = listOf(nome, cognome).filter { it.isNotBlank() }.joinToString(" ")
 }
@@ -510,6 +549,13 @@ data class ReservationItem(
     @SerialName("expires_at") val expiresAt: String? = null,
 )
 
+/** A patron type (`tipologia lettore`) as `/me` names it. */
+@Serializable
+data class PatronTypeRef(
+    val code: String? = null,
+    val name: String? = null,
+)
+
 // ---------- Availability calendar ----------
 // Mirrors GET /catalog/books/{id}/availability — ~180 days of per-day availability
 // used to drive the colored loan-request calendar (matches the website).
@@ -524,6 +570,15 @@ data class AvailabilityCalendar(
     @SerialName("loan_duration_days") val loanDurationDays: Int? = null,
     // Longest loan POST /reservations accepts through end_date (Mobile API 1.8.2); null on older servers.
     @SerialName("max_loan_duration_days") val maxLoanDurationDays: Int? = null,
+    // Closures calendar (Mobile API 1.9.0): days the library is closed. Not a start/pickup
+    // day; a return date on one moves to the next open day. Empty on older servers.
+    @SerialName("closed_dates") val closedDates: List<String> = emptyList(),
+    // Circulation rules of the reader's patron type (Mobile API 1.9.0). False `loanable` =
+    // consultation only (POST /reservations answers 409 not_loanable); false
+    // `reservations_enabled` = no waitlist (409 reservations_disabled). Older servers omit
+    // both, which reads as the behaviour they always had.
+    val loanable: Boolean = true,
+    @SerialName("reservations_enabled") val reservationsEnabled: Boolean = true,
 )
 
 @Serializable
@@ -555,11 +610,16 @@ data class CirculationRequestResult(
     @SerialName("book_id") val bookId: Int = 0,
     @SerialName("loan_id") val loanId: Int? = null,
     @SerialName("auto_approved") val autoApproved: Boolean? = null,
-    val status: String? = null, // pendente | da_ritirare
+    val status: String? = null, // pendente | da_ritirare | prenotato (Pinakes 0.9.0)
+    // Start day of an approved loan that begins on a later open day (`prenotato`): the library
+    // is closed today. Null otherwise, and on servers before Pinakes 0.9.0.
+    @SerialName("start_date") val startDate: String? = null,
 ) {
     val kind: CirculationRequestKind
         get() = when {
             type == "reservation" -> CirculationRequestKind.Reservation
+            // Approved, but it starts on the next open day: not waiting at the desk yet.
+            type == "loan" && status == "prenotato" -> CirculationRequestKind.LoanScheduled
             type == "loan" && (autoApproved == true || status == "da_ritirare") ->
                 CirculationRequestKind.LoanReadyForPickup
             type == "loan" && (autoApproved == false || status in setOf("pendente", "in_attesa")) ->
@@ -572,6 +632,8 @@ enum class CirculationRequestKind {
     Reservation,
     LoanPending,
     LoanReadyForPickup,
+    /** Approved and starting on a later open day (`prenotato`, with `start_date`). */
+    LoanScheduled,
     Unknown,
 }
 

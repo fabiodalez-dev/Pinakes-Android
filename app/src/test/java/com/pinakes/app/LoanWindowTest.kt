@@ -32,6 +32,20 @@ class LoanWindowTest {
         assertTrue(window!!.capped)
     }
 
+    @Test fun aReturnCutToTheMaximumOnAClosedDayMovesBackNeverPastTheMaximum() {
+        // max 14 < loan duration 30: the return is start + 14, a Sunday the library is closed.
+        val cal = AvailabilityCalendar(totalCopies = 1, maxLoanDurationDays = 14, closedDates = listOf("2030-03-17", "2030-03-18"))
+        val window = loanWindowFrom("2030-03-04", cal, 30)!!
+        assertEquals("2030-03-16", window.endDate)
+        assertEquals(12, window.maxDays)
+        assertTrue(window.requiresEndDate)
+        assertFalse(window.capped)
+        // The full duration on a closed day still moves forward, as the server's due date does.
+        val full = loanWindowFrom("2030-03-04", AvailabilityCalendar(totalCopies = 1, maxLoanDurationDays = 90, closedDates = listOf("2030-03-18")), 14)!!
+        assertEquals("2030-03-19", full.endDate)
+        assertFalse(full.requiresEndDate)
+    }
+
     @Test fun noConflictMeansStartPlusTheDuration() {
         val window = loanWindowFrom("2030-03-04", calendar("2030-05-01"), 14)
         assertEquals("2030-03-18", window?.endDate)

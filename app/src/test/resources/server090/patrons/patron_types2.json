@@ -1,0 +1,1 @@
+{"data":[{"id":1,"code":"standard","name":"Standard","description":null,"is_default":true,"active":true,"card_duration_days":null},{"id":3,"code":"pcap_fines","name":"E2E Fines","description":null,"is_default":false,"active":true,"card_duration_days":30}],"meta":{"count":2,"default_id":1,"can_assign":true},"error":null}

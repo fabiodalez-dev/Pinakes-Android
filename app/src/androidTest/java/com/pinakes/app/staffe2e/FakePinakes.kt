@@ -58,8 +58,12 @@ class FakePinakes {
     val apiBaseUrl: String get() = server.url("/api/v1/").toString()
     val origin: String get() = apiBaseUrl.removeSuffix("/api/v1/")
 
-    fun json(route: String, fixture: String, status: Int = 200) {
-        routes[route] = { MockResponse().setResponseCode(status).setHeader("Content-Type", "application/json").setBody(fixture(fixture)) }
+    /** [delayMs] holds the body back, to let the screen draw before the answer arrives. */
+    fun json(route: String, fixture: String, status: Int = 200, delayMs: Long = 0) {
+        routes[route] = {
+            MockResponse().setResponseCode(status).setHeader("Content-Type", "application/json").setBody(fixture(fixture))
+                .apply { if (delayMs > 0) setBodyDelay(delayMs, java.util.concurrent.TimeUnit.MILLISECONDS) }
+        }
     }
 
     /** Answer [route] with each fixture in turn (status, fixture), repeating the last one. */
