@@ -117,6 +117,9 @@ enum class VisitOutcome { WELCOME, WARNING, GUEST, UNKNOWN_CARD, ERROR }
 
 /** Visitor log decisions. Pure. */
 object AttendanceRules {
+    /** A visit's tone is due once: [tick] counts the visits, [played] the last one sounded. */
+    fun tonePending(tick: Int, played: Int): Boolean = tick > played
+
     fun outcome(visit: AttendanceVisit): VisitOutcome = when {
         visit.type == "guest" -> VisitOutcome.GUEST
         visit.warning != null || visit.member?.cardActive == false || visit.member?.cardExpired == true -> VisitOutcome.WARNING

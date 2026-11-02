@@ -294,4 +294,41 @@ class Staff090LibraryFormsTest {
         assertEquals(-1, f.occurrence)
         assertTrue(CustomForms.invalid(f, 14, 400, 12).isEmpty())
     }
+
+    @Test fun aReloadKeepsUnsavedWeekdayTicks() {
+        // Untouched: another month brings the server's days.
+        assertEquals(setOf(0), CalendarGrid.reseedWeekdays(draft = setOf(1), before = setOf(1), server = setOf(0)))
+        // Saturday and Sunday ticked, then next month: the ticks stay (and Save stays offered).
+        assertEquals(setOf(0, 6), CalendarGrid.reseedWeekdays(draft = setOf(0, 6), before = emptySet(), server = emptySet()))
+        // First load: nothing to keep.
+        assertEquals(setOf(0), CalendarGrid.reseedWeekdays(draft = emptySet(), before = null, server = setOf(0)))
+    }
+
+    @Test fun aReloadKeepsUnsavedYearlySwitches() {
+        val xmas = Staff090LibraryClosure(id = 1, yearly = true, active = true)
+        val may = Staff090LibraryClosure(id = 2, yearly = true, active = true)
+        // Christmas switched off and not saved; May Day turned off on the server meanwhile.
+        val after = CalendarGrid.reseedYearly(mapOf(1 to false, 2 to true), listOf(xmas, may), listOf(xmas, may.copy(active = false)))
+        assertEquals(mapOf(1 to false, 2 to false), after)
+        // A closure gone from the server drops its switch; a new one starts from the server.
+        assertEquals(mapOf(3 to true), CalendarGrid.reseedYearly(mapOf(1 to false), listOf(xmas), listOf(Staff090LibraryClosure(id = 3, yearly = true, active = true))))
+    }
+
+    @Test fun aNewHolidayPreviewKeepsTheTicksOfTheSameCountry() {
+        val listed = listOf("easter", "xmas", "patron")
+        // Another year of the same country: the operator's choice, for the rules still listed.
+        assertEquals(setOf("xmas"), CalendarGrid.reseedHolidays(setOf("xmas", "gone"), touched = true, sameCountry = true, listed = listed, serverChecked = setOf("easter")))
+        // Untouched, or another country: the server's selection.
+        assertEquals(setOf("easter"), CalendarGrid.reseedHolidays(setOf("xmas"), touched = false, sameCountry = true, listed = listed, serverChecked = setOf("easter")))
+        assertEquals(setOf("easter"), CalendarGrid.reseedHolidays(setOf("xmas"), touched = true, sameCountry = false, listed = listed, serverChecked = setOf("easter")))
+    }
+
+    @Test fun aModulesSaveKeepsTheUnsavedLoanEdits() {
+        val before = mapOf("fine_daily" to "0,50", "max_loans" to "5")
+        val server = mapOf("fine_daily" to "0,50", "max_loans" to "6")
+        // The fine was edited and not saved; max loans changed on the server.
+        assertEquals(mapOf("fine_daily" to "1,00", "max_loans" to "6"), LoansForm.reseed(mapOf("fine_daily" to "1,00", "max_loans" to "5"), before, server))
+        // Nothing edited: the server's values.
+        assertEquals(server, LoansForm.reseed(before, before, server))
+    }
 }

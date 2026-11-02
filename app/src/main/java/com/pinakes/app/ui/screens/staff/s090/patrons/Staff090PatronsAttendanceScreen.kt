@@ -127,6 +127,8 @@ data class AttendanceUiState(
     val last: VisitResult? = null,
     /** Bumped on every result, so the screen plays its tone once. */
     val toneTick: Int = 0,
+    /** The last [toneTick] whose tone was played: a recomposition or a rotation does not replay it. */
+    val tonePlayed: Int = 0,
     val manualError: Boolean = false,
     val guestSheet: Boolean = false,
     val savingGuest: Boolean = false,
@@ -326,6 +328,8 @@ class Staff090AttendanceViewModel @Inject constructor(
     }
 
     fun consumeMessage() = _state.update { it.copy(message = null) }
+
+    fun tonePlayed(tick: Int) = _state.update { it.copy(tonePlayed = maxOf(it.tonePlayed, tick)) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -342,10 +346,11 @@ fun Staff090AttendanceScreen(onNavigateUp: () -> Unit) {
     StaffSnackbarEffect(state.message, snackbar, vm::consumeMessage)
     LaunchedEffect(state.toneTick) {
         val last = state.last
-        if (state.toneTick > 0 && last != null) {
+        if (AttendanceRules.tonePending(state.toneTick, state.tonePlayed) && last != null) {
             val ok = AttendanceRules.successTone(last.outcome)
             DeskTone.play(ok)
             haptics.performHapticFeedback(if (ok) HapticFeedbackType.TextHandleMove else HapticFeedbackType.LongPress)
+            vm.tonePlayed(state.toneTick)
         }
     }
 

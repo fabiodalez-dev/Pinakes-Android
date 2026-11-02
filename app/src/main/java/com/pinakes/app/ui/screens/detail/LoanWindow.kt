@@ -120,8 +120,10 @@ internal fun loanWindowFrom(startIso: String, calendar: AvailabilityCalendar?, l
     // A default return on a closed day moves to the next open day, as the server's due date
     // does. When that walk meets a fully-booked day, the loan would run into the commitment:
     // the booked day caps it, as if it lay inside the duration (the server's renewal cap does
-    // the same with closures).
-    if (firstBlocked == null && cal.isClosed(rawEnd.toString())) {
+    // the same with closures). A return already cut to max_loan_duration_days is the limit
+    // itself: walking forward would send an end_date past the maximum, so it moves back below.
+    val cutToMaximum = durationDays < loanDurationDays
+    if (firstBlocked == null && !cutToMaximum && cal.isClosed(rawEnd.toString())) {
         var d = rawEnd
         while (cal.isClosed(d.toString()) && ChronoUnit.DAYS.between(rawEnd, d) < 60) {
             if (cal.isFullyBooked(d.toString())) break

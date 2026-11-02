@@ -125,6 +125,13 @@ data class LoanField(val key: String, val kind: LoanFieldKind, val section: Loan
 enum class LoanSection { APPROVAL, DURATION, PICKUP, CARD, RENEWALS, LIMITS, RECALLS, FINES }
 
 object LoansForm {
+    /**
+     * The loan fields after a re-read of the server (a module saved on another tab): a field the
+     * operator edited and did not save keeps the edit, every other one takes the server's value.
+     */
+    fun reseed(draft: Map<String, String>, before: Map<String, String>, server: Map<String, String>): Map<String, String> =
+        server.mapValues { (key, value) -> draft[key]?.takeIf { it != before[key] } ?: value }
+
     val FIELDS = listOf(
         LoanField("auto_approve_requests", LoanFieldKind.BOOL, LoanSection.APPROVAL),
         LoanField("loan_duration_days", LoanFieldKind.INT, LoanSection.DURATION),
@@ -436,6 +443,34 @@ object CalendarGrid {
 
     /** At least one weekday must stay open (the server refuses all seven). */
     fun weekdaysValid(closed: Set<Int>) = closed.size < 7 && closed.all { it in 0..6 }
+
+    /**
+     * The weekday ticks after a reload (another month, another branch, a save elsewhere): the
+     * server's days, unless the operator changed them since the last answer ([before]), in which
+     * case the unsaved ticks stay.
+     */
+    fun reseedWeekdays(draft: Set<Int>, before: Set<Int>?, server: Set<Int>): Set<Int> =
+        if (before == null || draft == before) server else draft
+
+    /**
+     * The yearly switches after a reload: each switch the operator flipped and did not save keeps
+     * its position (while the closure still exists); every other one takes the server's.
+     */
+    fun reseedYearly(draft: Map<Int, Boolean>, before: List<Staff090LibraryClosure>?, server: List<Staff090LibraryClosure>): Map<Int, Boolean> {
+        val old = yearly(before.orEmpty()).associate { it.id to it.active }
+        return yearly(server).associate { c ->
+            val mine = draft[c.id]
+            c.id to if (mine != null && c.id in old && mine != old[c.id]) mine else c.active
+        }
+    }
+
+    /**
+     * The ticked national holidays after a new preview: another year or region of the same
+     * country keeps what the operator ticked or unticked (for the rules still listed); a new
+     * country, or a list the operator has not touched, takes the server's selection.
+     */
+    fun reseedHolidays(selected: Set<String>, touched: Boolean, sameCountry: Boolean, listed: List<String>, serverChecked: Set<String>): Set<String> =
+        if (touched && sameCountry) selected.filter { it in listed }.toSet() else serverChecked
 }
 
 /** Closure form (create and edit). */

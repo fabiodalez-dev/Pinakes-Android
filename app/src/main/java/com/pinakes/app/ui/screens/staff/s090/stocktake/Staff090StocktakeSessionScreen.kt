@@ -195,10 +195,13 @@ class StocktakeSessionViewModel @Inject constructor(
     fun reload() {
         _state.update { it.copy(loading = it.session == null, error = null) }
         viewModelScope.launch {
+            val asked = _state.value.session?.status
             val res = repo.session(sessionId, _state.value.mine)
             _state.update {
                 when (res) {
-                    is ApiResult.Success -> it.copy(
+                    // Same rule as the poll: an answer read before this device closed or cancelled
+                    // the session never brings the open session back.
+                    is ApiResult.Success -> if (!Staff090StocktakeMerge.acceptReload(it.session, asked, res.data)) it.copy(loading = false) else it.copy(
                         session = res.data, loading = false,
                         // The session's own shelf is where the operator starts, until they pick another.
                         shelfId = if (shelfChosen) it.shelfId else res.data.filter.shelfId,
@@ -546,6 +549,9 @@ class StocktakeSessionViewModel @Inject constructor(
 
     fun consumeMessage() = _state.update { it.copy(message = null) }
 
+    /** The tone and haptic of [id] were played: a recomposition or a rotation does not play them again. */
+    fun feedbackPlayed(id: Int) = _state.update { if (it.feedback?.id == id) it.copy(feedback = null) else it }
+
     companion object {
         /** The web scan page polls every few seconds; so does the app while the screen is visible. */
         const val POLL_MS = 4_000L
@@ -572,6 +578,7 @@ fun Staff090StocktakeSessionScreen(onNavigateUp: () -> Unit, onOpenReport: (Int)
         val feedback = state.feedback ?: return@LaunchedEffect
         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
         player.play(feedback.tone)
+        vm.feedbackPlayed(feedback.id)
     }
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {

@@ -330,4 +330,30 @@ class Staff090StocktakeLogicTest {
         assertEquals(1, withNew.last().id)
         assertEquals(56, withNew.size)
     }
+
+    @Test fun moreThanAPageOfNewScansRestartsFromPageOneInsteadOfLeavingAGap() {
+        fun scans(range: IntProgression) = range.map { Staff090StocktakeScan(id = it, code = "C$it") }
+        val all = scans(55 downTo 1)
+        // 120 scans arrived while the screen was in the background: page one (170..121) shares
+        // nothing with the list, so rows 120..56 would be hidden under it.
+        val (list, cursor) = Staff090StocktakeMerge.refreshedFiltered(all, null, true, scans(170 downTo 121), "after-121")
+        assertEquals(scans(170 downTo 121), list)
+        assertEquals("after-121", cursor)
+        // An empty first page (every scan of this outcome gone) empties the list too.
+        assertEquals(emptyList<Staff090StocktakeScan>() to null, Staff090StocktakeMerge.refreshedFiltered(all, null, true, emptyList(), null))
+    }
+
+    @Test fun aReloadAnsweredAfterTheCloseNeverReopensTheSession() {
+        val detail = data("s090_stocktake_session_detail", Staff090StocktakeSession.serializer())
+        val closed = Staff090StocktakeMerge.withStatus(detail, "closed")
+        // The close answered first: the reload left while the session was open.
+        assertFalse(Staff090StocktakeMerge.acceptReload(closed, asked = "open", answer = detail))
+        // Even asked after the close, an "open" answer does not undo it.
+        assertFalse(Staff090StocktakeMerge.acceptReload(closed, asked = "closed", answer = detail))
+        // The normal cases: first load, a fresh open session, another operator's close.
+        assertTrue(Staff090StocktakeMerge.acceptReload(null, asked = null, answer = detail))
+        assertTrue(Staff090StocktakeMerge.acceptReload(detail, asked = "open", answer = detail))
+        assertTrue(Staff090StocktakeMerge.acceptReload(detail, asked = "open", answer = closed))
+        assertTrue(Staff090StocktakeMerge.acceptReload(closed, asked = "closed", answer = closed))
+    }
 }

@@ -89,4 +89,11 @@ class Staff090FlagsTest {
         val decoded = json.decodeFromString(Staff090Flags.serializer(), json.encodeToString(Staff090Flags.serializer(), flags))
         assertEquals(flags, decoded)
     }
+
+    @Test fun catalogueCardsAloneOpenNoCataloguingSection() {
+        // Cards live on the book screen: without MARC or suppliers the hub has no row for them.
+        assertFalse(Staff090Areas(catalogueCards = true).anyCatalogue)
+        assertTrue(Staff090Areas(catalogueCards = true, suppliers = true).anyCatalogue)
+        assertTrue(Staff090Areas(marc = true).anyCatalogue)
+    }
 }

@@ -197,4 +197,12 @@ class Staff090PatronsRulesTest {
         // A 422 validation carries the precise server text: never replaced.
         assertNull(Staff090PatronsErrors.messageRes(ApiResult.Failure("validation", "Enter the library card code.", 422)))
     }
+
+    @Test fun aVisitToneSoundsOnce() {
+        assertTrue(AttendanceRules.tonePending(tick = 1, played = 0))
+        // Played, then the screen recomposes or rotates: nothing new to play.
+        assertFalse(AttendanceRules.tonePending(tick = 1, played = 1))
+        assertFalse(AttendanceRules.tonePending(tick = 0, played = 0))
+        assertTrue(AttendanceRules.tonePending(tick = 2, played = 1))
+    }
 }

@@ -30,7 +30,8 @@ data class Staff090Areas(
     val userImport: Boolean = false,
 ) {
     val anyPatronDesk: Boolean get() = attendance || userImport
-    val anyCatalogue: Boolean get() = suppliers || marc || catalogueCards
+    /** The hub's Cataloguing rows (catalogue cards live on the book screen, not in the hub). */
+    val anyCatalogue: Boolean get() = suppliers || marc
     val anyLibrary: Boolean get() = librarySettings || circulationRules || closuresCalendar
 
     companion object {

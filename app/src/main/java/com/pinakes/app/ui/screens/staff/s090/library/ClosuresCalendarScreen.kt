@@ -113,6 +113,8 @@ data class HolidayPickerState(
     val countries: List<Staff090LibraryCodeName> = emptyList(),
     val preset: Staff090LibraryHolidayPreset = Staff090LibraryHolidayPreset(),
     val selected: Set<String> = emptySet(),
+    /** The operator ticked or unticked a rule: a new preview of the same country keeps the choice. */
+    val touched: Boolean = false,
     val loading: Boolean = true,
     val applying: Boolean = false,
     val error: StaffMessage? = null,
@@ -170,8 +172,9 @@ class ClosuresCalendarViewModel @Inject constructor(
                 when (res) {
                     is ApiResult.Success -> it.copy(
                         cal = res.data, loading = false, refreshing = false, month = res.data.month,
-                        weekdays = res.data.closedWeekdays.toSet(),
-                        yearly = CalendarGrid.yearly(res.data.closures).associate { c -> c.id to c.active },
+                        // Another month, branch or a save elsewhere must not drop unsaved ticks.
+                        weekdays = CalendarGrid.reseedWeekdays(it.weekdays, it.cal?.closedWeekdays?.toSet(), res.data.closedWeekdays.toSet()),
+                        yearly = CalendarGrid.reseedYearly(it.yearly, it.cal?.closures, res.data.closures),
                     )
                     is ApiResult.Failure -> it.copy(loading = false, refreshing = false, exit = res.exitMessage(), error = res.toLibraryMessage(R.string.staff_error_load))
                 }
@@ -310,7 +313,10 @@ class ClosuresCalendarViewModel @Inject constructor(
                 when (res) {
                     is ApiResult.Success -> s.copy(holidays = h.copy(
                         countries = res.data.countries, preset = res.data.preset, loading = false,
-                        selected = res.data.holidays.filter { it.checked }.map { it.id }.toSet(),
+                        selected = CalendarGrid.reseedHolidays(
+                            h.selected, h.touched, sameCountry = h.preset.country == res.data.preset.country,
+                            listed = res.data.holidays.map { it.id }, serverChecked = res.data.holidays.filter { it.checked }.map { it.id }.toSet(),
+                        ),
                     ))
                     is ApiResult.Failure -> s.copy(holidays = h.copy(loading = false, error = res.toLibraryMessage(R.string.staff_error_load)))
                 }
@@ -319,7 +325,7 @@ class ClosuresCalendarViewModel @Inject constructor(
     }
 
     fun toggleHoliday(id: String) = _state.update { s ->
-        s.copy(holidays = s.holidays?.let { h -> h.copy(selected = if (id in h.selected) h.selected - id else h.selected + id) })
+        s.copy(holidays = s.holidays?.let { h -> h.copy(selected = if (id in h.selected) h.selected - id else h.selected + id, touched = true) })
     }
 
     fun closeHolidays() = _state.update { it.copy(holidays = null) }

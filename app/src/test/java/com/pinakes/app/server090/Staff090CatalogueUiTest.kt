@@ -98,6 +98,16 @@ class Staff090CatalogueUiTest {
         compose.runOnIdle { assertEquals(null, value.rdaContentType) }
     }
 
+    @Test fun theHubShowsNoCataloguingHeaderWithoutARowUnderIt() {
+        var areas by mutableStateOf(com.pinakes.app.data.staff.Staff090Areas(catalogueCards = true))
+        compose.setContent { PinakesTheme { Column { com.pinakes.app.ui.screens.staff.s090.Staff090HubSections(areas) {} } } }
+        val header = text(R.string.staff090_section_cataloguing).uppercase()
+        assertTrue(compose.onAllNodes(androidx.compose.ui.test.hasText(header)).fetchSemanticsNodes().isEmpty())
+        areas = com.pinakes.app.data.staff.Staff090Areas(catalogueCards = true, suppliers = true)
+        compose.onNodeWithText(header).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.staff090_suppliers)).assertIsDisplayed()
+    }
+
     @Test fun supplierRowMenuOnlyWithTheServersPermission() {
         val supplier = Supplier(id = 21, name = "Libreria Cat090 Prova", email = "ordini@example.org", bookCount = 2, canEdit = true, canDelete = true)
         var deleted = 0

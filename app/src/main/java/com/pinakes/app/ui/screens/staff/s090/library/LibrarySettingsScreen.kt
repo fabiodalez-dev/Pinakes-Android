@@ -156,6 +156,16 @@ class LibrarySettingsViewModel @Inject constructor(
 
     private fun LibrarySettingsUiState.withCards(c: Staff090LibraryCards) = copy(cards = c, cardValues = c.settings)
 
+    /** [withLoans] for a background re-read: unsaved edits of the loans tab stay. */
+    private fun LibrarySettingsUiState.withLoansKeepingDrafts(l: Staff090LibraryLoans): LibrarySettingsUiState {
+        val initial = LoansForm.initial(l, AppLocale.current())
+        return copy(loans = l, loanOriginal = initial, loanValues = LoansForm.reseed(loanValues, loanOriginal, initial))
+    }
+
+    /** [withCards] for a background re-read: an unsaved edit of the cards tab stays. */
+    private fun LibrarySettingsUiState.withCardsKeepingDrafts(c: Staff090LibraryCards) =
+        copy(cards = c, cardValues = if (cards == null || cardValues == cards.settings) c.settings else cardValues)
+
     fun setTab(tab: SettingsTab) = _state.update { it.copy(tab = tab, formError = null, fieldErrors = emptyMap()) }
     fun setModule(key: String, on: Boolean) = _state.update { it.copy(moduleValues = it.moduleValues + (key to on), formError = null) }
     fun setRetention(value: String) = _state.update { it.copy(retention = value, formError = null) }
@@ -194,8 +204,9 @@ class LibrarySettingsViewModel @Inject constructor(
     private fun refreshSecondary() {
         viewModelScope.launch {
             val c = repo.cards()
-            (repo.loans() as? ApiResult.Success)?.data?.let { l -> _state.update { it.withLoans(l) } }
-            _state.update { if (c is ApiResult.Success) it.withCards(c.data) else it.copy(cards = null, tab = if (it.tab == SettingsTab.CARDS) SettingsTab.MODULES else it.tab) }
+            // A modules save must not drop what the operator typed on the other tabs.
+            (repo.loans() as? ApiResult.Success)?.data?.let { l -> _state.update { it.withLoansKeepingDrafts(l) } }
+            _state.update { if (c is ApiResult.Success) it.withCardsKeepingDrafts(c.data) else it.copy(cards = null, tab = if (it.tab == SettingsTab.CARDS) SettingsTab.MODULES else it.tab) }
         }
     }
 

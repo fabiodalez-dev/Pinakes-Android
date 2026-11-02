@@ -263,6 +263,17 @@ object Staff090StocktakeMerge {
         else session.copy(status = status, canScan = status == "open" && session.canScan, canUpload = status == "open" && session.canUpload,
             canClose = status == "open" && session.canClose, canCancel = status == "open" && session.canCancel)
 
+    /**
+     * Whether a reload [answer] may replace the [current] session. It may not when the status
+     * changed while the reload was in flight (it was [asked]: this device closed or cancelled the
+     * session meanwhile), nor when it would turn a closed or cancelled session back to open.
+     */
+    fun acceptReload(current: Staff090StocktakeSession?, asked: String?, answer: Staff090StocktakeSession): Boolean = when {
+        current == null -> true
+        current.status != asked -> false
+        else -> !(current.status != "open" && answer.status == "open")
+    }
+
     /** Polling runs only while the session takes scans. */
     fun shouldPoll(session: Staff090StocktakeSession?): Boolean = session?.isOpen == true
 
@@ -278,8 +289,14 @@ object Staff090StocktakeMerge {
         paged: Boolean,
         firstPage: List<Staff090StocktakeScan>,
         firstCursor: String?,
-    ): Pair<List<Staff090StocktakeScan>, String?> =
-        if (!paged) firstPage to firstCursor else (firstPage + current).distinctBy(Staff090StocktakeScan::id) to currentCursor
+    ): Pair<List<Staff090StocktakeScan>, String?> {
+        // Page one shares no scan with the list: more than a page arrived since the last refresh
+        // (the screen sat in the background while others scanned). Putting it on top would hide
+        // the scans in between, so the list starts again from page one and its cursor.
+        val overlaps = firstPage.any { new -> current.any { it.id == new.id } }
+        return if (!paged || !overlaps) firstPage to firstCursor
+        else (firstPage + current).distinctBy(Staff090StocktakeScan::id) to currentCursor
+    }
 }
 
 /** The statistics bars and labels. Pure. */
