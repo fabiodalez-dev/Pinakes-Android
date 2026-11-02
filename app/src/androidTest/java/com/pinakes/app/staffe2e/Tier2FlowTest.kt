@@ -61,7 +61,7 @@ class Tier2FlowTest : AppFlowTest() {
         clickDescription(text(R.string.staff_year_add))
         compose.onAllNodes(hasSetTextAction() and hasTestTag("year-input")).onFirst().performTextReplacement("2027")
         typeInto(text(R.string.staff_year_volume), "34")
-        clickTag("form-save")
+        tapUntilSent("form-save", "POST", "periodicals/staff/16/years")
         val body = lastBody("POST", "periodicals/staff/16/years")
         assertTrue(body, body.contains("\"year\":2027") && body.contains("\"volume\":\"34\""))
         waitText(text(R.string.staff_year_added))
@@ -77,15 +77,8 @@ class Tier2FlowTest : AppFlowTest() {
         openStaffHub()
         click(text(R.string.staff_clubs))
         clickDescription(text(R.string.staff_club_new))
-        // The form sheet slides in: wait for it, then tap Save until the create reaches the server
-        // (a tap computed while the sheet still moves can land beside the button).
-        waitFor(hasTestTag("form-save"))
         compose.onAllNodes(hasSetTextAction() and hasTestTag("club-name")).onFirst().performTextReplacement("Lettori del giovedì")
-        repeat(3) {
-            if (api.recorded("POST", "bookclub/staff/clubs").isEmpty()) {
-                runCatching { clickTag("form-save"); compose.waitUntil(3_000) { api.recorded("POST", "bookclub/staff/clubs").isNotEmpty() } }
-            }
-        }
+        tapUntilSent("form-save", "POST", "bookclub/staff/clubs")
         val body = lastBody("POST", "bookclub/staff/clubs")
         assertTrue(body, body.contains("\"name\":\"Lettori del giovedì\"") && body.contains("\"privacy\":\"public\""))
         waitText("Ada Rossi")
@@ -106,7 +99,7 @@ class Tier2FlowTest : AppFlowTest() {
         click("Lettori del giovedì")
         click(text(R.string.staff_club_workflow_edit))
         click(text(R.string.staff_club_state_add))
-        clickTag("form-save")
+        tapUntilSent("form-save", "PUT", "bookclub/staff/clubs/1132/workflow")
         val body = lastBody("PUT", "bookclub/staff/clubs/1132/workflow")
         assertEquals(4, Regex("\"label\"").findAll(body).count())
         assertTrue(body, body.contains("\"voting\":true"))
@@ -125,12 +118,12 @@ class Tier2FlowTest : AppFlowTest() {
         click(text(R.string.staff_works))
         clickDescription(text(R.string.staff_work_new))
         compose.onAllNodes(hasSetTextAction() and hasTestTag("work-title")).onFirst().performTextReplacement("Odissea")
-        clickTag("form-save")
+        tapUntilSent("form-save", "POST", "staff/works")
         assertTrue(lastBody("POST", "staff/works").contains("\"uniform_title\":\"Odissea\""))
         waitText(text(R.string.staff_work_expressions).uppercase())
         click(text(R.string.staff_expression_add))
         compose.onAllNodes(hasSetTextAction() and hasTestTag("expression-title")).onFirst().performTextReplacement("Odissea (trad. Calzecchi Onesti)")
-        clickTag("form-save")
+        tapUntilSent("form-save", "POST", "staff/works/2/expressions")
         val expr = lastBody("POST", "staff/works/2/expressions")
         assertTrue(expr, expr.contains("\"type\":\"testo\"") && expr.contains("Calzecchi"))
         click(text(R.string.staff_work_attach))
