@@ -3,6 +3,7 @@ package com.pinakes.app.ui.common
 import androidx.annotation.StringRes
 import com.pinakes.app.R
 import com.pinakes.app.data.model.LoanItem
+import com.pinakes.app.data.model.StaffLoan
 import com.pinakes.app.ui.components.AvailabilityStatus
 
 /**
@@ -20,6 +21,19 @@ data class StatusLabel(@param:StringRes val resId: Int?, val fallback: String? =
  * untranslated snake_case string.
  */
 object StatusMapping {
+
+    private fun calendarStatus(status: String, isOverdue: Boolean?): String =
+        if (isOverdue != null && status in setOf("in_corso", "in_ritardo")) {
+            if (isOverdue) "in_ritardo" else "in_corso"
+        } else status
+
+    fun loan(loan: LoanItem): Pair<AvailabilityStatus, StatusLabel> =
+        this.loan(calendarStatus(loan.status, loan.isOverdue), loan.statusLabel)
+
+    fun loan(loan: StaffLoan): Pair<AvailabilityStatus, StatusLabel> =
+        this.loan(calendarStatus(loan.status, loan.isOverdue), loan.statusLabel)
+
+    fun loanGroup(loan: LoanItem): LoanGroup = loanGroup(calendarStatus(loan.status, loan.isOverdue))
 
     fun loan(stato: String, serverLabel: String? = null): Pair<AvailabilityStatus, StatusLabel> = when (stato) {
         // Active, on time — available-green (this is the good state).
@@ -87,7 +101,7 @@ object StatusMapping {
 
     /** Server computes this in the library timezone; stale `in_corso` rows may need attention too. */
     fun loanNeedsAttention(loan: LoanItem): Boolean =
-        loan.dueAttention || loanGroup(loan.status) == LoanGroup.Overdue
+        loan.dueAttention || loanGroup(loan) == LoanGroup.Overdue
 
     enum class LoanDateKind { Overdue, Returned, Requested, Due, Borrowed }
 
@@ -99,13 +113,13 @@ object StatusMapping {
      * requested_at must win over the requested loan interval's due date.
      */
     fun loanDate(loan: LoanItem): LoanDate? {
-        val overdue = loanGroup(loan.status) == LoanGroup.Overdue
-        if (overdue) return LoanDate(LoanDateKind.Overdue, loan.dueAt)
+        val overdue = loanGroup(loan) == LoanGroup.Overdue
+        if (overdue) return LoanDate(LoanDateKind.Overdue, loan.displayDueAt)
         if (loan.status in setOf("pendente", "in_attesa", "annullato", "scaduto")) {
             return loan.requestedAt?.let { LoanDate(LoanDateKind.Requested, it) }
         }
         if (loan.returnedAt != null) return LoanDate(LoanDateKind.Returned, loan.returnedAt)
-        if (loan.dueAt != null) return LoanDate(LoanDateKind.Due, loan.dueAt)
+        if (loan.displayDueAt != null) return LoanDate(LoanDateKind.Due, loan.displayDueAt)
         if (loan.loanedAt != null) return LoanDate(LoanDateKind.Borrowed, loan.loanedAt)
         return null
     }

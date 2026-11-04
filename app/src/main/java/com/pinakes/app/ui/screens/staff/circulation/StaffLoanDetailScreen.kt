@@ -369,7 +369,7 @@ fun StaffLoanDetailScreen(onNavigateUp: () -> Unit, onOpenUser: (Int) -> Unit, o
                         InfoLine(stringResource(R.string.staff_copy_inventory), loan.copy?.inventoryNumber)
                         InfoLine(stringResource(R.string.staff_loan_requested), loan.requestedAt?.let(DateFormat::date))
                         InfoLine(stringResource(R.string.staff_loan_loaned), loan.loanedAt?.let(DateFormat::date))
-                        InfoLine(stringResource(R.string.staff_loan_due), loan.dueAt?.let(DateFormat::date))
+                        InfoLine(stringResource(R.string.staff_loan_due), loan.displayDueAt?.let(DateFormat::date))
                         InfoLine(stringResource(R.string.staff_loan_pickup_deadline), loan.pickupDeadline?.let(DateFormat::date))
                         InfoLine(stringResource(R.string.staff_loan_returned_at), loan.returnedAt?.let(DateFormat::date))
                         InfoLine(stringResource(R.string.staff_loan_renewals), stringResource(R.string.staff_loan_renewals_value, loan.renewals, loan.maxRenewals))
