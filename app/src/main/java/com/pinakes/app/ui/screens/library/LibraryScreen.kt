@@ -178,7 +178,7 @@ private fun ActiveLoanList(
     }
     // Group by urgency bucket, preserving the bucket order (Overdue → … → Pending).
     val grouped = loans
-        .groupBy { StatusMapping.loanGroup(it.status) }
+        .groupBy { StatusMapping.loanGroup(it) }
         .toSortedMap(compareBy { it.order })
 
     LazyColumn(
@@ -250,7 +250,7 @@ private fun androidx.compose.foundation.lazy.LazyItemScope.LoanRow(
     onBookClick: (Int) -> Unit,
     onCancel: ((Int) -> Unit)? = null,
 ) {
-    val (status, statusLabel) = StatusMapping.loan(loan.status, loan.statusLabel)
+    val (status, statusLabel) = StatusMapping.loan(loan)
     val label = statusLabel.resId?.let { stringResource(it) } ?: statusLabel.fallback
     val attention = StatusMapping.loanNeedsAttention(loan)
     val dateLine = when (val date = StatusMapping.loanDate(loan)) {

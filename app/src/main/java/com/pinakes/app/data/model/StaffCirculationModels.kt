@@ -48,6 +48,8 @@ data class StaffLoan(
     @SerialName("requested_at") val requestedAt: String? = null,
     @SerialName("loaned_at") val loanedAt: String? = null,
     @SerialName("due_at") val dueAt: String? = null,
+    @SerialName("effective_due_at") val effectiveDueAt: String? = null,
+    @SerialName("is_overdue") val isOverdue: Boolean? = null,
     @SerialName("pickup_deadline") val pickupDeadline: String? = null,
     @SerialName("returned_at") val returnedAt: String? = null,
     @SerialName("returned_late") val returnedLate: Boolean = false,
@@ -64,7 +66,10 @@ data class StaffLoan(
     val actions: List<String> = emptyList(),
     /** Mobile API 1.10.0: the late fine (detail and return answers); null while fines are off. */
     @SerialName("late_fine") val lateFine: StaffLoanLateFine? = null,
-)
+) {
+    /** Display the usable return day; the edit form keeps the stored dueAt. */
+    val displayDueAt: String? get() = effectiveDueAt ?: dueAt
+}
 
 @Serializable
 data class StaffReservation(

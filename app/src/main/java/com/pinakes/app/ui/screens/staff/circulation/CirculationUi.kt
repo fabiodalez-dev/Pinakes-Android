@@ -52,7 +52,7 @@ import com.pinakes.app.ui.theme.Spacing
 /** Chip status + localized label for a loan state (`status_label` for states the app does not know). */
 @Composable
 internal fun loanChip(loan: StaffLoan): Pair<AvailabilityStatus, String?> {
-    val (status, label) = StatusMapping.loan(loan.status, loan.statusLabel)
+    val (status, label) = StatusMapping.loan(loan)
     return status to (label.resId?.let { stringResource(it) } ?: label.fallback)
 }
 
@@ -64,14 +64,17 @@ internal fun reservationChip(reservation: StaffReservation): Pair<AvailabilitySt
 
 /** The date that matters for a desk row: overdue days, due date, pickup deadline, request date. */
 @Composable
-internal fun loanDateLine(loan: StaffLoan): String? = when {
-    loan.status == "in_ritardo" && loan.daysOverdue > 0 -> stringResource(R.string.staff_loan_days_overdue, loan.daysOverdue)
-    loan.status == "da_ritirare" && loan.pickupDeadline != null -> stringResource(R.string.staff_loan_pickup_by, DateFormat.date(loan.pickupDeadline))
-    loan.returnedAt != null -> stringResource(R.string.library_returned_on, DateFormat.date(loan.returnedAt))
-    loan.status == "pendente" && loan.requestedAt != null -> stringResource(R.string.library_requested_on, DateFormat.date(loan.requestedAt))
-    loan.status == "prenotato" && loan.loanedAt != null -> stringResource(R.string.staff_loan_starts_on, DateFormat.date(loan.loanedAt))
-    loan.dueAt != null -> stringResource(R.string.library_due_label, DateFormat.date(loan.dueAt))
-    else -> null
+internal fun loanDateLine(loan: StaffLoan): String? {
+    val dueAt = loan.displayDueAt
+    return when {
+        (loan.isOverdue ?: (loan.status == "in_ritardo")) && loan.daysOverdue > 0 -> stringResource(R.string.staff_loan_days_overdue, loan.daysOverdue)
+        loan.status == "da_ritirare" && loan.pickupDeadline != null -> stringResource(R.string.staff_loan_pickup_by, DateFormat.date(loan.pickupDeadline))
+        loan.returnedAt != null -> stringResource(R.string.library_returned_on, DateFormat.date(loan.returnedAt))
+        loan.status == "pendente" && loan.requestedAt != null -> stringResource(R.string.library_requested_on, DateFormat.date(loan.requestedAt))
+        loan.status == "prenotato" && loan.loanedAt != null -> stringResource(R.string.staff_loan_starts_on, DateFormat.date(loan.loanedAt))
+        dueAt != null -> stringResource(R.string.library_due_label, DateFormat.date(dueAt))
+        else -> null
+    }
 }
 
 /** One loan at the desk: cover, title, borrower and the date that matters. */

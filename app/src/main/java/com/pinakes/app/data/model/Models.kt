@@ -527,13 +527,18 @@ data class LoanItem(
     @SerialName("requested_at") val requestedAt: String? = null,
     @SerialName("loaned_at") val loanedAt: String? = null,
     @SerialName("due_at") val dueAt: String? = null,
+    @SerialName("effective_due_at") val effectiveDueAt: String? = null,
+    // Nullable for older servers: only the server knows branch closures and library time.
+    @SerialName("is_overdue") val isOverdue: Boolean? = null,
     // Computed in the library timezone; do not re-derive from device LocalDate.
     @SerialName("due_attention") val dueAttention: Boolean = false,
     @SerialName("returned_at") val returnedAt: String? = null,
     val renewals: Int? = null,
     // Mobile API 1.4.4 presentation hint; DELETE /loans/{id} revalidates it.
     val cancellable: Boolean = false,
-)
+) {
+    val displayDueAt: String? get() = effectiveDueAt ?: dueAt
+}
 
 @Serializable
 data class ReservationItem(
