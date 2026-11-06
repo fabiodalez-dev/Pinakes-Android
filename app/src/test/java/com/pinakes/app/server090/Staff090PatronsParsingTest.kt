@@ -1,5 +1,6 @@
 package com.pinakes.app.server090
 
+import com.pinakes.app.data.model.AttendanceCheckInRequest
 import com.pinakes.app.data.model.AttendanceOverview
 import com.pinakes.app.data.model.AttendancePurgeResult
 import com.pinakes.app.data.model.AttendanceSettingsResult
@@ -31,6 +32,9 @@ import com.pinakes.app.data.repository.isForbidden
 import com.pinakes.app.R
 import com.pinakes.app.ui.screens.staff.s090.patrons.toPatronsMessage
 import com.pinakes.app.data.store.InstanceFeatures
+import com.pinakes.app.data.staff.AttendanceRules
+import com.pinakes.app.data.staff.VisitOutcome
+import com.pinakes.app.ui.screens.staff.s090.patrons.toVisitorItem
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -59,6 +63,41 @@ class Staff090PatronsParsingTest {
         val areas = Staff090Areas.of("admin", InstanceFeatures.from(health), online = true)
         assertTrue(areas.patrons && areas.patronTypes && areas.patronCards && areas.patronPhotos)
         assertTrue(areas.ledger && areas.attendance && areas.userImport)
+    }
+
+    @Test fun aServerThatTakesAPickedMemberSaysSo() {
+        // Pinakes 0.9.2 (Mobile API 1.11.0): the visitor log also checks in a member by id.
+        val areas = Staff090Areas.of("staff", InstanceFeatures.from(data<HealthPayload>("health_092")), online = true)
+        assertTrue(areas.attendance && areas.attendanceMemberPick)
+        // A 0.9.0 / 0.9.1 server has no flag: the search stays hidden.
+        assertFalse(Staff090Areas.of("staff", InstanceFeatures.from(data<HealthPayload>("health")), online = true).attendanceMemberPick)
+    }
+
+    @Test fun aPickedMemberIsSentByIdAndRecordedLikeACard() {
+        val app = Json { ignoreUnknownKeys = true; explicitNulls = false; isLenient = true; coerceInputValues = true }
+        assertEquals("""{"user_id":6805}""", app.encodeToString(AttendanceCheckInRequest.serializer(), AttendanceCheckInRequest(userId = 6805)))
+        assertEquals("""{"card_code":"GB2026","branch_id":2}""", app.encodeToString(AttendanceCheckInRequest.serializer(), AttendanceCheckInRequest(cardCode = "GB2026", branchId = 2)))
+        val visit = data<AttendanceVisit>("att_checkin_member")
+        assertEquals("member", visit.type)
+        assertEquals(6805, visit.member?.id)
+        assertEquals(VisitOutcome.WELCOME, AttendanceRules.outcome(visit))
+        val missing = failure("att_member_not_found", 404)
+        assertEquals("member_not_found", missing.code)
+        assertEquals(R.string.staff090_patrons_err_member_not_found, Staff090PatronsErrors.messageRes(missing))
+        assertEquals(VisitOutcome.ERROR, AttendanceRules.outcome(missing))
+        // Card and member together: the server's precise 422 text is kept.
+        val both = failure("att_member_and_card", 422)
+        assertEquals("validation", both.code)
+        assertNull(Staff090PatronsErrors.messageRes(both))
+    }
+
+    @Test fun theEntranceSearchShowsCardAndMailWithoutLoanEligibility() {
+        val blocked = data<List<StaffUser>>("users_search").single().copy(eligible = false, eligibilityReason = "debt_block")
+        val item = blocked.toVisitorItem()
+        assertEquals(blocked.id, item.id)
+        assertTrue(item.enabled)
+        assertNull(item.note)
+        assertEquals(listOfNotNull(blocked.cardNumber, blocked.email).filter { it.isNotBlank() }.joinToString(" · ").ifBlank { null }, item.subtitle)
     }
 
     @Test fun staffUserCarriesTheNewPatronFields() {

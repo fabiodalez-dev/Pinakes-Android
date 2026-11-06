@@ -1,5 +1,12 @@
 # Pinakes Android — Build Status
 
+## 1.13.0 (versionCode 27): the visitor log finds a member without the card
+
+Pairs with Pinakes 0.9.2 (Mobile API 1.11.0). Works with older servers: without `staff_attendance_member_pick` in `/health` the button is not shown and the desk behaves as in 1.12.0.
+
+- **Find member** in the visitor log's desk tab: a reader who forgot the card is found by name, e-mail, card or phone with the loan desk's borrower search (`GET /staff/users`, at least two characters) and checked in with `user_id` on `POST /staff/attendance/check-ins`, under its own Idempotency-Key, with the same result card, tone and inactive-account warning as a scanned card. The rows show card and e-mail only: loan eligibility (a debt block, for example) plays no part at the entrance. The camera stops reading while the search is open. `404 member_not_found` has its own wording; a `422` keeps the server's text.
+- Shown only when the server advertises it (`/health.features.staff_attendance_member_pick`, Pinakes 0.9.2), and with the visitor log on.
+
 ## 1.12.0 (versionCode 26): loans follow the server calendar, and the same-day handover switch
 
 Pairs with Pinakes 0.9.0 and 0.9.1 (Mobile API 1.10.0 as shipped in the stable release). Works with older servers: the new fields are optional and their absence keeps the 1.11.0 behaviour.

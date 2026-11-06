@@ -37,6 +37,7 @@ data class Staff090Flags(
     val staffCatalogueCards: Boolean = false,
     val staffMarc: Boolean = false,
     val staffAttendance: Boolean = false,
+    val staffAttendanceMemberPick: Boolean = false,
     val staffStatistics: Boolean = false,
     val staffUserImport: Boolean = false,
 ) {
@@ -72,6 +73,7 @@ data class Staff090Flags(
                 staffCatalogueCards = f.staffCatalogueCards,
                 staffMarc = f.staffMarc,
                 staffAttendance = f.staffAttendance && circulation,
+                staffAttendanceMemberPick = f.staffAttendanceMemberPick && f.staffAttendance && circulation,
                 staffStatistics = f.staffStatistics,
                 staffUserImport = f.staffUserImport,
             )

@@ -26,6 +26,8 @@ data class Staff090Areas(
     val catalogueCards: Boolean = false,
     val marc: Boolean = false,
     val attendance: Boolean = false,
+    /** The visitor log also checks in a member picked by name (Mobile API 1.11.0, Pinakes 0.9.2). */
+    val attendanceMemberPick: Boolean = false,
     val statistics: Boolean = false,
     val userImport: Boolean = false,
 ) {
@@ -60,6 +62,7 @@ data class Staff090Areas(
                 catalogueCards = f.staffCatalogueCards,
                 marc = f.staffMarc,
                 attendance = f.staffAttendance,
+                attendanceMemberPick = f.staffAttendance && f.staffAttendanceMemberPick,
                 statistics = f.staffStatistics,
                 userImport = f.staffUserImport,
             )

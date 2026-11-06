@@ -16,6 +16,7 @@ object Staff090PatronsErrors {
         "card_not_renewable" -> R.string.staff090_patrons_err_card_not_renewable
         "amount_exceeds_balance" -> R.string.staff090_patrons_err_amount_exceeds_balance
         "card_not_found" -> R.string.staff090_patrons_err_card_not_found
+        "member_not_found" -> R.string.staff090_patrons_err_member_not_found
         "not_started" -> R.string.staff090_patrons_err_not_started
         "already_started" -> R.string.staff090_patrons_err_already_started
         "job_cancelled" -> R.string.staff090_patrons_err_job_cancelled

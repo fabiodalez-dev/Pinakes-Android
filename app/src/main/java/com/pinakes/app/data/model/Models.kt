@@ -152,6 +152,8 @@ data class HealthFeatures(
     @SerialName("staff_catalogue_cards") val staffCatalogueCards: Boolean = false,
     @SerialName("staff_marc") val staffMarc: Boolean = false,
     @SerialName("staff_attendance") val staffAttendance: Boolean = false,
+    // Mobile API 1.11.0 (Pinakes 0.9.2): a check-in may name a member picked from the search.
+    @SerialName("staff_attendance_member_pick") val staffAttendanceMemberPick: Boolean = false,
     @SerialName("staff_statistics") val staffStatistics: Boolean = false,
     @SerialName("staff_user_import") val staffUserImport: Boolean = false,
 )

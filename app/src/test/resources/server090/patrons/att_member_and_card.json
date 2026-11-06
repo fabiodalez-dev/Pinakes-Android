@@ -1,0 +1,13 @@
+{
+  "data": null,
+  "meta": {
+    "field": "user_id",
+    "fields": {
+      "user_id": "Indica la tessera oppure il socio, non entrambi."
+    }
+  },
+  "error": {
+    "code": "validation",
+    "message": "Indica la tessera oppure il socio, non entrambi."
+  }
+}

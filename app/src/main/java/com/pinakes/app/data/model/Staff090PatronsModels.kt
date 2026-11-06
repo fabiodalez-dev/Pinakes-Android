@@ -240,7 +240,13 @@ data class AttendanceVisit(
 )
 
 @Serializable
-data class AttendanceCheckInRequest(@SerialName("card_code") val cardCode: String, @SerialName("branch_id") val branchId: Int? = null)
+data class AttendanceCheckInRequest(
+    /** The scanned or typed card; null when [userId] names the member (never both). */
+    @SerialName("card_code") val cardCode: String? = null,
+    /** Mobile API 1.11.0: a member picked from `GET /staff/users`. */
+    @SerialName("user_id") val userId: Int? = null,
+    @SerialName("branch_id") val branchId: Int? = null,
+)
 
 @Serializable
 data class AttendanceGuestRequest(val name: String? = null, val reason: String? = null, @SerialName("branch_id") val branchId: Int? = null)
