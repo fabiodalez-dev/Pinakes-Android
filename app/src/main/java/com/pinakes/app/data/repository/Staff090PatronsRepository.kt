@@ -127,7 +127,11 @@ class Staff090PatronsRepository @Inject constructor(
     suspend fun attendance(days: Int): ApiResult<AttendanceOverview> = session.staffCall { api.attendance(days) }
 
     suspend fun checkIn(cardCode: String, branchId: Int?, idempotencyKey: String?): ApiResult<AttendanceVisit> =
-        session.staffCall { api.checkIn(AttendanceCheckInRequest(cardCode.trim(), branchId), idempotencyKey) }
+        session.staffCall { api.checkIn(AttendanceCheckInRequest(cardCode = cardCode.trim(), branchId = branchId), idempotencyKey) }
+
+    /** A member picked from the borrower search (Mobile API 1.11.0), in place of a card. */
+    suspend fun checkInMember(userId: Int, branchId: Int?, idempotencyKey: String?): ApiResult<AttendanceVisit> =
+        session.staffCall { api.checkIn(AttendanceCheckInRequest(userId = userId, branchId = branchId), idempotencyKey) }
 
     suspend fun guest(name: String?, reason: String?, branchId: Int?, idempotencyKey: String?): ApiResult<AttendanceVisit> =
         session.staffCall { api.guest(AttendanceGuestRequest(name.blankToNull()?.take(150), reason.blankToNull()?.take(255), branchId), idempotencyKey) }

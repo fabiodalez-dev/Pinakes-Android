@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.PersonSearch
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -64,7 +65,9 @@ import com.pinakes.app.R
 import com.pinakes.app.data.model.AttendanceOverview
 import com.pinakes.app.data.model.AttendanceVisit
 import com.pinakes.app.data.network.ApiResult
+import com.pinakes.app.data.model.StaffUser
 import com.pinakes.app.data.repository.Staff090PatronsRepository
+import com.pinakes.app.data.repository.StaffCirculationRepository
 import com.pinakes.app.data.repository.StaffFilesRepository
 import com.pinakes.app.data.repository.isForbidden
 import com.pinakes.app.data.staff.AttendanceRules
@@ -87,6 +90,9 @@ import com.pinakes.app.ui.screens.staff.FormSectionTitle
 import com.pinakes.app.ui.screens.staff.InfoCard
 import com.pinakes.app.ui.screens.staff.InfoLine
 import com.pinakes.app.ui.screens.staff.LeaveWhen
+import com.pinakes.app.ui.screens.staff.PickItem
+import com.pinakes.app.ui.screens.staff.SearchController
+import com.pinakes.app.ui.screens.staff.SearchPickerSheet
 import com.pinakes.app.ui.screens.staff.StaffMessage
 import com.pinakes.app.ui.screens.staff.StaffSnackbarEffect
 import com.pinakes.app.ui.screens.staff.resolve
@@ -113,7 +119,8 @@ data class VisitResult(
     val photo: ByteArray? = null,
 )
 
-private data class CheckInSubmission(val code: String, val branchId: Int?)
+/** One check-in attempt: a card code or a picked member, at a branch. */
+private data class CheckInSubmission(val code: String?, val userId: Int?, val branchId: Int?)
 private data class GuestSubmission(val name: String, val reason: String, val branchId: Int?)
 
 data class AttendanceUiState(
@@ -131,6 +138,8 @@ data class AttendanceUiState(
     val tonePlayed: Int = 0,
     val manualError: Boolean = false,
     val guestSheet: Boolean = false,
+    /** The member search (Mobile API 1.11.0) is open. */
+    val memberSheet: Boolean = false,
     val savingGuest: Boolean = false,
     val guestError: StaffMessage? = null,
     val savingSettings: Boolean = false,
@@ -143,7 +152,9 @@ data class AttendanceUiState(
 
 /**
  * The visitor log at the entrance: the phone scans the patron card (CODE 128 or QR), the
- * server records the visit and answers the kiosk's message; guests are recorded by hand. The
+ * server records the visit and answers the kiosk's message; guests are recorded by hand. A
+ * member who forgot the card is found by name with the loan desk's borrower search and checked
+ * in by id, on servers that advertise it (`staff_attendance_member_pick`). The
  * statistics tab shows the counters of the web page, the CSV export and, for administrators,
  * the retention and the purge.
  */
@@ -151,12 +162,21 @@ data class AttendanceUiState(
 class Staff090AttendanceViewModel @Inject constructor(
     private val patrons: Staff090PatronsRepository,
     private val files: StaffFilesRepository,
+    private val circulation: StaffCirculationRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(AttendanceUiState())
     val state: StateFlow<AttendanceUiState> = _state.asStateFlow()
     private val debouncer = ScanDebouncer()
     private val checkInKeys = SubmissionKeys()
     private val guestKeys = SubmissionKeys()
+
+    /** The member search: the loan desk's borrower search, at least two characters. */
+    val members = SearchController(viewModelScope, minLength = 2) { q ->
+        when (val res = circulation.users(q)) {
+            is ApiResult.Success -> ApiResult.Success(res.data.map { it.toVisitorItem() })
+            is ApiResult.Failure -> res
+        }
+    }.also { it.onFailure = { f -> if (f.isForbidden()) _state.update { s -> s.copy(forbidden = true) } } }
 
     init { load() }
 
@@ -189,7 +209,7 @@ class Staff090AttendanceViewModel @Inject constructor(
     fun selectBranch(id: Int?) = _state.update { it.copy(branchId = id) }
 
     fun onDecoded(raw: String) {
-        if (_state.value.checking || _state.value.guestSheet) return
+        if (_state.value.checking || _state.value.guestSheet || _state.value.memberSheet) return
         val code = AttendanceRules.normalizeCard(raw).takeIf { it.isNotEmpty() } ?: return
         val accepted = debouncer.offer(code, SystemClock.elapsedRealtime()) ?: return
         checkIn(accepted)
@@ -209,13 +229,33 @@ class Staff090AttendanceViewModel @Inject constructor(
         return true
     }
 
-    private fun checkIn(code: String) {
+    fun openMembers() {
+        debouncer.pause()
+        members.clear()
+        _state.update { it.copy(memberSheet = true) }
+    }
+
+    fun closeMembers() {
+        _state.update { it.copy(memberSheet = false) }
+        members.clear()
+        debouncer.resume(SystemClock.elapsedRealtime())
+    }
+
+    /** A member picked from the search is checked in by id, like a scanned card. */
+    fun pickMember(item: PickItem) {
+        if (_state.value.checking) return
+        _state.update { it.copy(memberSheet = false) }
+        members.clear()
+        checkIn(code = null, userId = item.id)
+    }
+
+    private fun checkIn(code: String?, userId: Int? = null) {
         val branch = _state.value.branchId
-        val key = checkInKeys.keyFor(CheckInSubmission(code, branch))
+        val key = checkInKeys.keyFor(CheckInSubmission(code, userId, branch))
         debouncer.pause()
         _state.update { it.copy(checking = true) }
         viewModelScope.launch {
-            val res = patrons.checkIn(code, branch, key)
+            val res = if (userId != null) patrons.checkInMember(userId, branch, key) else patrons.checkIn(code.orEmpty(), branch, key)
             val result = when (res) {
                 is ApiResult.Success -> {
                     checkInKeys.reset()
@@ -364,10 +404,17 @@ fun Staff090AttendanceScreen(onNavigateUp: () -> Unit) {
                     Tab(selected = tab == state.tab, onClick = { vm.selectTab(tab) }, text = { Text(stringResource(tab.label)) }, modifier = Modifier.testTag("tab-${tab.name.lowercase()}"))
                 }
             }
-            if (state.tab == AttendanceTab.DESK) DeskTab(state, vm) else StatsTab(state, vm)
+            if (state.tab == AttendanceTab.DESK) DeskTab(state, vm, memberPick = areas.s090.attendanceMemberPick) else StatsTab(state, vm)
         }
     }
     if (state.guestSheet) GuestSheet(state, vm)
+    if (state.memberSheet) {
+        val s by vm.members.state.collectAsStateWithLifecycle()
+        SearchPickerSheet(
+            title = stringResource(R.string.staff090_patrons_member_pick_title), placeholder = stringResource(R.string.staff_search_users), state = s,
+            onQuery = vm.members::onQuery, onPick = vm::pickMember, onDismiss = vm::closeMembers, hint = stringResource(R.string.staff_search_min_chars),
+        )
+    }
     if (state.confirmPurge) ConfirmDialog(
         title = stringResource(R.string.staff090_patrons_purge),
         body = stringResource(R.string.staff090_patrons_purge_body, state.overview?.retention?.days ?: 0),
@@ -379,7 +426,7 @@ fun Staff090AttendanceScreen(onNavigateUp: () -> Unit) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DeskTab(state: AttendanceUiState, vm: Staff090AttendanceViewModel) {
+private fun DeskTab(state: AttendanceUiState, vm: Staff090AttendanceViewModel, memberPick: Boolean) {
     Column(
         Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -423,6 +470,10 @@ private fun DeskTab(state: AttendanceUiState, vm: Staff090AttendanceViewModel) {
             }
         }
         state.last?.let { VisitCard(it) }
+        if (memberPick) SecondaryButton(
+            stringResource(R.string.staff090_patrons_member_pick), onClick = vm::openMembers, leadingIcon = Icons.Outlined.PersonSearch,
+            enabled = !state.checking, modifier = Modifier.fillMaxWidth().testTag("member-open"),
+        )
         SecondaryButton(
             stringResource(R.string.staff090_patrons_guest), onClick = vm::openGuest, leadingIcon = Icons.Outlined.PersonAdd,
             modifier = Modifier.fillMaxWidth().testTag("guest-open"),
@@ -586,3 +637,10 @@ private fun RetentionCard(overview: AttendanceOverview, saving: Boolean, vm: Sta
         }
     }
 }
+
+/** A search row for the entrance: name, card and e-mail; loan eligibility plays no part here. */
+internal fun StaffUser.toVisitorItem(): PickItem = PickItem(
+    id = id,
+    title = name,
+    subtitle = listOfNotNull(cardNumber?.takeIf { it.isNotBlank() }, email?.takeIf { it.isNotBlank() }).joinToString(" · ").ifBlank { null },
+)
