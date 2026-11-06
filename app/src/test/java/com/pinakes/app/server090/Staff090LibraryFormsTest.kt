@@ -22,6 +22,8 @@ import com.pinakes.app.ui.screens.staff.s090.library.CustomForms
 import com.pinakes.app.ui.screens.staff.s090.library.IntInput
 import com.pinakes.app.ui.screens.staff.s090.library.LibraryMoney
 import com.pinakes.app.ui.screens.staff.s090.library.LibrarySettingsUiState
+import com.pinakes.app.ui.screens.staff.s090.library.LoanFieldKind
+import com.pinakes.app.ui.screens.staff.s090.library.LoanSection
 import com.pinakes.app.ui.screens.staff.s090.library.LoansForm
 import com.pinakes.app.ui.screens.staff.s090.library.ModulesForm
 import com.pinakes.app.ui.screens.staff.s090.library.RuleNumber
@@ -137,6 +139,26 @@ class Staff090LibraryFormsTest {
         val edited = original + mapOf("daily_fine_cents" to "1", "max_renewals" to "4")
         assertEquals("""{"max_renewals":4}""", LoansForm.body(l, original, edited).toString())
         assertFalse(LoansForm.editable(l, "fine_grace_mode"))
+    }
+
+    @Test fun theSameDayHandoverSwitchFollowsTheClosuresCalendarAndIsSentWhenChanged() {
+        // Pinakes 0.9.0+ sends the setting; staff may change it (it is not administrator-only).
+        val l = data("s090_library_loans_staff_091", Staff090LibraryLoans.serializer())
+        val field = LoansForm.fields(l).single { it.key == "same_day_handover_after_closure" }
+        assertEquals(LoanFieldKind.BOOL, field.kind)
+        assertEquals(LoanSection.CLOSURES, field.section)
+        val keys = LoansForm.fields(l).map { it.key }
+        assertTrue(keys.indexOf("app_timezone") < keys.indexOf("same_day_handover_after_closure"))
+        assertTrue(keys.indexOf("same_day_handover_after_closure") < keys.indexOf("pickup_expiry_days"))
+        assertTrue(LoansForm.editable(l, "same_day_handover_after_closure"))
+        val original = LoansForm.initial(l, it)
+        assertEquals("false", original["same_day_handover_after_closure"])
+        assertEquals("""{"same_day_handover_after_closure":true}""", LoansForm.body(l, original, original + ("same_day_handover_after_closure" to "true")).toString())
+        // A server before 0.9.0 does not send it: no switch, and nothing about it in the body.
+        val old = data("s090_library_loans_staff", Staff090LibraryLoans.serializer())
+        assertFalse(LoansForm.fields(old).any { it.key == "same_day_handover_after_closure" })
+        val oldOriginal = LoansForm.initial(old, it)
+        assertNull(LoansForm.body(old, oldOriginal, oldOriginal + ("same_day_handover_after_closure" to "true")))
     }
 
     @Test fun loanValidationUsesTheServerLimits() {

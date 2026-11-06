@@ -464,6 +464,7 @@ internal fun CardsTab(c: Staff090LibraryCards, state: LibrarySettingsUiState, on
 private fun loanSectionTitle(s: LoanSection) = when (s) {
     LoanSection.APPROVAL -> R.string.staff090_library_loans_approval
     LoanSection.DURATION -> R.string.staff090_library_loans_duration
+    LoanSection.CLOSURES -> R.string.staff090_library_loans_closures
     LoanSection.PICKUP -> R.string.staff090_library_loans_pickup
     LoanSection.CARD -> R.string.staff090_library_loans_card
     LoanSection.RENEWALS -> R.string.staff090_library_loans_renewals
@@ -477,6 +478,7 @@ internal fun loanFieldLabel(key: String) = when (key) {
     "loan_duration_days" -> R.string.staff090_library_loan_duration
     "max_loan_duration_days" -> R.string.staff090_library_loan_max_duration
     "app_timezone" -> R.string.staff090_library_loan_timezone
+    "same_day_handover_after_closure" -> R.string.staff090_library_loan_same_day_handover
     "pickup_expiry_days" -> R.string.staff090_library_loan_pickup_days
     "pickup_reminder_days" -> R.string.staff090_library_loan_pickup_reminder
     "card_expiry_warning_days" -> R.string.staff090_library_loan_card_warning
@@ -501,6 +503,7 @@ private fun loanFieldHelp(key: String): Int? = when (key) {
     "loan_duration_days" -> R.string.staff090_library_loan_duration_help
     "max_loan_duration_days" -> R.string.staff090_library_loan_max_duration_help
     "app_timezone" -> R.string.staff090_library_loan_timezone_help
+    "same_day_handover_after_closure" -> R.string.staff090_library_loan_same_day_handover_help
     "pickup_expiry_days" -> R.string.staff090_library_loan_pickup_days_help
     "pickup_reminder_days" -> R.string.staff090_library_loan_pickup_reminder_help
     "card_expiry_warning_days" -> R.string.staff090_library_loan_card_warning_help

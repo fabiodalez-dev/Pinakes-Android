@@ -1,5 +1,12 @@
 # Pinakes Android — Build Status
 
+## 1.12.0 (versionCode 26): loans follow the server calendar, and the same-day handover switch
+
+Pairs with Pinakes 0.9.0 and 0.9.1 (Mobile API 1.10.0 as shipped in the stable release). Works with older servers: the new fields are optional and their absence keeps the 1.11.0 behaviour.
+
+- **Loans show the usable return day** ([#58](https://github.com/fabiodalez-dev/Pinakes-Android/pull/58)): reader and staff loans read `effective_due_at` (the first open day after a due date closed afterwards) and `is_overdue` (lateness in the library timezone and the copy branch calendar). The date shown, the "late" state and the active/overdue grouping follow them, so a loan due on a closure is not shown late while the library is closed; `due_at` keeps the stored date.
+- **Same-day handover after a closure**: Library settings → Loans gains the web's *Closures calendar* section with the `same_day_handover_after_closure` switch and its help (when on, another reader can receive the book on the first open day after a closed due day). It is sent only when changed, and only when the server sends it; Staff can change it, as on the web.
+
 ## 1.11.0 (versionCode 25): Pinakes 0.9.0, and its whole admin from the staff area
 
 Pairs with Pinakes 0.9.0-rc.2 (Mobile API 1.10.0 for the staff areas, the copy editor's consultation switch and `patron_type` on the profile; Mobile API 1.9.0 for `closed_dates`, `loanable`, `reservations_enabled`, `/me/movements` and the new 409 codes; Mobile API 1.9.1 for the `/health` toggles `fines`, `closures_calendar` and `circulation_rules`). Works with older servers: every field is optional, the three flags default to off, and their absence keeps the 1.10.0 behaviour.
