@@ -122,7 +122,7 @@ enum class LoanFieldKind { INT, BOOL, CHOICE, MONEY, TIMEZONE }
 /** One field of the loans tab, in the web page's order. */
 data class LoanField(val key: String, val kind: LoanFieldKind, val section: LoanSection)
 
-enum class LoanSection { APPROVAL, DURATION, PICKUP, CARD, RENEWALS, LIMITS, RECALLS, FINES }
+enum class LoanSection { APPROVAL, DURATION, CLOSURES, PICKUP, CARD, RENEWALS, LIMITS, RECALLS, FINES }
 
 object LoansForm {
     /**
@@ -137,6 +137,7 @@ object LoansForm {
         LoanField("loan_duration_days", LoanFieldKind.INT, LoanSection.DURATION),
         LoanField("max_loan_duration_days", LoanFieldKind.INT, LoanSection.DURATION),
         LoanField("app_timezone", LoanFieldKind.TIMEZONE, LoanSection.DURATION),
+        LoanField("same_day_handover_after_closure", LoanFieldKind.BOOL, LoanSection.CLOSURES),
         LoanField("pickup_expiry_days", LoanFieldKind.INT, LoanSection.PICKUP),
         LoanField("pickup_reminder_days", LoanFieldKind.INT, LoanSection.PICKUP),
         LoanField("card_expiry_warning_days", LoanFieldKind.INT, LoanSection.CARD),
