@@ -305,6 +305,7 @@
   "library_section_upcoming": "À retirer et programmés",
   "library_section_pending": "Demandes en attente",
   "library_due_label": "À rendre le %1$s",
+  "library_pickup_by": "À retirer avant le %1$s",
   "library_overdue_label": "En retard",
   "library_overdue_since": "En retard, devait être rendu le %1$s",
   "book_personal_on_loan_title": "Vous l'avez emprunté",

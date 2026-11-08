@@ -19,6 +19,22 @@ server advertises their APIs. The five bottom navigation destinations are retain
 
 > These are **debug-signed** builds for direct sideloading, not Play Store releases. Each release bumps `versionCode`, so a newer APK installs over the previous one in place.
 
+## What's New in v1.13.0
+
+Pinakes Android 1.13.0 follows Pinakes 0.9.2 (Mobile API 1.11.0). In the staff area the visitor log checks in a member without the card: *Find member* opens the same member search as the loan desk, and the visit is recorded exactly as with the card, only once even after a retry. The button appears only when the server announces `staff_attendance_member_pick` in `/health`; on older servers the app behaves as 1.12.0.
+
+## What's New
+
+The complete history is on the [Releases page](https://github.com/fabiodalez-dev/Pinakes-Android/releases).
+
+### v1.12.0
+
+Follows Pinakes 0.9.0 and 0.9.1 (Mobile API 1.10.0). Reader and staff loans show the usable return day the server computes from the branch closures calendar, and lateness follows the server in the library timezone, so a loan due on a closed day is no longer shown as late. Library settings → Loans gains the closures calendar section with the same-day handover switch.
+
+### v1.11.0
+
+Follows Pinakes 0.9.0: everything the 0.9.0 admin adds can be done from the staff area, including library settings, patron types and loan rules, the closures calendar, stocktake, patron ledger, MARC import and export, and the visitor log. The reader side follows the new circulation rules; on older servers every new field is optional and the new screens stay hidden.
+
 ## What it is
 
 A single self-contained app any Pinakes library can hand to its members. On first
@@ -271,7 +287,7 @@ _contract/            OpenAPI snapshot + API spec the app is built against
 All core screens are implemented and verified end-to-end on an emulator against a
 live instance (onboarding, login, catalog, detail, loans, reservations, audio, PDF,
 themes, languages). UnifiedPush registration is wired in the data layer; the
-distributor receiver is a follow-up. See `STATUS.md` for the full breakdown.
+distributor receiver is a follow-up. See `STATUS.md` for the full breakdown, and [the request-by-request Uwe verification](docs/UWE-PARITY.md) for the reader-side parity with the website.
 
 ## License
 
@@ -286,22 +302,3 @@ and published online resources follow the server data. Public PDFs use the
 URL supplied by the server; the website action opens the article’s full page. Older servers retain the existing periodicals browser.
 See [the article integration notes](docs/emeroteca-standalone-articles.md).
 
-## Android 1.6 / current server parity
-
-The updated client reads Mobile API 1.5.0, Desiderata 1.2.0, Emeroteca 1.13.0 and
-Archives 1.5.1. Update the server/plugins before expecting the new optional
-collection screens. Older instances remain usable; unsupported article facets
-show an upgrade message rather than silently returning unfiltered results.
-
-Desiderata is the library's wanted collection, separate from a member's wishlist.
-Donation contact details come from the verified account. Proposals require
-consent and survive transport retries/process death without creating inventory.
-Archives supports paged hierarchy, text/level/year search, authorities, all
-public documents and export links. Article/book citations are formatted by the
-server, with five styles and text/HTML clipboard copies. Every digital book
-attachment is shown; audio switches one native player at a time.
-
-Administrative cataloguing and uploads open the protected PHP website, including
-the existing article form. No native administrative CRUD API is invented.
-
-See [the request-by-request Uwe verification](docs/UWE-PARITY.md).

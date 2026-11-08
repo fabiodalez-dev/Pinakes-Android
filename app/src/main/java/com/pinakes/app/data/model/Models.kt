@@ -534,6 +534,9 @@ data class LoanItem(
     @SerialName("is_overdue") val isOverdue: Boolean? = null,
     // Computed in the library timezone; do not re-derive from device LocalDate.
     @SerialName("due_attention") val dueAttention: Boolean = false,
+    // Mobile API 1.12.0: last day to collect a da_ritirare loan, already moved past the
+    // copy branch closures by the server. Null for other states and on older servers.
+    @SerialName("pickup_deadline") val pickupDeadline: String? = null,
     @SerialName("returned_at") val returnedAt: String? = null,
     val renewals: Int? = null,
     // Mobile API 1.4.4 presentation hint; DELETE /loans/{id} revalidates it.

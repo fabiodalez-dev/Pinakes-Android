@@ -263,6 +263,8 @@ private fun androidx.compose.foundation.lazy.LazyItemScope.LoanRow(
                 stringResource(R.string.library_returned_on, DateFormat.date(requireNotNull(date.value)))
             StatusMapping.LoanDateKind.Requested ->
                 stringResource(R.string.library_requested_on, DateFormat.date(requireNotNull(date.value)))
+            StatusMapping.LoanDateKind.Pickup ->
+                stringResource(R.string.library_pickup_by, DateFormat.date(requireNotNull(date.value)))
             StatusMapping.LoanDateKind.Due ->
                 stringResource(R.string.library_due_label, DateFormat.date(requireNotNull(date.value)))
             StatusMapping.LoanDateKind.Borrowed ->

@@ -305,6 +305,7 @@
   "library_section_upcoming": "Abholbereit & geplant",
   "library_section_pending": "Ausstehende Anfragen",
   "library_due_label": "Fällig am %1$s",
+  "library_pickup_by": "Abholen bis %1$s",
   "library_overdue_label": "Überfällig",
   "library_overdue_since": "Überfällig, war fällig am %1$s",
   "book_personal_on_loan_title": "Du hast es ausgeliehen",

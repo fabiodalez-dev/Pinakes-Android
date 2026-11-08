@@ -103,7 +103,7 @@ object StatusMapping {
     fun loanNeedsAttention(loan: LoanItem): Boolean =
         loan.dueAttention || loanGroup(loan) == LoanGroup.Overdue
 
-    enum class LoanDateKind { Overdue, Returned, Requested, Due, Borrowed }
+    enum class LoanDateKind { Overdue, Returned, Requested, Pickup, Due, Borrowed }
 
     data class LoanDate(val kind: LoanDateKind, val value: String? = null)
 
@@ -119,6 +119,10 @@ object StatusMapping {
             return loan.requestedAt?.let { LoanDate(LoanDateKind.Requested, it) }
         }
         if (loan.returnedAt != null) return LoanDate(LoanDateKind.Returned, loan.returnedAt)
+        // A ready loan is not in hand yet: the date that matters is the last pickup day.
+        if (loan.status == "da_ritirare" && loan.pickupDeadline != null) {
+            return LoanDate(LoanDateKind.Pickup, loan.pickupDeadline)
+        }
         if (loan.displayDueAt != null) return LoanDate(LoanDateKind.Due, loan.displayDueAt)
         if (loan.loanedAt != null) return LoanDate(LoanDateKind.Borrowed, loan.loanedAt)
         return null
