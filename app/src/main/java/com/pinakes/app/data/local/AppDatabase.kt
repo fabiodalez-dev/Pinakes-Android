@@ -8,7 +8,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * Local cache database. V4 adds the pickup deadline while keeping data cached by v3.
+ * Local cache database. V4 adds the usable return day, the server lateness and the pickup deadline
+ * of a loan while keeping data cached by v3.
  * Older schemas can be rebuilt from the server; clearing the sync watermark triggers a full sync.
  * The database is excluded from backups because it belongs to one instance and one user.
  */
@@ -25,8 +26,11 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         const val FILE_NAME = "pinakes-cache.db"
 
-        private val migration3To4 = object : Migration(3, 4) {
+        /** v4 keeps the v3 rows and adds the server calendar facts of a loan, null until the next refresh. */
+        internal val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE cached_loans ADD COLUMN effectiveDueAt TEXT")
+                db.execSQL("ALTER TABLE cached_loans ADD COLUMN isOverdue INTEGER")
                 db.execSQL("ALTER TABLE cached_loans ADD COLUMN pickupDeadline TEXT")
             }
         }
@@ -40,7 +44,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     FILE_NAME,
-                ).addMigrations(migration3To4)
+                ).addMigrations(MIGRATION_3_4)
                     .fallbackToDestructiveMigration()
                     .build().also { INSTANCE = it }
             }

@@ -25,6 +25,9 @@ data class CachedLoan(
     val requestedAt: String? = null,
     val loanedAt: String? = null,
     val dueAt: String? = null,
+    // Server calendar facts (Mobile API 1.10.0): offline rows must not fall back to the stored due date.
+    val effectiveDueAt: String? = null,
+    val isOverdue: Boolean? = null,
     val dueAttention: Boolean = false,
     val pickupDeadline: String? = null,
     val returnedAt: String? = null,
@@ -76,14 +79,15 @@ data class SyncMeta(
 fun LoanItem.toCached(bucket: String, position: Int): CachedLoan = CachedLoan(
     bucket = bucket, id = id, position = position, bookId = bookId, title = title, coverUrl = coverUrl,
     status = status, statusLabel = statusLabel, requestedAt = requestedAt, loanedAt = loanedAt, dueAt = dueAt,
+    effectiveDueAt = effectiveDueAt, isOverdue = isOverdue,
     dueAttention = dueAttention, pickupDeadline = pickupDeadline, returnedAt = returnedAt,
     renewals = renewals, cancellable = cancellable,
 )
 
 fun CachedLoan.toLoanItem(): LoanItem = LoanItem(
     id = id, bookId = bookId, title = title, coverUrl = coverUrl, status = status, statusLabel = statusLabel,
-    requestedAt = requestedAt, loanedAt = loanedAt, dueAt = dueAt, dueAttention = dueAttention,
-    pickupDeadline = pickupDeadline, returnedAt = returnedAt, renewals = renewals, cancellable = cancellable,
+    requestedAt = requestedAt, loanedAt = loanedAt, dueAt = dueAt, effectiveDueAt = effectiveDueAt,
+    isOverdue = isOverdue, dueAttention = dueAttention, pickupDeadline = pickupDeadline, returnedAt = returnedAt, renewals = renewals, cancellable = cancellable,
 )
 
 fun ReservationItem.toCached(position: Int): CachedLoan = CachedLoan(

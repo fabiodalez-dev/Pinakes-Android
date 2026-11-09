@@ -48,8 +48,9 @@ class LibraryDaoTest {
     private val loans = LoansData(
         pending = listOf(LoanItem(id = 3, bookId = 30, title = "Pending", status = "pendente", cancellable = true)),
         active = listOf(
-            LoanItem(id = 1, bookId = 10, title = "First", status = "in_corso", dueAt = "2026-11-01"),
-            LoanItem(id = 2, bookId = 20, title = "Second", status = "in_ritardo", dueAttention = true),
+            LoanItem(id = 1, bookId = 10, title = "First", status = "in_corso", dueAt = "2026-11-01", effectiveDueAt = "2026-11-03", isOverdue = false),
+            LoanItem(id = 2, bookId = 20, title = "Second", status = "in_ritardo", isOverdue = true, dueAttention = true),
+            LoanItem(id = 5, bookId = 50, title = "Ready", status = "da_ritirare", dueAt = "2026-11-20", pickupDeadline = "2026-11-06"),
         ),
         history = listOf(LoanItem(id = 4, bookId = 40, title = "Old", status = "restituito", returnedAt = "2026-01-01")),
     )
@@ -73,6 +74,15 @@ class LibraryDaoTest {
             StatusMapping.LoanDate(StatusMapping.LoanDateKind.Pickup, "2030-12-27"),
             StatusMapping.loanDate(cached),
         )
+    }
+
+    @Test fun offlineLoanKeepsTheServerCalendar() = runBlocking {
+        // Due on a day the branch later closed: the server moved it and cleared the stale late state.
+        val moved = LoanItem(id = 6, status = "in_ritardo", dueAt = "2030-12-25", effectiveDueAt = "2030-12-27", isOverdue = false)
+        dao.replaceLoans(CachedLoan.LOAN_BUCKETS, LoansData(active = listOf(moved)).toCached())
+        val cached = dao.loans(CachedLoan.LOAN_BUCKETS).toLoansData().active.single()
+        assertEquals(StatusMapping.LoanGroup.OnLoan, StatusMapping.loanGroup(cached))
+        assertEquals(StatusMapping.LoanDate(StatusMapping.LoanDateKind.Due, "2030-12-27"), StatusMapping.loanDate(cached))
     }
 
     @Test fun replacingLoansKeepsReservations() = runBlocking {
@@ -124,7 +134,7 @@ class LibraryDaoTest {
         dao.deleteLoan(9, listOf(CachedLoan.RESERVATION))
         val back = dao.loans(CachedLoan.LOAN_BUCKETS).toLoansData()
         assertTrue(back.pending.isEmpty())
-        assertEquals(2, back.active.size)
+        assertEquals(loans.active, back.active)   // the active bucket is untouched
         assertEquals(1, back.history.size)   // other buckets untouched
         assertTrue(dao.loans(listOf(CachedLoan.RESERVATION)).isEmpty())
 
