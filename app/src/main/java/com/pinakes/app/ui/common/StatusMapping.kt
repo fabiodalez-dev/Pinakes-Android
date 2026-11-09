@@ -120,7 +120,7 @@ object StatusMapping {
         }
         if (loan.returnedAt != null) return LoanDate(LoanDateKind.Returned, loan.returnedAt)
         // A ready loan is not in hand yet: the date that matters is the last pickup day.
-        if (loan.status == "da_ritirare" && loan.pickupDeadline != null) {
+        if (loan.status == "da_ritirare" && !loan.pickupDeadline.isNullOrBlank()) {
             return LoanDate(LoanDateKind.Pickup, loan.pickupDeadline)
         }
         if (loan.displayDueAt != null) return LoanDate(LoanDateKind.Due, loan.displayDueAt)

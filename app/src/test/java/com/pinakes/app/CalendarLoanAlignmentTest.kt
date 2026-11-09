@@ -60,6 +60,11 @@ class CalendarLoanAlignmentTest {
         assertEquals(StatusMapping.LoanDate(StatusMapping.LoanDateKind.Due, "2030-12-30"), StatusMapping.loanDate(loan))
     }
 
+    @Test fun blankPickupDayFallsBackToTheReturnDay() {
+        val loan = LoanItem(status = "da_ritirare", dueAt = "2030-12-30", pickupDeadline = " ", isOverdue = false)
+        assertEquals(StatusMapping.LoanDate(StatusMapping.LoanDateKind.Due, "2030-12-30"), StatusMapping.loanDate(loan))
+    }
+
     @Test fun pickupDayIsIgnoredOnceTheLoanIsCollected() {
         val loan = LoanItem(status = "in_corso", dueAt = "2030-12-30", pickupDeadline = "2030-12-27", isOverdue = false)
         assertEquals(StatusMapping.LoanDate(StatusMapping.LoanDateKind.Due, "2030-12-30"), StatusMapping.loanDate(loan))
