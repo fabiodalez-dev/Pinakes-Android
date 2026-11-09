@@ -305,6 +305,7 @@
   "library_section_upcoming": "Da ritirare e programmati",
   "library_section_pending": "Richieste in attesa",
   "library_due_label": "Scade il %1$s",
+  "library_pickup_by": "Da ritirare entro il %1$s",
   "library_overdue_label": "In ritardo",
   "library_overdue_since": "In ritardo, scaduto il %1$s",
   "book_personal_on_loan_title": "Ce l'hai in prestito",

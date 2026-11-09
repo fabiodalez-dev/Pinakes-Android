@@ -45,6 +45,31 @@ class CalendarLoanAlignmentTest {
         assertEquals(R.string.loan_status_on_loan, StatusMapping.loan(loan).second.resId)
     }
 
+    @Test fun readyLoanShowsTheLastPickupDayTheServerMovedPastAClosure() {
+        val loan = json.decodeFromString<LoanItem>("""{
+            "id":8,"status":"da_ritirare","due_at":"2030-12-30","effective_due_at":"2030-12-30",
+            "pickup_deadline":"2030-12-27","is_overdue":false
+        }""")
+        assertEquals("2030-12-27", loan.pickupDeadline)
+        assertEquals(StatusMapping.LoanDate(StatusMapping.LoanDateKind.Pickup, "2030-12-27"), StatusMapping.loanDate(loan))
+    }
+
+    @Test fun readyLoanFromAnOlderServerFallsBackToTheReturnDay() {
+        val loan = json.decodeFromString<LoanItem>("""{"status":"da_ritirare","due_at":"2030-12-30"}""")
+        assertNull(loan.pickupDeadline)
+        assertEquals(StatusMapping.LoanDate(StatusMapping.LoanDateKind.Due, "2030-12-30"), StatusMapping.loanDate(loan))
+    }
+
+    @Test fun blankPickupDayFallsBackToTheReturnDay() {
+        val loan = LoanItem(status = "da_ritirare", dueAt = "2030-12-30", pickupDeadline = " ", isOverdue = false)
+        assertEquals(StatusMapping.LoanDate(StatusMapping.LoanDateKind.Due, "2030-12-30"), StatusMapping.loanDate(loan))
+    }
+
+    @Test fun pickupDayIsIgnoredOnceTheLoanIsCollected() {
+        val loan = LoanItem(status = "in_corso", dueAt = "2030-12-30", pickupDeadline = "2030-12-27", isOverdue = false)
+        assertEquals(StatusMapping.LoanDate(StatusMapping.LoanDateKind.Due, "2030-12-30"), StatusMapping.loanDate(loan))
+    }
+
     @Test fun olderReaderPayloadKeepsItsPreviousStatusAndDate() {
         val loan = json.decodeFromString<LoanItem>("""{"status":"in_ritardo","due_at":"2030-12-25"}""")
         assertNull(loan.isOverdue)

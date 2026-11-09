@@ -305,6 +305,7 @@
   "library_section_upcoming": "Ready & scheduled",
   "library_section_pending": "Pending requests",
   "library_due_label": "Due %1$s",
+  "library_pickup_by": "Pick up by %1$s",
   "library_overdue_label": "Overdue",
   "library_overdue_since": "Overdue, was due %1$s",
   "book_personal_on_loan_title": "You have this on loan",
