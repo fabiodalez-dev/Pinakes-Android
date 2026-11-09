@@ -15,6 +15,7 @@ import com.pinakes.app.data.model.LoanItem
 import com.pinakes.app.data.model.LoansData
 import com.pinakes.app.data.model.ReservationItem
 import com.pinakes.app.data.model.WishlistItem
+import com.pinakes.app.ui.common.StatusMapping
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -26,7 +27,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Offline copies of the personal lists and the sync bookkeeping (Room v2). */
+/** Offline copies of the personal lists and the sync bookkeeping. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class LibraryDaoTest {
@@ -57,6 +58,21 @@ class LibraryDaoTest {
         dao.replaceLoans(CachedLoan.LOAN_BUCKETS, loans.toCached())
         val back = dao.loans(CachedLoan.LOAN_BUCKETS).toLoansData()
         assertEquals(loans, back)
+    }
+
+    @Test fun readyLoanKeepsItsPickupDateOffline() = runBlocking {
+        val ready = LoanItem(
+            id = 5,
+            status = "da_ritirare",
+            dueAt = "2030-12-30",
+            pickupDeadline = "2030-12-27",
+        )
+        dao.replaceLoans(CachedLoan.LOAN_BUCKETS, LoansData(active = listOf(ready)).toCached())
+        val cached = dao.loans(CachedLoan.LOAN_BUCKETS).toLoansData().active.single()
+        assertEquals(
+            StatusMapping.LoanDate(StatusMapping.LoanDateKind.Pickup, "2030-12-27"),
+            StatusMapping.loanDate(cached),
+        )
     }
 
     @Test fun replacingLoansKeepsReservations() = runBlocking {

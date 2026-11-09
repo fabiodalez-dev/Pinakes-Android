@@ -4,17 +4,17 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * Local cache database. Everything in it can be rebuilt from the server, so schema changes use
- * destructive migration: v1 (40-row snapshot) → v2 (whole catalogue + loans + wishlist + sync
- * bookkeeping) → v3 (folded search key) simply starts empty and the next sync refills it
- * (the sync watermark lives in the same database, so it restarts with a full pass). Excluded from backups
- * (`backup_rules.xml`, `data_extraction_rules.xml`): it belongs to one instance and one user.
+ * Local cache database. V4 adds the pickup deadline while keeping data cached by v3.
+ * Older schemas can be rebuilt from the server; clearing the sync watermark triggers a full sync.
+ * The database is excluded from backups because it belongs to one instance and one user.
  */
 @Database(
     entities = [CachedBook::class, CachedLoan::class, CachedWishlistItem::class, SyncMeta::class],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -25,6 +25,12 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         const val FILE_NAME = "pinakes-cache.db"
 
+        private val migration3To4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE cached_loans ADD COLUMN pickupDeadline TEXT")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -34,7 +40,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     FILE_NAME,
-                ).fallbackToDestructiveMigration().build().also { INSTANCE = it }
+                ).addMigrations(migration3To4)
+                    .fallbackToDestructiveMigration()
+                    .build().also { INSTANCE = it }
             }
     }
 }

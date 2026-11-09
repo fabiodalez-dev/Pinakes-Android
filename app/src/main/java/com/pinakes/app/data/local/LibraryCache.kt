@@ -26,6 +26,7 @@ data class CachedLoan(
     val loanedAt: String? = null,
     val dueAt: String? = null,
     val dueAttention: Boolean = false,
+    val pickupDeadline: String? = null,
     val returnedAt: String? = null,
     val renewals: Int? = null,
     val cancellable: Boolean = false,
@@ -75,13 +76,14 @@ data class SyncMeta(
 fun LoanItem.toCached(bucket: String, position: Int): CachedLoan = CachedLoan(
     bucket = bucket, id = id, position = position, bookId = bookId, title = title, coverUrl = coverUrl,
     status = status, statusLabel = statusLabel, requestedAt = requestedAt, loanedAt = loanedAt, dueAt = dueAt,
-    dueAttention = dueAttention, returnedAt = returnedAt, renewals = renewals, cancellable = cancellable,
+    dueAttention = dueAttention, pickupDeadline = pickupDeadline, returnedAt = returnedAt,
+    renewals = renewals, cancellable = cancellable,
 )
 
 fun CachedLoan.toLoanItem(): LoanItem = LoanItem(
     id = id, bookId = bookId, title = title, coverUrl = coverUrl, status = status, statusLabel = statusLabel,
     requestedAt = requestedAt, loanedAt = loanedAt, dueAt = dueAt, dueAttention = dueAttention,
-    returnedAt = returnedAt, renewals = renewals, cancellable = cancellable,
+    pickupDeadline = pickupDeadline, returnedAt = returnedAt, renewals = renewals, cancellable = cancellable,
 )
 
 fun ReservationItem.toCached(position: Int): CachedLoan = CachedLoan(
