@@ -1,5 +1,12 @@
 # Pinakes Android — Build Status
 
+## 1.14.0 (versionCode 28): a ready loan shows the last pickup day
+
+Pairs with Pinakes 0.9.4 (Mobile API 1.12.0). Works with older servers: without `pickup_deadline` the row shows the return day, as in 1.13.0.
+
+- **Last pickup day** ([#61](https://github.com/fabiodalez-dev/Pinakes-Android/pull/61)): a reader's `da_ritirare` loan shows "Pick up by <date>" from `pickup_deadline` on `GET /me/loans`, the stored pickup day moved by the server to the next open day of the copy's branch, the same day the staff loan page already showed. A missing or blank value falls back to the return day.
+- **The offline cache keeps the server calendar**: `cached_loans` stores `effectiveDueAt`, `isOverdue` and `pickupDeadline` (Room version 4, additive migration `MIGRATION_3_4`, no data loss on update), so a cached loan shows the usable return day and the server's lateness instead of the stored due date. `CacheMigrationTest` upgrades a real version 3 database without the destructive fallback.
+
 ## 1.13.0 (versionCode 27): the visitor log finds a member without the card
 
 Pairs with Pinakes 0.9.2 (Mobile API 1.11.0). Works with older servers: without `staff_attendance_member_pick` in `/health` the button is not shown and the desk behaves as in 1.12.0.

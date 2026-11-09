@@ -19,21 +19,21 @@ server advertises their APIs. The five bottom navigation destinations are retain
 
 > These are **debug-signed** builds for direct sideloading, not Play Store releases. Each release bumps `versionCode`, so a newer APK installs over the previous one in place.
 
-## What's New in v1.13.0
+## What's New in v1.14.0
 
-Pinakes Android 1.13.0 follows Pinakes 0.9.2 (Mobile API 1.11.0). In the staff area the visitor log checks in a member without the card: *Find member* opens the same member search as the loan desk, and the visit is recorded exactly as with the card, only once even after a retry. The button appears only when the server announces `staff_attendance_member_pick` in `/health`; on older servers the app behaves as 1.12.0.
+Pinakes Android 1.14.0 follows Pinakes 0.9.4 (Mobile API 1.12.0). A loan ready for pickup shows the last day to collect it, the same day the loan desk shows, moved past the branch closures by the server. The offline cache keeps the server calendar of every loan, so a loan opened without a connection shows the same dates and state as online. On older servers the row keeps showing the return day, as in 1.13.0.
 
 ## What's New
 
 The complete history is on the [Releases page](https://github.com/fabiodalez-dev/Pinakes-Android/releases).
 
+### v1.13.0
+
+Follows Pinakes 0.9.2 (Mobile API 1.11.0). In the staff area the visitor log checks in a member without the card: *Find member* opens the same member search as the loan desk. The button appears only when the server announces `staff_attendance_member_pick` in `/health`.
+
 ### v1.12.0
 
 Follows Pinakes 0.9.0 and 0.9.1 (Mobile API 1.10.0). Reader and staff loans show the usable return day the server computes from the branch closures calendar, and lateness follows the server in the library timezone, so a loan due on a closed day is no longer shown as late. Library settings → Loans gains the closures calendar section with the same-day handover switch.
-
-### v1.11.0
-
-Follows Pinakes 0.9.0: everything the 0.9.0 admin adds can be done from the staff area, including library settings, patron types and loan rules, the closures calendar, stocktake, patron ledger, MARC import and export, and the visitor log. The reader side follows the new circulation rules; on older servers every new field is optional and the new screens stay hidden.
 
 ## What it is
 
