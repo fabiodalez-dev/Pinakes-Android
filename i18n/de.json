@@ -895,6 +895,8 @@
   "staff_loan_requested": "Angefragt am",
   "staff_loan_loaned": "Ausleihbeginn",
   "staff_loan_due": "Fällig am",
+  "staff_loan_extension_reason": "Grund für den Erlass",
+  "staff_loan_extension_reason_help": "Diese Ausleihe ist überfällig und es läuft eine Gebühr von %1$s auf: Wird die Fälligkeit nach hinten verschoben, wird die bisher aufgelaufene Gebühr mit diesem Grund erlassen.",
   "staff_loan_pickup_deadline": "Abholen bis",
   "staff_loan_returned_at": "Zurückgegeben am",
   "staff_loan_renewals": "Verlängerungen",

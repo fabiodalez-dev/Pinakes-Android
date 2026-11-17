@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -22,8 +23,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -48,6 +49,7 @@ import com.pinakes.app.data.staff.LoanAction
 import com.pinakes.app.data.staff.LoanActionUi
 import com.pinakes.app.data.staff.LoanActions
 import com.pinakes.app.data.staff.ReturnOutcome
+import com.pinakes.app.ui.common.AppLocale
 import com.pinakes.app.ui.common.AppViewModel
 import com.pinakes.app.ui.common.DateFormat
 import com.pinakes.app.ui.components.AvailabilityChip
@@ -55,10 +57,12 @@ import com.pinakes.app.ui.components.BookCover
 import com.pinakes.app.ui.components.ConfirmDialog
 import com.pinakes.app.ui.components.ErrorState
 import com.pinakes.app.ui.components.LoadingState
+import com.pinakes.app.ui.components.PinakesTextField
 import com.pinakes.app.ui.components.PinakesTopBar
 import com.pinakes.app.ui.components.PrimaryButton
 import com.pinakes.app.ui.components.SecondaryButton
 import com.pinakes.app.ui.navigation.Routes
+import com.pinakes.app.ui.screens.movements.MoneyFormat
 import com.pinakes.app.ui.screens.staff.DatePickerField
 import com.pinakes.app.ui.screens.staff.ExportFileDialog
 import com.pinakes.app.ui.screens.staff.ForbiddenExit
@@ -91,7 +95,15 @@ data class LoanEditDraft(
     val userName: String,
     val loanedAt: String?,
     val dueAt: String?,
-)
+    /** Reason for waiving the fine accrued so far when an overdue loan's due date moves forward. */
+    val waiveReason: String = "",
+    /** The server asked for [waiveReason] (422 on `waive_reason`) even if the app could not tell. */
+    val reasonAsked: Boolean = false,
+) {
+    /** The reason field is shown, and required, for this draft of [loan]. */
+    fun needsReason(loan: StaffLoan?): Boolean =
+        reasonAsked || (loan != null && LoanActions.extensionNeedsReason(loan, dueAt))
+}
 
 data class StaffLoanDetailUiState(
     val loan: StaffLoan? = null,
@@ -197,6 +209,7 @@ class StaffLoanDetailViewModel @Inject constructor(
     fun openUserPicker() = _state.update { it.copy(userPicker = true) }
     fun closeUserPicker() { _state.update { it.copy(userPicker = false) }; users.clear() }
     fun editDates(loanedAt: String?, dueAt: String?) = _state.update { s -> s.copy(edit = s.edit?.copy(loanedAt = loanedAt, dueAt = dueAt)) }
+    fun editReason(text: String) = _state.update { s -> s.copy(edit = s.edit?.copy(waiveReason = text)) }
     fun closeEdit() = _state.update { it.copy(edit = null) }
 
     fun saveEdit() {
@@ -207,11 +220,16 @@ class StaffLoanDetailViewModel @Inject constructor(
             userId = draft.userId.takeIf { it != loan.user.id },
             loanedAt = draft.loanedAt?.takeIf { it != loan.loanedAt?.take(10) },
             dueAt = draft.dueAt?.takeIf { it != loan.dueAt?.take(10) },
-        )
+        ).let { r ->
+            val reason = draft.waiveReason.trim().take(255)
+            if (r.dueAt != null && draft.needsReason(loan) && reason.isNotEmpty()) r.copy(waiveReason = reason) else r
+        }
         if (request.userId == null && request.loanedAt == null && request.dueAt == null) {
             _state.update { it.copy(edit = null) }
             return
         }
+        // The save button is disabled meanwhile; the server would answer 422 anyway.
+        if (request.dueAt != null && draft.needsReason(loan) && request.waiveReason == null) return
         mutate(LoanAction.EDIT, R.string.staff_loan_updated, retryOnConcurrent = true, closeEdit = true) { circulation.updateLoan(loan.id, request) }
     }
 
@@ -235,7 +253,11 @@ class StaffLoanDetailViewModel @Inject constructor(
                         busy = null, loan = outcome.data, message = StaffMessage(success),
                         edit = if (closeEdit) null else it.edit,
                     )
-                    is ApiResult.Failure -> it.copy(busy = null, forbidden = outcome.isForbidden(), message = outcome.toStaffMessage(R.string.staff_error_save))
+                    is ApiResult.Failure -> it.copy(
+                        busy = null, forbidden = outcome.isForbidden(), message = outcome.toStaffMessage(R.string.staff_error_save),
+                        // A server that wants a reason this app could not foresee opens the field.
+                        edit = if (outcome.meta?.field == "waive_reason") it.edit?.copy(reasonAsked = true) else it.edit,
+                    )
                 }
             }
         }
@@ -446,7 +468,26 @@ private fun EditLoanSheet(draft: LoanEditDraft, state: StaffLoanDetailUiState, v
             PickedField(stringResource(R.string.staff_pick_user), draft.userName, stringResource(R.string.staff_pick_user), onClick = vm::openUserPicker)
             DatePickerField(stringResource(R.string.staff_loan_loaned), draft.loanedAt, { vm.editDates(it, draft.dueAt) })
             DatePickerField(stringResource(R.string.staff_loan_due), draft.dueAt, { vm.editDates(draft.loanedAt, it) })
-            PrimaryButton(stringResource(R.string.action_save), onClick = vm::saveEdit, loading = state.busy == LoanAction.EDIT, modifier = Modifier.fillMaxWidth())
+            val needsReason = draft.needsReason(state.loan)
+            if (needsReason) {
+                val fine = state.loan?.lateFine
+                if (fine != null && fine.accruingCents > 0) {
+                    Text(
+                        stringResource(R.string.staff_loan_extension_reason_help, MoneyFormat.format(fine.accruingCents, fine.currency, AppLocale.current())),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                PinakesTextField(
+                    value = draft.waiveReason, onValueChange = vm::editReason, label = stringResource(R.string.staff_loan_extension_reason),
+                    singleLine = false, maxLength = 255, isError = draft.waiveReason.isBlank(), errorText = stringResource(R.string.staff090_patrons_reason_required),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp).testTag("edit-waive-reason"),
+                )
+            }
+            PrimaryButton(
+                stringResource(R.string.action_save), onClick = vm::saveEdit, loading = state.busy == LoanAction.EDIT,
+                enabled = !needsReason || draft.waiveReason.isNotBlank(), modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(Spacing.lg))
         }
     }

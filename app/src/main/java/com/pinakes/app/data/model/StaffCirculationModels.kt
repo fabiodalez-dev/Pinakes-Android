@@ -178,6 +178,11 @@ data class LoanEditRequest(
     @SerialName("user_id") val userId: Int? = null,
     @SerialName("loaned_at") val loanedAt: String? = null,
     @SerialName("due_at") val dueAt: String? = null,
+    /**
+     * Pinakes 0.9.6: moving an overdue loan's due date forward waives the fine accrued so far,
+     * with this reason (422 validation_error, meta.field waive_reason, without it).
+     */
+    @SerialName("waive_reason") val waiveReason: String? = null,
 )
 
 @Serializable

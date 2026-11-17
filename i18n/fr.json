@@ -895,6 +895,8 @@
   "staff_loan_requested": "Demandé le",
   "staff_loan_loaned": "Début du prêt",
   "staff_loan_due": "Échéance",
+  "staff_loan_extension_reason": "Motif de la remise",
+  "staff_loan_extension_reason_help": "Ce prêt est en retard et une amende de %1$s court : repousser l’échéance remet l’amende accumulée jusqu’ici, avec ce motif.",
   "staff_loan_pickup_deadline": "À retirer avant",
   "staff_loan_returned_at": "Rendu le",
   "staff_loan_renewals": "Renouvellements",
