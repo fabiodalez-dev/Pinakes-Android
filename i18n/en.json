@@ -895,6 +895,8 @@
   "staff_loan_requested": "Requested",
   "staff_loan_loaned": "Loan start",
   "staff_loan_due": "Due",
+  "staff_loan_extension_reason": "Reason for the waiver",
+  "staff_loan_extension_reason_help": "This loan is overdue and accruing a fine of %1$s: moving the due date forward waives the fine accrued so far, with this reason.",
   "staff_loan_pickup_deadline": "Pick up by",
   "staff_loan_returned_at": "Returned",
   "staff_loan_renewals": "Renewals",
