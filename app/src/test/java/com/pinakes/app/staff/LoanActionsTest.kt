@@ -1,12 +1,17 @@
 package com.pinakes.app.staff
 
+import com.pinakes.app.data.model.LoanEditRequest
+import com.pinakes.app.data.model.Meta
 import com.pinakes.app.data.model.StaffLoan
 import com.pinakes.app.data.model.StaffLoanLateFine
+import com.pinakes.app.data.model.StaffUserRef
+import com.pinakes.app.data.network.ApiResult
 import com.pinakes.app.data.staff.LoanAction
 import com.pinakes.app.data.staff.LoanActionUi
 import com.pinakes.app.data.staff.LoanActions
 import com.pinakes.app.data.staff.ReturnOutcome
 import com.pinakes.app.ui.screens.staff.circulation.LoanEditDraft
+import com.pinakes.app.ui.screens.staff.circulation.mutationDroppedLateFine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -67,6 +72,63 @@ class LoanActionsTest {
         assertFalse(draft.needsReason(null))
         // A 422 on waive_reason opens the field even where the app saw no accruing fine.
         assertTrue(draft.copy(reasonAsked = true).needsReason(overdue.copy(lateFine = null)))
+    }
+
+    // The edit sheet's save path: what the request carries, and what a 422 leaves behind.
+    private val editable = overdue.copy(id = 5, user = StaffUserRef(id = 1, name = "R"), loanedAt = "2026-10-01")
+    private val opened = LoanEditDraft(userId = 1, userName = "R", loanedAt = "2026-10-01", dueAt = "2026-11-10")
+    private val reasonError = ApiResult.Failure("validation", "Reason required", 422, meta = Meta(field = "waive_reason"))
+
+    @Test fun aForwardMoveWithAFineSendsTheTypedReason() {
+        val draft = opened.copy(dueAt = "2026-11-30", waiveReason = "  Hospital stay  ")
+        assertFalse(opened.copy(dueAt = "2026-11-30").canSave(editable))
+        assertTrue(draft.canSave(editable))
+        assertEquals(LoanEditRequest(dueAt = "2026-11-30", waiveReason = "Hospital stay"), draft.request(editable))
+        assertEquals(255, draft.copy(waiveReason = "x".repeat(300)).request(editable)?.waiveReason?.length)
+    }
+
+    @Test fun aPlainDueDateMoveWithoutAFineOmitsTheReason() {
+        val noFine = editable.copy(status = "in_corso", lateFine = null)
+        val draft = opened.copy(dueAt = "2026-11-30", waiveReason = "left over")
+        assertTrue(draft.canSave(noFine))
+        assertEquals(LoanEditRequest(dueAt = "2026-11-30"), draft.request(noFine))
+        // Only the borrower changed: no due date, no reason, even with a fine accruing.
+        assertEquals(LoanEditRequest(userId = 2), opened.copy(userId = 2, waiveReason = "x").request(editable))
+        assertNull(opened.request(editable))
+    }
+
+    @Test fun aReasonErrorKeepsTheDraftAndOpensTheField() {
+        val noFine = editable.copy(lateFine = null)
+        val draft = opened.copy(userId = 2, userName = "S", loanedAt = "2026-10-02", dueAt = "2026-11-30", waiveReason = "typed")
+        val after = draft.afterFailure(reasonError)
+        assertEquals(draft.copy(reasonAsked = true), after)
+        assertTrue(after.needsReason(noFine))
+        assertEquals("typed", after.request(noFine)?.waiveReason)
+        assertFalse(after.copy(waiveReason = " ").canSave(noFine))
+        // Any other failure leaves the draft exactly as it was.
+        assertEquals(draft, draft.afterFailure(ApiResult.Failure("conflict", "", 409)))
+    }
+
+    @Test fun movingTheDueDateBackAfterAReasonErrorNeedsNoReason() {
+        val noFine = editable.copy(lateFine = null)
+        val asked = opened.copy(userId = 2, dueAt = "2026-11-30").afterFailure(reasonError)
+        listOf("2026-11-10", "2026-11-05").forEach { back ->
+            val draft = asked.copy(dueAt = back)
+            assertFalse(back, draft.needsReason(noFine))
+            assertTrue(back, draft.canSave(noFine))
+            assertNull(back, draft.copy(waiveReason = "typed").request(noFine)?.waiveReason)
+        }
+        assertEquals(LoanEditRequest(userId = 2), asked.copy(dueAt = "2026-11-10").request(noFine))
+        assertEquals(LoanEditRequest(userId = 2, dueAt = "2026-11-05"), asked.copy(dueAt = "2026-11-05").request(noFine))
+        // Forward again: the server's request still holds.
+        assertTrue(asked.copy(dueAt = "2026-12-01").needsReason(noFine))
+    }
+
+    @Test fun aMutationResponseWithoutTheFineIsFetchedAgain() {
+        assertTrue(mutationDroppedLateFine(overdue, overdue.copy(lateFine = null)))
+        assertFalse(mutationDroppedLateFine(overdue, overdue))
+        assertFalse(mutationDroppedLateFine(overdue.copy(lateFine = null), overdue.copy(lateFine = null)))
+        assertFalse(mutationDroppedLateFine(null, overdue))
     }
 
     @Test fun onlyOutstandingLoansAreBulkSelectable() {
