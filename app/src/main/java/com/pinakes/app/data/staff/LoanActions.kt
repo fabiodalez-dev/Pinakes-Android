@@ -48,8 +48,8 @@ sealed interface PenaltyInput {
  * every action); this only decides what to show and how to open it.
  */
 object LoanActions {
-    /** Largest penalty the server stores (DECIMAL(10,2)). */
-    const val MAX_PENALTY = 99_999_999.99
+    /** Largest penalty the server accepts: the patron ledger maximum (Pinakes 0.9.6). */
+    const val MAX_PENALTY = 999_999.99
 
     /** The known actions of [loan], in the server's order; unknown values are ignored. */
     fun of(loan: StaffLoan): List<LoanAction> = loan.actions.mapNotNull(LoanAction::fromWire).distinct()
@@ -64,6 +64,17 @@ object LoanActions {
         LoanAction.RECALL, LoanAction.EMAIL_RECEIPT -> LoanActionUi.IMMEDIATE
     }
 
+    /**
+     * Moving [loan]'s due date forward to [newDueAt] (yyyy-MM-dd) while it is overdue and a late
+     * fine is accruing waives that fine, so the server wants a reason (Pinakes 0.9.6). The server
+     * stays the authority: its 422 on `waive_reason` also opens the field.
+     */
+    fun extensionNeedsReason(loan: StaffLoan, newDueAt: String?): Boolean {
+        val current = loan.dueAt?.take(10) ?: return false
+        if (newDueAt == null || newDueAt <= current) return false
+        return (loan.status == "in_corso" || loan.status == "in_ritardo") && LateFineRules.shows(loan.lateFine)
+    }
+
     /** Only loans that are out (on time or overdue) can be extended or recalled together. */
     fun isBulkSelectable(loan: StaffLoan): Boolean = loan.status == "in_corso" || loan.status == "in_ritardo"
 
@@ -75,7 +86,7 @@ object LoanActions {
         val text = raw.trim()
         if (text.isEmpty()) return PenaltyInput.None
         if (!outcome.allowsPenalty) return PenaltyInput.Invalid
-        if (!Regex("""^\d{1,8}([.,]\d{1,2})?$""").matches(text)) return PenaltyInput.Invalid
+        if (!Regex("""^\d{1,6}([.,]\d{1,2})?$""").matches(text)) return PenaltyInput.Invalid
         val value = text.replace(',', '.').toDoubleOrNull() ?: return PenaltyInput.Invalid
         if (value < 0 || value > MAX_PENALTY) return PenaltyInput.Invalid
         return PenaltyInput.Amount(value)

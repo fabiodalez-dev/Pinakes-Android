@@ -895,6 +895,8 @@
   "staff_loan_requested": "Richiesto il",
   "staff_loan_loaned": "Inizio prestito",
   "staff_loan_due": "Scadenza",
+  "staff_loan_extension_reason": "Motivo del condono",
+  "staff_loan_extension_reason_help": "Il prestito è scaduto e sta maturando una multa di %1$s: spostando la scadenza in avanti la multa maturata finora viene condonata con questo motivo.",
   "staff_loan_pickup_deadline": "Ritiro entro",
   "staff_loan_returned_at": "Restituito il",
   "staff_loan_renewals": "Rinnovi",
